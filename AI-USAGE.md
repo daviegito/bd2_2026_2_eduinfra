@@ -40,6 +40,28 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   usá-la em qualquer decisão de projeto
 - **Quem revisou:** Davi e Gabriel, em discussão no grupo da Squad
 
+### 2026-09-27 — Documentação de processo da E1 (diário de bordo e AI-USAGE.md)
+
+- **Ferramenta:** Claude (assistente conversacional)
+- **Onde:** `docs/diario/semana-01-a-07.md`, `AI-USAGE.md` e a descrição da PR
+  do diário de bordo
+- **O que foi pedido:** levantar quais documentos faltavam pra E1 checando o
+  site da disciplina, o repositório e as issues abertas; gerar um rascunho do
+  diário de bordo (Semanas 1 a 7) a partir do histórico da Squad no WhatsApp
+  e do estado do repositório; auxílio na geração do próprio `AI-USAGE.md`, lendo as 
+  conversas do grupo para encontrar pontos importantes; e auxílio para escrever a
+  descrição da PR do diário
+- **O que foi aproveitado:** a identificação dos documentos faltantes (issues
+  #8 e #9), a estrutura e parte do conteúdo do diário de bordo, e o
+  texto da PR. Duas seções do diário ("O que surpreendeu" das Semanas 5 e 7)
+  foram reescritas a pedido, porque a versão à mão ficou fraca ou
+  incompleta demais para entrar como estava
+- **Como foi verificado:** conferência manual de cada entrega contra o
+  histórico real do grupo e o repositório (issues, ADRs, README); edição
+  direta do arquivo entre uma geração e outra, corrigindo nome (Marcos) e
+  tom de trechos específicos antes de aceitar o conteúdo
+- **Quem revisou:** Pedro Teixeira
+
 ### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
 
 - **Ferramenta:**
