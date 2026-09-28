@@ -277,9 +277,9 @@ ainda provisórias.
 | Davi Coelho | [@daviegito](https://github.com/daviegito) |
 | Gabriel Lopes de Amorim | [@BrzGab](https://github.com/BrzGab) |
 | Lucas Mendonça Arruda | [@lucasarruda9](https://github.com/lucasarruda9) |
-| Marcos Vinícius | — |
+| Marcos Vinícius | [@MarcosViniciusG](https://github.com/MarcosViniciusG) |
 | Pedro Sanchez | [@PedroDev-sketch](https://github.com/PedroDev-sketch) |
-| Pedro Vargas | — |
+| Pedro Vargas | [@Pedrovargas10](https://github.com/Pedrovargas10) |
 
 ## Licença
 
