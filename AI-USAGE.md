@@ -47,6 +47,27 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   um aluno à nota e à escola dele. Não foi alucinação; a cautela da Squad em
   não assumir a premissa sem fonte é que estava certa.
 
+### 2026-09-16 — Consolidação das planilhas da Squad e decisões de arquitetura da E1
+
+- **Ferramenta:** Claude
+- **Onde:** Planilhas de acompanhamento da disciplina, consolidação das propostas individuais da Squad em versão unificada (`Planilha_BD2_V3_Arquitetura_Escola_2024.xlsx`) e documentação de justificativas arquiteturais
+- **O que foi pedido:**
+  1. Análise e preenchimento inicial da planilha individual com base no problema do domínio;
+  2. Pesquisa e validação das fontes de dados públicas do INEP (ENEM, Censo Escolar, INSE) e justificativas técnicas para formatos e motores (Parquet, PostgreSQL, DuckDB);
+  3. Extração, análise cruzada e síntese de 7 planilhas individuais distintas dos integrantes da Squad, unificando temas comuns e melhores argumentos em uma planilha consolidada para o grupo;
+  4. Adequação da arquitetura aos direcionamentos trazidos da aula (3 estágios de dados / S3, camada semântica para IA, enriquecimento geográfico com API do IBGE e preservação da fonte transacional OLTP/insert-only exigida na E1);
+  5. Investigação sobre o impacto da LGPD na supressão do `CO_ESCOLA` entre 2018 e 2023, avaliando o trade-off entre agregar por município ou manter o grão de escola restringindo a análise à edição de 2024;
+- **O que foi aproveitado:**
+  - A síntese das propostas em uma planilha final única no template oficial da disciplina, eliminando redundâncias e alinhando o grupo em uma arquitetura consistente;
+  - A identificação da restrição do `CO_ESCOLA` nos microdados do INEP e a decisão arquitetural documentada no ADR de manter o grão da escola em 2024 e enriquecer com o IBGE;
+  - O diagnóstico de conformidade com o checklist da E1, evitando a remoção indevida da fonte OLTP (sistema de vistorias) que causaria perda de pontos na entrega;
+  - O roteiro de defesa e os argumentos técnicos para justificar a escolha de cada engine, formato e modelagem.
+- **Como foi verificado:**
+  - Conferência direta com as regras e checklist da E1 no site da disciplina (`unb-bd2.github.io/PlanoEnsino/projeto/e1/`), identificando a necessidade de preservar a origem transacional que quase havia sido descartada;
+  - Verificação na documentação e portais do INEP sobre a disponibilidade dos microdados e as mudanças de esquema pós-LGPD;
+  - Inspeção e validação do arquivo `.xlsx` gerado para conferir se todas as abas, células e fórmulas de validação atingiam o mínimo exigido pelo template;
+- **Quem revisou:** Pedro Vargas
+
 ### 2026-09-27 — Documentação de processo da E1 (diário de bordo e AI-USAGE.md)
 
 - **Ferramenta:** Claude (assistente conversacional)
