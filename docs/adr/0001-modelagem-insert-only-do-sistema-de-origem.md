@@ -1,129 +1,132 @@
-# ADR 0001 — Adotar esquema insert-only com carimbo de tempo do evento na origem
+# 0001 — Adotar esquema insert-only com carimbo de tempo do evento na origem
 
-| Campo | Valor |
-| --- | --- |
-| Status | Aceito |
-| Data | 16 de setembro de 2026 |
-| Decidido por | Squad EduInfra |
-| Entrega | E1 |
+- **Status:** aceito
+- **Data:** 16 de setembro de 2026
+- **Decisores:** Squad EduInfra
 
 ## Contexto
 
 A secretaria de educação vistoria a infraestrutura das escolas periodicamente. O
-aplicativo de vistorias é o sistema de origem do EduInfra AI: é dele que sai o
-dado transacional que alimenta a camada analítica e, mais adiante, o assistente
-RAG.
+aplicativo de vistorias é o sistema de origem do EduInfra AI, e é dele que sai o
+dado que alimenta a camada analítica e o assistente RAG.
 
-A pergunta de gestão que a plataforma existe para responder é temporal: *a
-infraestrutura de uma escola se reflete no desempenho dos seus alunos no ENEM?*
-A forma mais forte dessa pergunta é comparativa no tempo — o desempenho subiu
-depois que o laboratório foi construído?
+A pergunta de gestão é temporal: *a infraestrutura de uma escola se reflete no
+desempenho dos seus alunos no ENEM?* A forma mais forte dela é comparativa no
+tempo: o desempenho subiu depois que o laboratório foi construído? Um esquema que
+sobrescreve o registro a cada vistoria deixa o banco sabendo apenas o presente, e
+a pergunta perde a resposta antes de chegar à camada analítica.
 
-Um esquema CRUD convencional sobrescreveria o registro da escola a cada nova
-vistoria. O banco passaria a conhecer apenas o estado presente, e a pergunta
-acima deixaria de ter resposta possível, independentemente do que a camada
-analítica fizesse depois.
+**Carga**, medida na base populada com o Censo Escolar 2024 (detalhes em
+[caracterizacao-carga.md](../caracterizacao-carga.md)):
 
-## Requisitos e restrições
+| Dimensão | Valor |
+| --- | --- |
+| Escolas em atividade | 181.065, com 17 itens de infraestrutura cada |
+| Linhas de item na linha de base | 3.078.105 |
+| Escrita | carga anual em lote e vistorias pontuais pelo aplicativo, cerca de 500 por dia (estimativa da equipe, declarada na planilha de acompanhamento) |
+| Leitura transacional | estado atual de uma escola, por chave, a cada tela do aplicativo |
+| Leitura analítica | série histórica e extração completa, em lote, pelo pipeline da E2 |
+| Latência tolerada | 300 ms na tela do técnico; segundos para o lote |
 
-- Preservar o histórico completo de cada item de infraestrutura por escola.
-- Distinguir quando a realidade mudou de quando o dado entrou no sistema.
-- Volume da carga inicial: 181.065 escolas em atividade no Censo Escolar 2024,
-  17 itens por escola.
-- Escrita transacional pontual pelo aplicativo; leitura analítica retroativa em
-  lote pelo pipeline.
-- A equipe domina SQL e PostgreSQL. Não há orçamento para serviço gerenciado.
+**Restrições:** preservar o histórico de cada item por escola; distinguir quando
+a realidade mudou de quando o dado entrou no sistema; a equipe domina SQL e
+PostgreSQL; não há orçamento para serviço gerenciado.
 
-## Padrões de acesso previstos
+## Alternativas consideradas
 
-| Consulta | Origem | Frequência |
+### A. Opção nula: CRUD, uma linha por escola e item, sobrescrita a cada vistoria
+
+É o que um aplicativo de cadastro faz por padrão, e é viável: é a modelagem mais
+compacta e a de leitura mais rápida, como a medição confirma. Não foi escolhida
+porque cada vistoria apaga o que a anterior dizia. Depois de uma revisita, o banco
+não consegue mais responder qual era a infraestrutura da escola na data do ENEM,
+e é exatamente essa a junção que a pergunta de gestão exige.
+
+### B. Insert-only com carimbo de ingestão apenas
+
+Guarda o histórico e dispensa o técnico de informar a data, porque o banco
+preenche `default now()`. Fisicamente é igual à alternativa C. Não foi escolhida
+porque confunde a data em que o dado entrou com a data em que a escola ganhou o
+laboratório: a carga de linha de base, cuja referência é 29/05/2024, nasceria
+inteira datada do dia em que o script rodou, e a série temporal já começaria
+falsa.
+
+### C. Insert-only com carimbo do evento e da ingestão
+
+Cada vistoria é uma nova linha, com `ocorrido_em` (quando a realidade mudou) e
+`registrado_em` (quando o dado chegou). Cobra em volume e em custo de leitura do
+estado atual.
+
+## Medição
+
+As duas modelagens foram montadas a partir da mesma carga real do Censo 2024, em
+um esquema temporário, e submetidas a três ciclos de revisita de 10% das escolas
+cada, cerca de 18 mil escolas por ciclo. As revisitas são simuladas, porque o
+aplicativo ainda não tem vistorias presenciais: cada uma repete o que o Censo
+disse e muda a situação de um item. Leituras medidas pelo tempo de execução no
+servidor, sobre 500 escolas; escritas medidas no cliente, com commit, sobre 200
+escolas. PostgreSQL 16 em Docker Desktop, Windows 11.
+
+Como reproduzir, com o banco já carregado:
+
+```bash
+uv run eduinfra comparar-modelagem
+```
+
+| Métrica | A. CRUD (opção nula) | C. Insert-only |
 | --- | --- | --- |
-| Registrar vistoria de uma escola | Aplicativo da secretaria | Contínua, baixa vazão |
-| Estado corrente de infraestrutura de uma escola | Aplicativo e painel | Alta |
-| Série histórica de um item por escola | Pipeline analítico | Lote, anual |
-| Extração completa para a camada analítica | Pipeline de ingestão (E2) | Lote |
+| Tamanho após a linha de base | 298 MB | 414 MB |
+| Tamanho após 3 ciclos de revisita | 336 MB | 534 MB |
+| Registrar uma vistoria, mediana / p95 | 4,11 ms / 7,61 ms | 11,76 ms / 27,01 ms |
+| Estado atual de uma escola, mediana / p95 | 0,03 ms / 0,07 ms | 0,12 ms / 0,30 ms |
+| Responde a situação em 29/05/2024 depois das revisitas | não | sim |
+
+A alternativa B não aparece na tabela porque ocupa o mesmo espaço e tem o mesmo
+custo de C; a diferença entre elas é de correção, não de desempenho.
 
 ## Decisão
 
-Adotar modelo insert-only. Cada mudança gera uma nova linha em
-[vistoria](../../alembic/versions/0003_vistoria_insert_only.py), com `ocorrido_em`
-registrando quando a mudança aconteceu na escola e `registrado_em` quando o dado
-chegou ao banco. `UPDATE`, `DELETE` e `TRUNCATE` sobre as tabelas de evento são
-bloqueados por gatilho, não por convenção de aplicação.
+Escolhemos C. Cada vistoria gera uma nova linha em
+[vistoria](../../alembic/versions/0003_vistoria_insert_only.py), e `UPDATE`,
+`DELETE` e `TRUNCATE` nas tabelas de evento são bloqueados por gatilho no banco,
+não por convenção de aplicação.
 
-## Alternativa 1 — Esquema CRUD com atualização destrutiva
+A normalização para no grão escola, vistoria e item: uma linha por item vistoriado,
+em vez das 17 colunas por escola do arquivo do Censo. Cada item tem situação e
+quantidade próprias, e "não informado" precisa valer por item para não sobrescrever
+o que a vistoria anterior afirmou. Desnormalizar se paga na camada de serving, onde
+a tabela fato é plana para as consultas do assistente, e não na origem.
 
-- **Prós:** modelagem trivial; a tabela não cresce; o estado corrente é uma
-  leitura direta, sem window function.
-- **Contras:** destrói o histórico. O banco só sabe descrever o agora.
-- **Por que não foi escolhida:** inviabiliza o cruzamento temporal entre notas do
-  ENEM e infraestrutura da época, que é a pergunta central do projeto.
+## Consequências
 
-## Alternativa 2 — Insert-only com carimbo de ingestão apenas
+**O que ganhamos:** o histórico de infraestrutura chega à camada analítica sem CDC
+adicional; a E2 pode ingerir por marca d'água sobre `registrado_em`; nenhuma
+vistoria some do registro, o que permite auditoria.
 
-- **Prós:** o próprio banco preenche o carimbo com `default now()`, sem depender
-  do preenchimento correto pelo técnico em campo.
-- **Contras:** confunde a data em que o dado entrou no sistema com a data em que
-  a escola de fato ganhou o laboratório. Uma carga histórica feita hoje dataria
-  todo o passado como se fosse hoje.
-- **Por que não foi escolhida:** a carga de linha de base vem do Censo Escolar
-  2024, cuja data de referência é 29/05/2024. Com carimbo de ingestão, toda a
-  base nasceria datada da execução do script, e a série temporal seria falsa já
-  na primeira carga.
+**O que perdemos:** 39% a mais de espaço já na linha de base, e cerca de 120 MB a
+mais a cada três ciclos de revisita, contra 38 MB do CRUD. A leitura do estado
+atual fica 4 vezes mais lenta que no CRUD e passa a depender de `DISTINCT ON` na
+view `escola_estado_atual`; ainda está três ordens de grandeza abaixo dos 300 ms
+tolerados. Registrar uma vistoria fica perto de 3 vezes mais lento. Corrigir erro
+de digitação exige registrar uma retificação, não editar a linha.
 
-## Evidência
+**O que se torna irreversível:** a volta é assimétrica. Colapsar o insert-only em
+CRUD custa 134 s, o tempo medido para materializar a view em uma tabela. O caminho
+contrário não existe: o que um CRUD sobrescreveu não se recupera.
 
-- A carga de linha de base do Censo 2024 produz 181.065 vistorias e 3.078.105
-  linhas de item em uma execução de 2 min 51 s, todas datadas de 29/05/2024, a
-  data de referência do Censo, e não da execução do script. Os números medidos
-  estão em [caracterizacao-carga.md](../caracterizacao-carga.md).
-- O índice único parcial sobre `(co_entidade, ocorrido_em)` para vistorias de
-  origem `censo_escolar` torna a carga idempotente: rodando a carga duas vezes
-  seguidas, a segunda execução inseriu zero linhas.
-- A leitura do estado corrente de uma escola pela view `escola_estado_atual`
-  custou de 0,13 ms a 0,24 ms com a base populada, contra os 300 ms tolerados na
-  tela do técnico. O custo do insert-only, neste volume, é irrelevante para o
-  caminho transacional.
-- Os gatilhos de bloqueio têm teste automatizado em
-  [test_insert_only.py](../../tests/test_insert_only.py).
+## Gatilho de revisão
 
-## Consequências positivas
-
-- Histórico de infraestrutura sai de graça para a camada analítica, sem CDC
-  adicional na origem.
-- A E2 pode ingerir por marca d'água sobre `registrado_em` sem depender de
-  gatilho de auditoria.
-- Auditoria da secretaria fica possível: nenhuma vistoria some do registro.
-
-## Consequências negativas
-
-- O volume cresce a cada ciclo de vistoria, sem compensação por atualização.
-- Descobrir o estado corrente exige `DISTINCT ON` sobre o evento mais recente de
-  cada par escola-item, encapsulado na view `escola_estado_atual`.
-- Correção de erro de digitação de uma vistoria exige registrar uma retificação,
-  não editar a linha errada.
-
-## Riscos assumidos
-
-- Crescimento de armazenamento que force particionamento por ano antes do fim do
-  projeto.
-- Degradação da leitura do estado corrente conforme o número de vistorias por
-  escola aumenta.
-
-## Como e quando revisitar
-
-Esta decisão será reaberta se qualquer um destes sinais aparecer:
-
-- a leitura de `escola_estado_atual` para uma escola passar de 200 ms, caso em
-  que a view vira materializada com refresh ao fim de cada carga;
-- a tabela `vistoria_item` passar de 50 milhões de linhas, caso em que entra
-  particionamento por ano do evento;
-- o aplicativo da secretaria passar a exigir edição direta de vistoria por
-  requisito legal, caso em que o padrão de retificação precisa ser reavaliado.
+- A leitura de `escola_estado_atual` para uma escola passar de 200 ms: a view vira
+  materializada, com refresh ao fim de cada carga.
+- `vistoria_item` passar de 50 milhões de linhas: entra particionamento por ano do
+  evento.
+- O aplicativo da secretaria passar a exigir edição direta de vistoria por
+  requisito legal: o padrão de retificação precisa ser reavaliado.
 
 ## Histórico de Versões
 
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
-| 1.0 | Registro inicial da decisão de modelagem da origem | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 16 de setembro de 2026 |
+| 1.0 | Registro inicial da decisão de modelagem da origem | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de setembro de 2026 |
 | 1.1 | Evidência atualizada com os números medidos da carga do Censo 2024 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de setembro de 2026 |
+| 1.2 | Estrutura do template da disciplina, opção nula, medição comparativa com CRUD, irreversibilidade e normalização; corrige a data da versão 1.0, que repetia a data da decisão | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 26 de setembro de 2026 |

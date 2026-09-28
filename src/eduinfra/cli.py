@@ -5,7 +5,7 @@ import sys
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import caracterizacao
+from eduinfra import caracterizacao, comparacao_modelagem
 from eduinfra.carga import executar_carga
 from eduinfra.configuracao import Configuracao, carregar_configuracao
 
@@ -14,7 +14,8 @@ log = logging.getLogger("eduinfra")
 
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
-    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "tudo", "gerar_amostra"))
+
+    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "tudo", "gerar_amostra"))
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
     parser.add_argument("--revisao", default="head", help="revisão alvo do Alembic")
     parser.add_argument("--verboso", action="store_true")
@@ -29,6 +30,10 @@ def main(argumentos: list[str] | None = None) -> int:
 
     if opcoes.comando == "reverter":
         command.downgrade(_alembic(configuracao), opcoes.revisao)
+        return 0
+
+    if opcoes.comando == "comparar-modelagem":
+        print(comparacao_modelagem.formatar_markdown(comparacao_modelagem.comparar(configuracao.dsn)))
         return 0
 
     if opcoes.comando in ("migrar", "tudo"):
