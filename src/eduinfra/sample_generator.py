@@ -62,9 +62,12 @@ def gerar_amostra(config: Configuracao, n_escolas: int = 1000) -> None:
             now = datetime.datetime.utcnow()
             for e in range(1, n_escolas + 1):
                 co_entidade = 100000 + e
+                # 'vistoria_presencial' é o único valor da CHECK que se aplica a um
+                # registro sintético; não há índice único parcial para essa origem,
+                # então a amostra não é idempotente entre execuções.
                 conn.execute(
-                    "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, registrado_em) values (%s,%s,%s,%s,%s) on conflict (co_entidade, ocorrido_em) where origem = 'sintetico' do nothing",
-                    (co_entidade, tecnico_id, "sintetico", now, now),
+                    "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, registrado_em) values (%s,%s,%s,%s,%s)",
+                    (co_entidade, tecnico_id, "vistoria_presencial", now, now),
                 )
 
                 # inserir alguns itens escolhidos a partir do catálogo real
