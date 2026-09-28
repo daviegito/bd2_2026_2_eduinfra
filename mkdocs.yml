@@ -1,0 +1,16 @@
+site_name: EduInfra AI
+site_description: Documentação de EduInfra
+site_url: https://daviegito.github.io/bd2_2026_2_eduinfra/
+theme:
+  name: material
+  palette:
+    scheme: default
+    primary: indigo
+    accent: indigo
+
+nav:
+  - Início: index.md
+  - Caracterização da Carga: caracterizacao.md
+  - ADRs:
+      - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
+      - ADR 0002: adr/0002-cadeia-tls-incompleta-do-inep.md
