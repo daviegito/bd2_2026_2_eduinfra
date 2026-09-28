@@ -39,6 +39,13 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   sem confirmação técnica direta na documentação oficial do INEP antes de
   usá-la em qualquer decisão de projeto
 - **Quem revisou:** Davi e Gabriel, em discussão no grupo da Squad
+- **Atualização (2026-09-28):** conferida na documentação oficial, a afirmação
+  procede. O Leia-me dos microdados do ENEM 2025 diz que "os arquivos
+  PARTICIPANTES_2025.csv e RESULTADOS_2025.csv não possuem chave de ligação em
+  comum", para que a escola de conclusão não permita identificar o
+  participante. Ou seja, não é possível ligar o questionário socioeconômico de
+  um aluno à nota e à escola dele. Não foi alucinação; a cautela da Squad em
+  não assumir a premissa sem fonte é que estava certa.
 
 ### 2026-09-27 — Documentação de processo da E1 (diário de bordo e AI-USAGE.md)
 
