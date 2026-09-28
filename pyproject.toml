@@ -20,6 +20,12 @@ dev = [
     "pytest>=8.3",
 ]
 
+[project.optional-dependencies]
+dev_extra = [
+    "hypothesis>=6.80",
+    "atheris>=0.2",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
