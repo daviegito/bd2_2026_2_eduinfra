@@ -79,8 +79,11 @@ ENEM × Infraestrutura Escolar venceu o de trajetórias acadêmicas por 5 votos 
 
 **Pendências para a Semana seguinte**
 
-- [ ] Confirmar se a afirmação sobre a impossibilidade de relacionar as bases
+- [x] Confirmar se a afirmação sobre a impossibilidade de relacionar as bases
       do ENEM 2025 procede, antes de assumi-la como restrição real do projeto
+      *(confirmada em 28/09: procede. O Leia-me do ENEM 2025 diz que os
+      arquivos de participantes e de resultados "não possuem chave de ligação
+      em comum". Ver `AI-USAGE.md`, entrada de 25/08.)*
 - [ ] Entender o que a professora espera do formato final da entrega (não
       ficou claro se o projeto vira uma "plataforma")
 
