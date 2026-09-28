@@ -14,7 +14,9 @@ log = logging.getLogger("eduinfra")
 
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
-    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "tudo"))
+
+    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "tudo", "gerar_amostra"))
+    parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
     parser.add_argument("--revisao", default="head", help="revisão alvo do Alembic")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
@@ -51,6 +53,11 @@ def main(argumentos: list[str] | None = None) -> int:
         medidas = caracterizacao.medir(configuracao.dsn)
         tamanhos = caracterizacao.tamanhos_em_disco(configuracao.dsn)
         print(caracterizacao.formatar_markdown(medidas, tamanhos))
+
+    if opcoes.comando == "gerar_amostra":
+        from eduinfra.sample_generator import gerar_amostra
+
+        gerar_amostra(configuracao, opcoes.escolas)
 
     return 0
 
