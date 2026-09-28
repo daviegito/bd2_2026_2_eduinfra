@@ -1,7 +1,7 @@
 # Decisões de arquitetura
 
 Registro das decisões da Squad EduInfra, no formato Nygard e seguindo o
-[Método de Decisão](https://unb-bd2.github.io/Disciplina/adr/) da disciplina.
+[Método de Decisão](https://unb-bd2.github.io/PlanoEnsino/adr/) da disciplina.
 Para escrever um ADR novo, copie o [template](0000-template.md) e salve como
 `NNNN-titulo-em-kebab-case.md`.
 
