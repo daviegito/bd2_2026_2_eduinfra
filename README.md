@@ -261,7 +261,7 @@ sem pseudonimização.
 
 | Entrega | Tema | Data prevista |
 | --- | --- | --- |
-| E1 | Fonte transacional modelada e populada | 22/09/2026 |
+| E1 | Fonte transacional modelada e populada | 28/09/2026 |
 | E2 | Ingestão em lote e captura de mudanças | 13/10/2026 |
 | E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 |
 | E4 | Plataforma completa, governada e defendida | 24/11/2026 |
