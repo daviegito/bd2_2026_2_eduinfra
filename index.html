@@ -1,0 +1,1577 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/">
+      
+      
+      
+        <link rel="next" href="caracterizacao/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Visão Geral - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#eduinfra-ai" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href="." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Visão Geral
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="." class="md-tabs__link">
+          
+  
+  
+  Sobre
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="diario/semana-01-a-07/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sobre
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Sobre
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visão Geral
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visão Geral
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pergunta-de-gestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pergunta de Gestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#por-que-o-enem-de-2024" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Por que o ENEM de 2024?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arquitetura" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arquitetura
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modelagem-da-origem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelagem da Origem
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Modelagem da Origem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modelo-insert-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelo Insert-Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-de-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline de Ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volumetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volumetria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fontes-de-dados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fontes de Dados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#equipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equipe
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da Carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Qualidade e Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-Only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — Cadeia TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="diario/semana-01-a-07/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de Bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ai-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#pergunta-de-gestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pergunta de Gestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#por-que-o-enem-de-2024" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Por que o ENEM de 2024?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#arquitetura" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Arquitetura
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modelagem-da-origem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelagem da Origem
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Modelagem da Origem">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modelo-insert-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modelo Insert-Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pipeline-de-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pipeline de Ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#volumetria" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volumetria
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fontes-de-dados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fontes de Dados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#roadmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Roadmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#equipe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Equipe
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="eduinfra-ai">EduInfra AI<a class="headerlink" href="#eduinfra-ai" title="Permanent link">&para;</a></h1>
+<p>Plataforma de dados que cruza infraestrutura escolar com desempenho no ENEM e responde em linguagem natural. Projeto integrado da Squad EduInfra na disciplina Sistemas de Banco de Dados 2 (UnB / FCTE, 2026.2).</p>
+<p>Os microdados do ENEM e do Censo Escolar são públicos, mas cruzá-los exige SQL e engenharia de dados. O EduInfra AI constrói um pipeline analítico sobre esses dados e expõe um assistente RAG que permite a gestores educacionais e pesquisadores fazer perguntas em português, pelo chat, sem precisar escrever uma linha de código.</p>
+<hr />
+<h2 id="pergunta-de-gestao">Pergunta de Gestão<a class="headerlink" href="#pergunta-de-gestao" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p><strong>A infraestrutura de uma escola se reflete no desempenho dos seus alunos no ENEM?</strong></p>
+</blockquote>
+<p>O sistema educacional brasileiro apresenta profundas disparidades regionais e estruturais. Embora o INEP publique anualmente volumes massivos de microdados, esses dados são consumidos em silos isolados, desconectados das decisões cotidianas de gestão escolar. A plataforma EduInfra AI nasce da necessidade de transformar esses dados dispersos em uma base analítica contínua e acionável.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Quem usa</th>
+<th style="text-align: left;">Que decisão toma</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Gestores e Secretarias de Educação</strong></td>
+<td style="text-align: left;">Priorização de investimentos e alocação de orçamentos de reforma em escolas com carências estruturais críticas (laboratórios, internet, bibliotecas)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Pesquisadores de Políticas Públicas</strong></td>
+<td style="text-align: left;">Investigação sobre se carências materiais atuam como fatores explicativos de notas mais baixas, ou se o desempenho é predominantemente socioeconômico</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Técnicos de Vistoria</strong></td>
+<td style="text-align: left;">Profissionais em campo que inspecionam instalações e registram a realidade física de cada escola diretamente no sistema transacional</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="por-que-o-enem-de-2024">Por que o ENEM de 2024?<a class="headerlink" href="#por-que-o-enem-de-2024" title="Permanent link">&para;</a></h2>
+<p>Um dos maiores gargalos técnicos ao trabalhar com dados do INEP decorre das diretrizes de anonimização da LGPD. Entre as edições de <strong>2018 e 2023</strong>, o INEP adotou o chamado "modelo simplificado", suprimindo a variável <code>CO_ESCOLA</code> (código de identificação da escola) dos microdados públicos do ENEM. O objetivo era evitar que o cruzamento de quase-identificadores (município, sexo, raça, tamanho de turma) permitisse a reidentificação de participantes. Essa supressão impediu, durante seis anos, qualquer análise pública que vinculasse notas individuais ao estabelecimento de ensino.</p>
+<p>Na edição de <strong>2024</strong>, o INEP restaurou o código da escola nos microdados. Por essa razão técnica e regulatória fundamental, a Squad EduInfra fixou a modelagem analítica na edição de 2024 — o único ano em que podemos cruzar infraestrutura predial com desempenho no grão fino de <strong>escola</strong>, sem recorrer a agregações forçadas por município que desvirtuariam o propósito do projeto.</p>
+<hr />
+<h2 id="arquitetura">Arquitetura<a class="headerlink" href="#arquitetura" title="Permanent link">&para;</a></h2>
+<p>O dado passa por três estágios: o armazenamento bruto (Bronze e Silver), a camada de serviço (Gold) e o consumo pelo assistente.</p>
+<pre class="mermaid"><code>flowchart LR
+    INEP["INEP&lt;br/&gt;ENEM, Censo, INSE,&lt;br/&gt;dicionários"] --&gt;|extração anual| LAKE["Bronze / Silver&lt;br/&gt;Parquet + DuckDB"]
+    IBGE["API do IBGE"] --&gt;|enriquecimento| LAKE
+    APP["Aplicativo de vistorias"] --&gt; OLTP[("Origem OLTP&lt;br/&gt;PostgreSQL&lt;br/&gt;insert-only")]
+    OLTP --&gt;|ingestão| LAKE
+    LAKE --&gt;|transformação| GOLD[("Gold&lt;br/&gt;PostgreSQL")]
+    LAKE --&gt;|embeddings| VET[("Banco vetorial&lt;br/&gt;pgvector")]
+    GOLD --&gt; AGENTE["Assistente RAG&lt;br/&gt;ferramentas MCP"]
+    VET --&gt; AGENTE
+    CACHE[("Cache&lt;br/&gt;Redis")] &lt;--&gt; AGENTE
+    AGENTE --&gt; USER["Gestor / pesquisador"]</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Estágio</th>
+<th style="text-align: left;">O que guarda</th>
+<th style="text-align: left;">Tecnologia</th>
+<th style="text-align: left;">Por quê</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Origem transacional</strong></td>
+<td style="text-align: left;">Vistorias de infraestrutura registradas pela secretaria</td>
+<td style="text-align: left;">PostgreSQL, insert-only</td>
+<td style="text-align: left;">Escrita concorrente com integridade forte, sem apagar o histórico da escola</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Bronze e Silver</strong></td>
+<td style="text-align: left;">Microdados do INEP convertidos para formato colunar</td>
+<td style="text-align: left;">Parquet (zstd) + DuckDB</td>
+<td style="text-align: left;">A análise lê poucas colunas de milhões de linhas; DuckDB faz isso numa máquina só, sem cluster</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Gold</strong></td>
+<td style="text-align: left;">Tabela fato escola × desempenho, pronta para consulta</td>
+<td style="text-align: left;">PostgreSQL</td>
+<td style="text-align: left;">O assistente e o painel precisam de respostas exatas e rápidas, por chave e com filtro</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Banco vetorial</strong></td>
+<td style="text-align: left;">Embeddings das escolas e do dicionário de variáveis</td>
+<td style="text-align: left;">pgvector</td>
+<td style="text-align: left;">A busca por escolas parecidas é distância entre vetores, não SQL</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Cache semântico</strong></td>
+<td style="text-align: left;">Respostas e gráficos já gerados</td>
+<td style="text-align: left;">Redis</td>
+<td style="text-align: left;">A mesma pergunta não gasta latência nem tokens duas vezes</td>
+</tr>
+</tbody>
+</table>
+<p>O assistente responde por ferramentas MCP. Perguntas numéricas ("gere um gráfico da média do ENEM no DF comparando quem tem e quem não tem quadra") viram SQL exato no PostgreSQL. Perguntas abstratas ("quais escolas têm perfil parecido com a escola X?") vão para a busca por similaridade no banco vetorial.</p>
+<hr />
+<h2 id="modelagem-da-origem">Modelagem da Origem<a class="headerlink" href="#modelagem-da-origem" title="Permanent link">&para;</a></h2>
+<p>A origem transacional representa o <strong>Sistema de Vistorias e Infraestrutura Escolar</strong> — um banco que poderia estar em produção dentro de uma secretaria de educação. Os dados abertos governamentais funcionam como fotografias estáticas divulgadas com meses de atraso. Na prática, escolas sofrem reformas, equipamentos estragam, laboratórios são inaugurados e vistorias são conduzidas continuamente. A carga inicial do Censo Escolar 2024 atua como a <em>linha de base</em> (estado zero das 181.065 escolas em atividade), e o modelo transacional recebe os registros contínuos dos técnicos de campo.</p>
+<pre class="mermaid"><code>erDiagram
+    municipio ||--o{ escola : "tem"
+    escola ||--o{ vistoria : "recebe"
+    tecnico ||--o{ vistoria : "registra"
+    vistoria ||--|{ vistoria_item : "avalia"
+    item_infraestrutura ||--o{ vistoria_item : "é avaliado em"
+    municipio {
+        integer co_municipio PK
+        text no_municipio
+        char sg_uf
+    }
+    escola {
+        integer co_entidade PK
+        text no_entidade
+        integer co_municipio FK
+        smallint tp_dependencia
+        smallint tp_localizacao
+    }
+    tecnico {
+        bigint id PK
+        text matricula
+        text nome
+    }
+    vistoria {
+        bigint id PK
+        integer co_entidade FK
+        bigint tecnico_id FK
+        text origem
+        timestamptz ocorrido_em
+        timestamptz registrado_em
+    }
+    vistoria_item {
+        bigint vistoria_id PK
+        text item_codigo PK
+        situacao_item situacao
+        integer quantidade
+    }
+    item_infraestrutura {
+        text codigo PK
+        text coluna_censo
+        text categoria
+    }</code></pre>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Tabela</th>
+<th style="text-align: left;">Papel</th>
+<th style="text-align: left;">Detalhe</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>municipio</code></td>
+<td style="text-align: left;">Cadastro geográfico</td>
+<td style="text-align: left;">5.570 municípios com código IBGE, nome e UF. Preparado para enriquecimento futuro (PIB, IDH)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>escola</code></td>
+<td style="text-align: left;">Cadastro do estabelecimento</td>
+<td style="text-align: left;">181.065 escolas ativas pelo código <code>co_entidade</code>, com rede administrativa e localização (urbana/rural)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>item_infraestrutura</code></td>
+<td style="text-align: left;">Catálogo normalizado</td>
+<td style="text-align: left;">17 recursos físicos monitorados (laboratório, biblioteca, internet, refeitório, água, energia, etc.). Normalizar em tabela própria permite expandir o catálogo sem migrações DDL</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>tecnico</code></td>
+<td style="text-align: left;">Auditoria</td>
+<td style="text-align: left;">Agentes públicos responsáveis pelas vistorias. Única tabela com dado pessoal</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>vistoria</code></td>
+<td style="text-align: left;">Cabeçalho do evento</td>
+<td style="text-align: left;">Cada ato de inspeção vinculado a uma escola e a um técnico, com carimbos temporais auditáveis</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>vistoria_item</code></td>
+<td style="text-align: left;">Fato atômico</td>
+<td style="text-align: left;">Estado de cada item em cada vistoria. <code>situacao</code> é um ENUM com 5 valores: <code>existente</code>, <code>inexistente</code>, <code>em_obra</code>, <code>inutilizavel</code>, <code>nao_informado</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>escola_estado_atual</code></td>
+<td style="text-align: left;">View analítica</td>
+<td style="text-align: left;">Window function que entrega a fotografia atualizada de qualquer escola em menos de 1 ms</td>
+</tr>
+</tbody>
+</table>
+<h3 id="modelo-insert-only">Modelo Insert-Only<a class="headerlink" href="#modelo-insert-only" title="Permanent link">&para;</a></h3>
+<p>A decisão de modelagem mais crítica reside em como o sistema lida com a passagem do tempo. Em um CRUD convencional, registrar que uma escola construiu uma quadra de esportes seria um <code>UPDATE</code> na linha da escola, substituindo o valor anterior. Essa abordagem foi <strong>formalmente descartada</strong> pelo <a href="adr/0001-modelagem-insert-only-do-sistema-de-origem/">ADR 0001</a>:</p>
+<ul>
+<li><strong>Destruição da causalidade temporal:</strong> se a escola não tinha laboratório em maio de 2024 (quando o Censo foi coletado), mas constrói um em março de 2025, um <code>UPDATE</code> sobrescreveria o passado. Qualquer relatório futuro cruzaria as notas do ENEM de 2024 com uma infraestrutura que a escola só veio a ter em 2025, invalidando conclusões.</li>
+<li><strong>Event Sourcing:</strong> cada vistoria é um evento histórico imutável. Uma nova constatação não apaga a anterior; acrescenta um registro no tempo.</li>
+<li><strong>Semântica temporal rígida:</strong> <code>ocorrido_em</code> registra quando a escola mudou de fato; <code>registrado_em</code> registra quando o dado entrou no banco. Confundi-los produz relatórios inexplicáveis.</li>
+<li><strong>Garantia por triggers:</strong> a imutabilidade é imposta por gatilhos no PostgreSQL que bloqueiam <code>UPDATE</code>, <code>DELETE</code> e <code>TRUNCATE</code> nas tabelas de eventos, devolvendo exceções explícitas.</li>
+</ul>
+<hr />
+<h2 id="pipeline-de-ingestao">Pipeline de Ingestão<a class="headerlink" href="#pipeline-de-ingestao" title="Permanent link">&para;</a></h2>
+<p>A ingestão da linha de base do Censo Escolar 2024 opera como um processo completamente automatizado, resiliente a falhas de rede e estritamente idempotente:</p>
+<ol>
+<li><strong>Resolução TLS:</strong> o pipeline inspeciona a extensão AIA (<em>Authority Information Access</em>) do certificado do INEP para baixar dinamicamente os certificados intermediários ausentes, mantendo a verificação de segurança 100% ativa (<a href="adr/0002-cadeia-tls-incompleta-do-inep/">ADR 0002</a>).</li>
+<li><strong>Download resiliente:</strong> o pacote compactado é transferido com suporte a retomada e tentativas exponenciais em caso de oscilações na infraestrutura governamental.</li>
+<li><strong>Validação de esquema:</strong> antes de persistir qualquer registro, os cabeçalhos do arquivo são validados contra o catálogo de 17 itens. Colunas ausentes ou renomeadas abortam o processo antes de contaminar a base.</li>
+<li><strong>Carga idempotente:</strong> os registros são inseridos com <code>ON CONFLICT DO NOTHING</code> sobre índices únicos parciais. Reexecuções não duplicam nada.</li>
+</ol>
+<hr />
+<h2 id="volumetria">Volumetria<a class="headerlink" href="#volumetria" title="Permanent link">&para;</a></h2>
+<p>Medição real a partir de execução limpa em 26/09/2026.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Tabela</th>
+<th style="text-align: right;">Linhas</th>
+<th style="text-align: right;">Espaço</th>
+<th style="text-align: left;">Natureza</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>vistoria_item</code></td>
+<td style="text-align: right;"><strong>3.078.105</strong></td>
+<td style="text-align: right;">369 MB</td>
+<td style="text-align: left;">Escrita somente por <code>INSERT</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>vistoria</code></td>
+<td style="text-align: right;">181.065</td>
+<td style="text-align: right;">44 MB</td>
+<td style="text-align: left;">Eventos de inspeção escolar</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>escola</code></td>
+<td style="text-align: right;">181.065</td>
+<td style="text-align: right;">31 MB</td>
+<td style="text-align: left;">Leitura por chave <code>co_entidade</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>municipio</code></td>
+<td style="text-align: right;">5.570</td>
+<td style="text-align: right;">464 kB</td>
+<td style="text-align: left;">Dimensão geográfica</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>item_infraestrutura</code></td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">32 kB</td>
+<td style="text-align: left;">Catálogo estático</td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Total</strong></td>
+<td style="text-align: right;"><strong>3.445.823</strong></td>
+<td style="text-align: right;"><strong>445 MB</strong></td>
+<td style="text-align: left;"></td>
+</tr>
+</tbody>
+</table>
+<p>A Squad realizou um experimento comparativo documentado no <a href="adr/0001-modelagem-insert-only-do-sistema-de-origem/">ADR 0001</a> medindo CRUD clássico contra Insert-Only. O modelo insert-only consome <strong>39% a mais de disco</strong> (414 MB contra 298 MB) e a leitura é ~4× mais lenta (0,12 ms contra 0,03 ms). A Squad decidiu conscientemente pagar esse custo porque a latência medida (&lt; 1 ms) permanece ordens de grandeza abaixo do teto tolerado pela aplicação (300 ms), enquanto a capacidade de consultar o passado de qualquer escola viabiliza o projeto inteiro.</p>
+<hr />
+<h2 id="fontes-de-dados">Fontes de Dados<a class="headerlink" href="#fontes-de-dados" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Fonte</th>
+<th style="text-align: left;">Quem gera</th>
+<th style="text-align: left;">Papel no projeto</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><a href="https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/enem">Microdados do ENEM 2024</a></td>
+<td style="text-align: left;">INEP</td>
+<td style="text-align: left;">Desempenho (variável dependente)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><a href="https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar">Microdados do Censo Escolar 2024</a></td>
+<td style="text-align: left;">INEP</td>
+<td style="text-align: left;">Infraestrutura (variável independente) e carga da origem</td>
+</tr>
+<tr>
+<td style="text-align: left;">Indicador de Nível Socioeconômico (INSE)</td>
+<td style="text-align: left;">INEP</td>
+<td style="text-align: left;">Controle socioeconômico das comparações</td>
+</tr>
+<tr>
+<td style="text-align: left;">API do IBGE</td>
+<td style="text-align: left;">IBGE</td>
+<td style="text-align: left;">Contexto regional do município da escola</td>
+</tr>
+<tr>
+<td style="text-align: left;">Dicionários de variáveis</td>
+<td style="text-align: left;">INEP</td>
+<td style="text-align: left;">Metadados da camada semântica e do RAG</td>
+</tr>
+<tr>
+<td style="text-align: left;">Sistema de vistorias</td>
+<td style="text-align: left;">Aplicativo da secretaria</td>
+<td style="text-align: left;">Origem transacional (OLTP)</td>
+</tr>
+</tbody>
+</table>
+<p>Os microdados do INEP são anonimizados na origem. Na E1, o único dado pessoal é o do técnico que registra a vistoria (tabela <code>tecnico</code>), e ele não sai da origem sem pseudonimização.</p>
+<hr />
+<h2 id="roadmap">Roadmap<a class="headerlink" href="#roadmap" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Entrega</th>
+<th style="text-align: left;">Tema</th>
+<th style="text-align: left;">Prazo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"><strong>E1</strong></td>
+<td style="text-align: left;">Fonte transacional modelada e populada</td>
+<td style="text-align: left;">22/09/2026</td>
+</tr>
+<tr>
+<td style="text-align: center;">E2</td>
+<td style="text-align: left;">Ingestão em lote e captura de mudanças (CDC)</td>
+<td style="text-align: left;">13/10/2026</td>
+</tr>
+<tr>
+<td style="text-align: center;">E3</td>
+<td style="text-align: left;">Camada analítica transformada, testada e orquestrada</td>
+<td style="text-align: left;">03/11/2026</td>
+</tr>
+<tr>
+<td style="text-align: center;">E4</td>
+<td style="text-align: left;">Plataforma completa, governada e defendida</td>
+<td style="text-align: left;">24/11/2026</td>
+</tr>
+</tbody>
+</table>
+<p>Datas do <a href="https://unb-bd2.github.io/Disciplina/cronograma/">cronograma da disciplina</a>, ainda provisórias.</p>
+<hr />
+<h2 id="equipe">Equipe<a class="headerlink" href="#equipe" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Integrante</th>
+<th style="text-align: left;">GitHub</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">Artur Mendonça Arruda</td>
+<td style="text-align: left;"><a href="https://github.com/ArtyMend07">@ArtyMend07</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Davi Coelho</td>
+<td style="text-align: left;"><a href="https://github.com/daviegito">@daviegito</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Gabriel Lopes de Amorim</td>
+<td style="text-align: left;"><a href="https://github.com/BrzGab">@BrzGab</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Lucas Mendonça Arruda</td>
+<td style="text-align: left;"><a href="https://github.com/lucasarruda9">@lucasarruda9</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Marcos Vinícius</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr>
+<td style="text-align: left;">Pedro Sanchez</td>
+<td style="text-align: left;"><a href="https://github.com/PedroDev-sketch">@PedroDev-sketch</a></td>
+</tr>
+<tr>
+<td style="text-align: left;">Pedro Vargas</td>
+<td style="text-align: left;">—</td>
+</tr>
+</tbody>
+</table>
+<p>Squad EduInfra · Sistemas de Banco de Dados 2 · UnB / FCTE · 2026.2<br />
+<a href="https://github.com/daviegito/bd2_2026_2_eduinfra">Repositório</a> · <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/LICENSE">GPL-3.0</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": ".", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "navigation.expand", "content.code.copy", "search.highlight", "toc.follow"], "search": "assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
