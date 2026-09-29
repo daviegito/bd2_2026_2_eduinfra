@@ -1,16 +1,66 @@
 site_name: EduInfra AI
-site_description: Documentação de EduInfra
+site_description: Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)
 site_url: https://daviegito.github.io/bd2_2026_2_eduinfra/
+site_author: Squad EduInfra (UnB / FCTE, 2026.2)
+repo_url: https://github.com/daviegito/bd2_2026_2_eduinfra
+repo_name: daviegito/bd2_2026_2_eduinfra
+
 theme:
   name: material
+  language: pt
   palette:
-    scheme: default
-    primary: indigo
-    accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Mudar para modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Mudar para modo claro
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
 
 nav:
-  - Início: index.md
-  - Caracterização da Carga: caracterizacao.md
-  - ADRs:
-      - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
-      - ADR 0002: adr/0002-cadeia-tls-incompleta-do-inep.md
+  - Sobre:
+      - Visão Geral: index.md
+  - Dados:
+      - Caracterização da Carga: caracterizacao.md
+      - Qualidade e Testes: testes.md
+  - Decisões:
+      - Índice: adr/README.md
+      - ADR 0001 — Insert-Only: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
+      - ADR 0002 — Cadeia TLS: adr/0002-cadeia-tls-incompleta-do-inep.md
+  - Processo:
+      - Diário de Bordo: diario/semana-01-a-07.md
+      - Uso de IA: ai-usage.md

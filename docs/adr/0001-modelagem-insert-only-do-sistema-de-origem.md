@@ -17,7 +17,7 @@ sobrescreve o registro a cada vistoria deixa o banco sabendo apenas o presente, 
 a pergunta perde a resposta antes de chegar à camada analítica.
 
 **Carga**, medida na base populada com o Censo Escolar 2024 (detalhes em
-[caracterizacao-carga.md](../caracterizacao-carga.md)):
+[caracterizacao.md](../caracterizacao.md)):
 
 | Dimensão | Valor |
 | --- | --- |
