@@ -1,4 +1,5 @@
 import logging
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,7 +37,8 @@ def preparar_camada_silver(
     csv_bruto: Path,
     colunas_por_item: dict[str, str],
 ) -> CamadaSilver:
-    destino = configuracao.diretorio_dados / "silver"
+    # Uma partição por ano do Censo: reingerir um ano só troca os arquivos dele.
+    destino = configuracao.diretorio_dados / "silver" / f"ano_censo={configuracao.ano_censo}"
     destino.mkdir(parents=True, exist_ok=True)
 
     conexao = duckdb.connect()
@@ -68,9 +70,17 @@ def preparar_camada_silver(
             itens=destino / "vistoria_item.parquet",
         )
 
-        _exportar(conexao, _consulta_municipios(), camada.municipios)
-        _exportar(conexao, _consulta_escolas(), camada.escolas)
-        _exportar(conexao, _consulta_itens(colunas_por_item), camada.itens)
+        # Escreve tudo em arquivos temporários e só então troca os definitivos:
+        # falha no meio da escrita nunca deixa um Parquet truncado visível.
+        temporarios = {
+            camada.municipios: _consulta_municipios(),
+            camada.escolas: _consulta_escolas(),
+            camada.itens: _consulta_itens(colunas_por_item),
+        }
+        gravados = [(_exportar(conexao, consulta, definitivo), definitivo) for definitivo, consulta in temporarios.items()]
+        for temporario, definitivo in gravados:
+            os.replace(temporario, definitivo)
+            log.info("camada silver gravada em %s", definitivo.name)
 
         return camada
     finally:
@@ -141,8 +151,10 @@ def _consulta_itens(colunas_por_item: dict[str, str]) -> str:
     """
 
 
-def _exportar(conexao: duckdb.DuckDBPyConnection, consulta: str, destino: Path) -> None:
+def _exportar(conexao: duckdb.DuckDBPyConnection, consulta: str, destino: Path) -> Path:
+    temporario = destino.with_name(destino.name + ".tmp")
     conexao.execute(
-        f"copy ({consulta}) to '{destino.as_posix()}' (format parquet, compression zstd)"
+        f"copy ({consulta}) to '{temporario.as_posix()}' (format parquet, compression zstd)"
     )
-    log.info("camada silver gravada em %s", destino.name)
+
+    return temporario

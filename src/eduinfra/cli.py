@@ -6,7 +6,7 @@ from alembic import command
 from alembic.config import Config
 
 from eduinfra import caracterizacao, comparacao_modelagem
-from eduinfra.carga import executar_carga
+from eduinfra.ingestao import ingerir
 from eduinfra.configuracao import Configuracao, carregar_configuracao
 
 log = logging.getLogger("eduinfra")
@@ -15,9 +15,10 @@ log = logging.getLogger("eduinfra")
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
 
-    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "tudo", "gerar_amostra"))
+    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "tudo", "gerar_amostra"))
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
     parser.add_argument("--revisao", default="head", help="revisão alvo do Alembic")
+    parser.add_argument("--forcar", action="store_true", help="reexecuta a ingestão mesmo que o arquivo já conste no manifesto")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -39,15 +40,19 @@ def main(argumentos: list[str] | None = None) -> int:
     if opcoes.comando in ("migrar", "tudo"):
         command.upgrade(_alembic(configuracao), opcoes.revisao)
 
-    if opcoes.comando in ("carregar", "tudo"):
-        resumo = executar_carga(configuracao)
-        log.info(
-            "carga concluída: %d municípios, %d escolas, %d vistorias, %d itens",
-            resumo.municipios,
-            resumo.escolas,
-            resumo.vistorias,
-            resumo.itens,
-        )
+    if opcoes.comando in ("carregar", "ingerir", "tudo"):
+        resultado = ingerir(configuracao, forcar=opcoes.forcar)
+        if resultado.ignorada:
+            log.info("ingestão ignorada: arquivo já registrado no manifesto")
+        else:
+            resumo = resultado.carga
+            log.info(
+                "ingestão concluída: %d municípios, %d escolas, %d vistorias, %d itens inseridos",
+                resumo.municipios,
+                resumo.escolas,
+                resumo.vistorias,
+                resumo.itens,
+            )
 
     if opcoes.comando in ("caracterizar", "tudo"):
         medidas = caracterizacao.medir(configuracao.dsn)
