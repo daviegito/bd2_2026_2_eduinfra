@@ -182,6 +182,26 @@ set -a && source .env && set +a
 uv run eduinfra tudo
 ```
 
+### Captura de mudanças: pré-requisitos (E2)
+
+O serviço `banco` sobe com `wal_level=logical`, o que permite decodificar o WAL
+em eventos. A migração `0005` cria a publicação `eduinfra_cdc`, que cobre só
+`vistoria` e `vistoria_item` e emite apenas `INSERT` (as tabelas são
+insert-only; `UPDATE`, `DELETE` e `TRUNCATE` são bloqueados por gatilho).
+
+Para conferir:
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "show wal_level;" \
+  -c "select pubname, pubinsert, pubupdate, pubdelete from pg_publication;"
+```
+
+O resultado esperado é `logical` e a publicação `eduinfra_cdc` com
+`pubinsert = t` e as demais colunas `f`. Um slot de replicação sem consumidor
+retém WAL no disco; remova slots abandonados com
+`select pg_drop_replication_slot('nome');`.
+
 ## O que a carga produz
 
 Medido numa execução a partir de um clone limpo, em 26/09/2026, com o comando
