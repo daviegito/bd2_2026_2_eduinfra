@@ -4,7 +4,6 @@ Registro semanal curto. Três perguntas, uma entrada por Semana. É insumo das
 retrospectivas e da defesa final, e é a evidência que sustenta o componente de
 processo da avaliação de Entrega.
 
-
 ## Semana 1 — Formação da Squad (11–17/08)
 
 **O que foi medido**
@@ -26,7 +25,6 @@ via link de convite, em vez de recrutar ativamente.
 **Pendências para a Semana seguinte**
 
 - [x] Ver se mais alguém entra pelo link antes de fechar os 4 membros iniciais
-
 
 ## Semana 2 — Primeiras ideias de domínio (18–24/08)
 
@@ -53,7 +51,6 @@ novos nomes da planilha.
 
 - [ ] Decidir se e como convidar os 3 nomes que apareceram na planilha
 - [ ] Amadurecer as duas ideias de domínio
-
 
 ## Semana 3 — Domínio escolhido: ENEM × Infraestrutura Escolar (25–31/08)
 
@@ -84,7 +81,6 @@ ENEM × Infraestrutura Escolar venceu o de trajetórias acadêmicas por 5 votos 
 - [ ] Entender o que a professora espera do formato final da entrega (não
       ficou claro se o projeto vira uma "plataforma")
 
-
 ## Semana 4 — Organização de ferramentas (01–07/09)
 
 **O que foi medido**
@@ -108,7 +104,6 @@ sexta 11/09.
 
 - [ ] Cada integrante preencher sua cópia da planilha até 09/09
 - [ ] Marcar a primeira reunião da Squad pelo When2Meet
-
 
 ## Semana 5 — Primeira reunião, repositório e primeiro obstáculo de dados (08–14/09)
 
@@ -146,7 +141,6 @@ provisória, já que o 2025 não tem resultados disponíveis.
       conseguiu
 - [ ] Confirmar se dá para usar o ENEM 2024 sem prejuízo do projeto
 
-
 ## Semana 6 — Validação do domínio e mudança de prazo (15–21/09)
 
 **O que foi medido**
@@ -177,7 +171,6 @@ disponibilização — detalhe que ninguém conseguiu esclarecer melhor depois.
       discutido em sala
 - [ ] Esclarecer com a professora ou monitoria o que ela quis dizer com
       GitHub Pages no lugar de Power BI
-
 
 ## Semana 7 — Implementação da origem transacional (22–28/09)
 
@@ -227,3 +220,53 @@ em 4 migrações Alembic, carga automatizada e idempotente via Docker Compose.
 - [ ] Mergear a PR que adequa o ADR 0001 ao template da disciplina e adiciona
       o índice de ADRs
 - [ ] Definir o plano de ingestão para a E2 (Semana 10)
+
+## Semana 8 — Apresentação e feedback (29–05/10)
+
+**O que foi medido**
+
+Nenhuma métrica de dado ainda.
+
+**O que surpreendeu**
+
+Para a apresentação, não sabíamos qual formato seria o melhor para apresentar e nos impressionamos que muitos dos grupos tinham criado GitPages para isso. Aproveitamos a ideia e acabamos criando um para o nosso projeto também.
+
+**O que foi decidido**
+
+Quem iria apresentar o quê na apresentação; o formato dos slides - se PowerPoint ou GitPages;
+
+**Pendências para a Semana seguinte**
+
+- [ ] Consolidar o feedback recebido em issues do GitHub
+- [ ] Quem iria fazer o quê no pós-feedback
+
+## Semana 9 — Pós-feedback (06–13/10)
+
+**O que foi medido**
+
+Nenhuma métrica de dado ainda.
+
+**O que surpreendeu**
+
+O receio da Semana anterior — ter que trocar de base por causa da série
+interrompida do ENEM — se dissolveu ao reler o material da disciplina:
+descontinuidade e inconsistência de dado público é o objeto da matéria, não
+um obstáculo a ser evitado. "Série interrompida" era exatamente a situação da
+Squad.
+
+**O que foi decidido**
+
+Mantida a base do ENEM/Censo Escolar, sem trocar de domínio. Prazo da E1
+adiado de 22/09 para 28/09 pela professora, repassado pelo Davi no Discord.
+Pedro Vargas consolidou as planilhas individuais da Squad em uma só. Da fala
+da professora em sala, Artur trouxe três direcionamentos: não usar
+orquestrador do tipo Airflow neste projeto específico, definir a arquitetura
+antes de avançar, e considerar GitHub Pages como alternativa ao Power BI para
+disponibilização — detalhe que ninguém conseguiu esclarecer melhor depois.
+
+**Pendências para a Semana seguinte**
+
+- [ ] Definir a arquitetura da E1 (origem transacional) a partir do que foi
+      discutido em sala
+- [ ] Esclarecer com a professora ou monitoria o que ela quis dizer com
+      GitHub Pages no lugar de Power BI
