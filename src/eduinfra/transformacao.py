@@ -23,6 +23,10 @@ COLUNAS_CADASTRAIS = (
 
 ESCOLA_EM_ATIVIDADE = "1"
 
+# Escolhido por medição sobre a Silver real: o menor em disco, com leitura
+# empatada com snappy e sem compressão (docs/serializacao-compressao.md).
+COMPRESSAO_PARQUET = "zstd"
+
 
 @dataclass(frozen=True)
 class CamadaSilver:
@@ -143,6 +147,6 @@ def _consulta_itens(colunas_por_item: dict[str, str]) -> str:
 
 def _exportar(conexao: duckdb.DuckDBPyConnection, consulta: str, destino: Path) -> None:
     conexao.execute(
-        f"copy ({consulta}) to '{destino.as_posix()}' (format parquet, compression zstd)"
+        f"copy ({consulta}) to '{destino.as_posix()}' (format parquet, compression {COMPRESSAO_PARQUET})"
     )
     log.info("camada silver gravada em %s", destino.name)
