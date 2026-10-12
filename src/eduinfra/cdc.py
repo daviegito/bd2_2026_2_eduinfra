@@ -29,7 +29,14 @@ class EstadoDoSlot:
 
 
 def garantir_slot(conexao: psycopg.Connection, slot: str = SLOT_PADRAO) -> bool:
-    existente = conexao.execute("select 1 from pg_replication_slots where slot_name = %s", (slot,)).fetchone()
+    existente = conexao.execute(
+        "select database, database = current_database() from pg_replication_slots where slot_name = %s",
+        (slot,),
+    ).fetchone()
+    if existente and not existente[1]:
+        raise RuntimeError(
+            f"o slot {slot} pertence ao banco {existente[0]}; slots são do cluster, então outro banco precisa de outro nome"
+        )
     if existente:
         return False
 
