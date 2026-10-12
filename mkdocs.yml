@@ -11,6 +11,7 @@ theme:
 nav:
   - Início: index.md
   - Caracterização da Carga: caracterizacao.md
+  - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
   - ADRs:
       - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
       - ADR 0002: adr/0002-cadeia-tls-incompleta-do-inep.md

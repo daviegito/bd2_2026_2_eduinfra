@@ -173,7 +173,11 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
 | `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
-| `docker compose run --rm carga tudo` | migrar, ingerir e caracterizar em sequência; é o padrão do compose |
+| `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
+| `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
+| `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
+| `| `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
+| `docker compose run --rm carga tudo` | migrar, ingerir, publicar o analítico e caracterizar; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -198,6 +202,29 @@ docker compose exec banco psql -U eduinfra -d eduinfra \
   -c "show wal_level;" \
   -c "select pubname, pubinsert, pubupdate, pubdelete from pg_publication;"
 ```
+
+### Camada analítica e CDC (E2)
+
+O dado analítico fica numa tabela Delta Lake, `eventos_vistoria`, em
+`$DIRETORIO_DADOS/warehouse/eventos_vistoria` (volume `dados_censo` no Docker),
+particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
+
+```bash
+docker compose run --rm carga publicar-analitico      # linha de base: origem -> Delta, idempotente
+docker compose run --rm carga cdc                     # uma passada do consumidor do slot lógico
+docker compose run --rm carga demonstrar-cdc          # insere na origem e mostra o efeito até o Delta
+```
+
+O serviço `cdc` do Compose roda o consumidor de forma contínua, a cada 2
+segundos, depois que a carga termina. Para parar e retomar sem perder eventos:
+
+```bash
+docker compose stop cdc
+docker compose start cdc
+```
+
+Mecanismo, semântica de entrega, demonstração e medições estão em
+[docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
 
 O resultado esperado é `logical` e a publicação `eduinfra_cdc` com
 `pubinsert = t` e as demais colunas `f`. Um slot de replicação sem consumidor
