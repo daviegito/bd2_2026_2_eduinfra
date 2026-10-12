@@ -10,6 +10,8 @@ services:
       - max_replication_slots=10
       - -c
       - max_wal_senders=10
+      - -c
+      - max_slot_wal_keep_size=1GB
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -37,6 +39,25 @@ services:
         condition: service_healthy
     restart: "no"
     command: ["tudo"]
+
+  cdc:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+    volumes:
+      - dados_censo:/dados
+    depends_on:
+      carga:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    command: ["cdc", "--continuo", "--intervalo", "2"]
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/cdc_vivo) )) -lt 60"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
 volumes:
   dados_postgres:
