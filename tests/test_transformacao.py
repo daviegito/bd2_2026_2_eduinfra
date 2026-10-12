@@ -49,9 +49,7 @@ def configuracao(tmp_path: Path) -> Configuracao:
 
 
 def ler(parquet: Path) -> list[tuple]:
-    return duckdb.connect().execute(
-        f"select * from read_parquet('{parquet.as_posix()}', hive_partitioning=false)"
-    ).fetchall()
+    return duckdb.connect().execute(f"select * from read_parquet('{parquet.as_posix()}')").fetchall()
 
 
 def test_escola_paralisada_fica_de_fora(configuracao, censo_reduzido):

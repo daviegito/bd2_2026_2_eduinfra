@@ -73,8 +73,7 @@ def _copiar_camada_silver(conexao: psycopg.Connection, camada: CamadaSilver) -> 
 def _copiar_parquet(conexao: psycopg.Connection, parquet: Path, tabela: str) -> None:
     leitor = duckdb.connect()
     try:
-        # O diretório ano_censo=AAAA seria lido como coluna extra por inferência hive.
-        leitor.execute(f"select * from read_parquet('{parquet.as_posix()}', hive_partitioning=false)")
+        leitor.execute(f"select * from read_parquet('{parquet.as_posix()}')")
         with conexao.cursor().copy(f"copy {tabela} from stdin") as copia:
             while lote := leitor.fetchmany(TAMANHO_LOTE):
                 for linha in lote:

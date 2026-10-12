@@ -90,24 +90,6 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   tom de trechos específicos antes de aceitar o conteúdo
 - **Quem revisou:** Pedro Teixeira
 
-### 2026-10-10 — Implementação das issues E2-1 (WAL lógico) e E2-2 (ingestão idempotente)
-
-- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
-- **Onde:** `docker-compose.yml`, `alembic/versions/0005_publicacao_cdc.py`,
-  `alembic/versions/0006_manifesto_ingestao.py`, `src/eduinfra/ingestao.py`,
-  `src/eduinfra/cli.py`, `src/eduinfra/transformacao.py`, `src/eduinfra/carga.py`,
-  `tests/test_wal_logico.py`, `tests/test_ingestao.py` e as seções novas do README
-- **O que foi pedido:** Auxílio na implementação e revisão do código relevante para as duas issues tratadas.
-- **O que foi aproveitado:** o código e os testes, depois de rodados contra o
-  banco local (23 testes passando, incluindo os de insert-only que antes eram
-  pulados). Decisões de projeto sugeridas e a revisar pela Squad: publicação só
-  com `INSERT`, manifesto gravado na mesma transação da carga e partição Silver
-  por `ano_censo=AAAA`
-- **Como foi verificado:** `pytest` completo, ciclo de `migrar`/`reverter`
-  da revisão `0005`, e execução da CLI duas vezes (a segunda ignorada e a
-  terceira, com `--forcar`, sem linhas novas). 
-- **Quem revisou:** Pedro Teixeira
-
 ### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
 
 - **Ferramenta:**

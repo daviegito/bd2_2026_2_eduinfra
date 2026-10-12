@@ -169,15 +169,14 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | aplica as migrações até a última revisão |
 | `docker compose run --rm carga reverter --revisao 0003` | volta o esquema até a revisão indicada |
-| `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
-| `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
-| `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
+| `docker compose run --rm carga carregar` | baixa o Censo, se preciso, e carrega; é idempotente |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
+| `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
 | `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
 | `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
 | `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
-| `| `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
-| `docker compose run --rm carga tudo` | migrar, ingerir, publicar o analítico e caracterizar; é o padrão do compose |
+| `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
+| `docker compose run --rm carga tudo` | migrar, carregar, publicar o analítico e caracterizar; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -188,24 +187,11 @@ set -a && source .env && set +a
 uv run eduinfra tudo
 ```
 
-### Captura de mudanças: pré-requisitos (E2)
-
-O serviço `banco` sobe com `wal_level=logical`, o que permite decodificar o WAL
-em eventos. A migração `0005` cria a publicação `eduinfra_cdc`, que cobre só
-`vistoria` e `vistoria_item` e emite apenas `INSERT` (as tabelas são
-insert-only; `UPDATE`, `DELETE` e `TRUNCATE` são bloqueados por gatilho).
-
-Para conferir:
-
-```bash
-docker compose exec banco psql -U eduinfra -d eduinfra \
-  -c "show wal_level;" \
-  -c "select pubname, pubinsert, pubupdate, pubdelete from pg_publication;"
-```
-
 ### Camada analítica e CDC (E2)
 
-O dado analítico fica numa tabela Delta Lake, `eventos_vistoria`, em
+O serviço `banco` sobe com `wal_level=logical` e a migração `0005` publica
+`vistoria` e `vistoria_item` na publicação `eduinfra_cdc`. O dado analítico fica
+numa tabela Delta Lake, `eventos_vistoria`, em
 `$DIRETORIO_DADOS/warehouse/eventos_vistoria` (volume `dados_censo` no Docker),
 particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
 
@@ -225,32 +211,6 @@ docker compose start cdc
 
 Mecanismo, semântica de entrega, demonstração e medições estão em
 [docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
-
-O resultado esperado é `logical` e a publicação `eduinfra_cdc` com
-`pubinsert = t` e as demais colunas `f`. Um slot de replicação sem consumidor
-retém WAL no disco; remova slots abandonados com
-`select pg_drop_replication_slot('nome');`.
-
-### Ingestão em lote idempotente (E2)
-
-Cada ingestão calcula o SHA-256 do CSV de origem e consulta a tabela
-`ingestao_execucao` (o manifesto). Se o ano e o hash já constam, a execução é
-ignorada. A linha do manifesto é gravada na mesma transação da carga, então
-"consta no manifesto" significa "foi carregado por inteiro"; falha no meio faz
-rollback de tudo, inclusive do manifesto.
-
-Os Parquet da camada Silver ficam em `silver/ano_censo=AAAA/`. São escritos em
-arquivos temporários e trocados no fim, e reingerir um ano só substitui a
-partição dele.
-
-Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parquet
-é substituída e o OLTP recebe apenas chaves novas: `vistoria` é insert-only
-(ADR 0001), então corrigir um evento passado exige registrar uma nova vistoria.
-
-```bash
-docker compose exec banco psql -U eduinfra -d eduinfra \
-  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
-```
 
 ## O que a carga produz
 
