@@ -1,7 +1,7 @@
 services:
   banco:
     image: pgvector/pgvector:pg16
-    # Decodificação lógica do WAL: pré-requisito do CDC da E2 (issue E2-1).
+    # Decodificação lógica do WAL: pré-requisito do CDC da E2 (issue #22).
     command:
       - postgres
       - -c
