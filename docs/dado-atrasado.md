@@ -90,6 +90,25 @@ docker compose run --rm carga demonstrar-atraso            # a demonstração ab
 A demonstração insere duas vistorias na origem. Como a origem é insert-only,
 elas ficam lá, marcadas na observação. Rode num ambiente de desenvolvimento.
 
+### Testes
+
+Os testes sem banco rodam direto:
+
+```bash
+uv run pytest tests/test_janelas.py
+```
+
+Os de integração precisam do banco carregado e do `DATABASE_URL` do `.env`,
+que aponta para a porta publicada pelo compose:
+
+```bash
+docker compose up --build -d                 # sobe o banco e roda a carga
+set -a && source .env && set +a              # exporta DATABASE_URL
+uv run pytest tests/test_janelas_integracao.py
+```
+
+Como a demonstração, eles inserem vistorias de teste na origem.
+
 ## Demonstração
 
 Saída real de `demonstrar-atraso` em 12/10/2026, sobre o banco carregado com o

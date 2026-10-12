@@ -28,13 +28,11 @@ import psycopg
 from psycopg import sql
 
 from eduinfra.configuracao import Configuracao
+from eduinfra.transformacao import COMPRESSAO_PARQUET
 
 log = logging.getLogger(__name__)
 
 TOLERANCIA = timedelta(days=7)
-
-# O mesmo codec da camada Silver, escolhido por medição (issue #28).
-COMPRESSAO_PARQUET = "zstd"
 
 # Um registro com registrado_em pouco anterior à última marca pode ter sido
 # confirmado depois dela: now() é a hora de início da transação, não a do commit.

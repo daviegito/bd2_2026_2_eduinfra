@@ -25,9 +25,27 @@ def configuracao(tmp_path_factory):
         pytest.skip("DATABASE_URL não definida")
 
     base = carregar_configuracao()
-    with psycopg.connect(base.dsn) as conexao:
-        if not conexao.execute("select exists (select 1 from vistoria)").fetchone()[0]:
-            pytest.skip("banco sem carga")
+    problema = None
+    try:
+        with psycopg.connect(base.dsn, connect_timeout=5) as conexao:
+            carregado = conexao.execute("select exists (select 1 from vistoria)").fetchone()[0]
+    except psycopg.ProgrammingError as erro:
+        problema = (
+            f"DATABASE_URL não é uma URL de conexão válida ({str(erro).strip()}). Carregue o .env "
+            "(`set -a && source .env && set +a`) ou exporte a URL completa, "
+            "como postgresql://eduinfra:<senha>@localhost:5432/eduinfra"
+        )
+    except psycopg.OperationalError as erro:
+        problema = (
+            f"não foi possível conectar ao banco em DATABASE_URL ({str(erro).strip()}). "
+            "Suba o banco com `docker compose up -d banco` e confira a porta do .env"
+        )
+
+    # Fora do except: a mensagem sai sozinha, sem o rastro da exceção original.
+    if problema:
+        pytest.fail(problema, pytrace=False)
+    if not carregado:
+        pytest.skip("banco sem carga: rode `docker compose up` antes")
 
     configuracao = replace(base, diretorio_dados=Path(tmp_path_factory.mktemp("dados")))
     janelas.processar(configuracao)  # estado de partida: todas as janelas existentes
