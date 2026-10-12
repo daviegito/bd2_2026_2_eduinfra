@@ -76,7 +76,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **O que foi pedido:** levantar quais documentos faltavam pra E1 checando o
   site da disciplina, o repositório e as issues abertas; gerar um rascunho do
   diário de bordo (Semanas 1 a 7) a partir do histórico da Squad no WhatsApp
-  e do estado do repositório; auxílio na geração do próprio `AI-USAGE.md`, lendo as 
+  e do estado do repositório; auxílio na geração do próprio `AI-USAGE.md`, lendo as
   conversas do grupo para encontrar pontos importantes; e auxílio para escrever a
   descrição da PR do diário
 - **O que foi aproveitado:** a identificação dos documentos faltantes (issues
@@ -90,17 +90,17 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   tom de trechos específicos antes de aceitar o conteúdo
 - **Quem revisou:** Pedro Teixeira
 
-### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
+### 2026-10-12 — [preencher: uso de IA na modelagem/migrações do esquema]
 
-- **Ferramenta:**
-- **Onde:** `alembic/versions/000X_*.py`
-- **O que foi pedido:**
-- **O que foi aproveitado:**
-- **Como foi verificado:**
-- **Quem revisou:**
+- **Ferramenta:** Perplexity (assistente conversacional)
+- **Onde:** `alembic/versions/0005_habilita_cdc_logico.py`
+- **O que foi pedido:** ajuda para melhor entender os requisitos pedidos
+- **O que foi aproveitado:** a estrutura de outras migrações do alembic
+- **Como foi verificado:** testes foram realizados para confirmar se os critérios de aceite foram feitos e um PR foi aberto para que outra pessoa revisasse também.
+- **Quem revisou:** Davi
 
 > Preencher por quem trabalhou nas migrações (`0001_cadastro_escolar.py` a
-> `0004_estado_atual.py`) e no modelo insert-only, se algum assistente foi
+> `0005_habilita_cdc_logico.py`) e no modelo insert-only, se algum assistente foi
 > usado na implementação ou na revisão do esquema.
 
 ### AAAA-MM-DD — [preencher: uso de IA na carga e no download do Censo]
