@@ -5,7 +5,7 @@ import sys
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import caracterizacao, comparacao_compressao, comparacao_modelagem
+from eduinfra import caracterizacao, comparacao_compressao, comparacao_modelagem, janelas
 from eduinfra.carga import executar_carga
 from eduinfra.configuracao import Configuracao, carregar_configuracao
 
@@ -15,8 +15,9 @@ log = logging.getLogger("eduinfra")
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
 
-    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "comparar-compressao", "tudo", "gerar_amostra"))
+    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "caracterizar", "comparar-modelagem", "comparar-compressao", "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao")
+    parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
     parser.add_argument("--revisao", default="head", help="revisão alvo do Alembic")
     parser.add_argument("--verboso", action="store_true")
@@ -40,6 +41,23 @@ def main(argumentos: list[str] | None = None) -> int:
     if opcoes.comando == "comparar-compressao":
         silver = configuracao.diretorio_dados / "silver"
         print(comparacao_compressao.formatar_markdown(comparacao_compressao.comparar(silver, opcoes.repeticoes)))
+        return 0
+
+    if opcoes.comando == "processar-janelas":
+        print(janelas.resumo_texto(janelas.processar(configuracao)))
+        return 0
+
+    if opcoes.comando == "reprocessar-janela":
+        if not opcoes.mes:
+            parser.error("reprocessar-janela exige --mes AAAA-MM")
+        janela = janelas.reprocessar_janela(configuracao, opcoes.mes)
+        print(f"janela {janela.mes}: {janela.linhas} linhas, impressão {janela.impressao}")
+        return 0
+
+    if opcoes.comando == "demonstrar-atraso":
+        from eduinfra.demonstracao_atraso import demonstrar
+
+        print(demonstrar(configuracao))
         return 0
 
     if opcoes.comando in ("migrar", "tudo"):
