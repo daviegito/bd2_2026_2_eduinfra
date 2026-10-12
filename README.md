@@ -161,6 +161,37 @@ Para apagar tudo e começar do zero, inclusive o download em cache:
 docker compose down -v
 ```
 
+### Confirmar o WAL lógico
+
+O PostgreSQL de origem inicia com decodificação lógica habilitada. Para conferir
+os parâmetros carregados pelo servidor:
+
+```bash
+docker compose exec banco psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SHOW wal_level;" \
+  -c "SHOW max_replication_slots;" \
+  -c "SHOW max_wal_senders;"
+```
+
+`wal_level` deve retornar `logical`. Para confirmar a publicação e suas tabelas:
+
+```bash
+docker compose exec banco psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -c "SELECT pubname, pubinsert, pubupdate, pubdelete, pubtruncate
+      FROM pg_publication
+      WHERE pubname = 'eduinfra_cdc';" \
+  -c "SELECT pubname, schemaname, tablename
+      FROM pg_publication_tables
+      WHERE pubname = 'eduinfra_cdc'
+      ORDER BY schemaname, tablename;"
+```
+
+A publicação `eduinfra_cdc` inclui `public.vistoria` e
+`public.vistoria_item`. Ambas usam `REPLICA IDENTITY DEFAULT`, isto é, suas
+chaves primárias identificam linhas no WAL lógico. O modelo atual é insert-only,
+mas a identidade por chave evita registrar a linha inteira e deixa a origem
+preparada caso outros eventos sejam publicados no futuro.
+
 ### Comandos da CLI
 
 A imagem expõe a CLI `eduinfra`. Com o banco no ar:
