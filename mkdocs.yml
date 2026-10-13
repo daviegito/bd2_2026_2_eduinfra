@@ -12,6 +12,7 @@ nav:
   - Início: index.md
   - Caracterização da Carga: caracterizacao.md
   - Serialização e Compressão: serializacao-compressao.md
+  - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
   - Dado Atrasado: dado-atrasado.md
   - Camada Analítica: camada-analitica.md
   - ADRs:
