@@ -169,7 +169,9 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | aplica as migrações até a última revisão |
 | `docker compose run --rm carga reverter --revisao 0003` | volta o esquema até a revisão indicada |
-| `docker compose run --rm carga carregar` | baixa o Censo, se preciso, e carrega; é idempotente |
+| `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
+| `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
+| `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
 | `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
@@ -216,6 +218,27 @@ docker compose start cdc
 
 Mecanismo, semântica de entrega, demonstração e medições estão em
 [docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
+
+### Ingestão em lote idempotente (E2)
+
+Cada ingestão calcula o SHA-256 do CSV de origem e consulta a tabela
+`ingestao_execucao` (o manifesto). Se o ano e o hash já constam, a execução é
+ignorada. A linha do manifesto é gravada na mesma transação da carga, então
+"consta no manifesto" significa "foi carregado por inteiro"; falha no meio faz
+rollback de tudo, inclusive do manifesto.
+
+Os Parquet da camada Silver ficam em `silver/ano_censo=AAAA/`. São escritos em
+arquivos temporários e trocados no fim, e reingerir um ano só substitui a
+partição dele.
+
+Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parquet
+é substituída e o OLTP recebe apenas chaves novas: `vistoria` é insert-only
+(ADR 0001), então corrigir um evento passado exige registrar uma nova vistoria.
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
+```
 
 ## O que a carga produz
 

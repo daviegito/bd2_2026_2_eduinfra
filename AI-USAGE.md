@@ -90,6 +90,25 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   tom de trechos específicos antes de aceitar o conteúdo
 - **Quem revisou:** Pedro Teixeira
 
+### 2026-10-13 — Ingestão em lote idempotente (issue #23)
+
+- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
+- **Onde:** `src/eduinfra/ingestao.py`, `alembic/versions/0006_manifesto_ingestao.py`,
+  `src/eduinfra/cli.py`, `src/eduinfra/transformacao.py`, `src/eduinfra/carga.py`,
+  `tests/test_ingestao.py` e a seção nova do README
+- **O que foi pedido:** revisar e auxília no código relevante para a issue #23 sobre a `main` atual, com testes,
+  rodando contra um PostgreSQL 16 local, e depois rebasear o trabalho quando as
+  PRs de WAL, CDC, compressão e dado atrasado entraram na `main`
+- **O que foi aproveitado:** o código e os testes. Decisões de projeto sugeridas
+  e a revisar pela Squad: manifesto gravado na mesma transação da carga, Silver
+  particionada por `ano_censo=AAAA` e arquivo corrigido que substitui só o
+  Parquet, sem reescrever o OLTP (ADR 0001)
+- **Como foi verificado:** `pytest` nos módulos de ingestão, transformação e
+  insert-only (17 passando); CLI executada três vezes sobre um CSV sintético
+  (carga, repetição ignorada e `--forcar` sem linhas novas); leitura da saída
+  pela camada analítica existente. 
+- **Quem revisou:** Pedro Teixeira
+
 ### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
 
 - **Ferramenta:**
