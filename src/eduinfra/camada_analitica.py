@@ -1,12 +1,3 @@
-"""Camada analítica em tabela Delta sobre a Silver.
-
-Junta os três Parquet da Silver numa tabela larga, um registro por item de
-vistoria com UF, município e rede da escola, e a grava em
-dados/warehouse/vistoria_item como tabela Delta. O log de transações
-(_delta_log/) fica ao lado dos dados e faz o papel de catálogo. Issue #24;
-critérios e números em docs/camada-analitica.md.
-"""
-
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -90,7 +81,6 @@ def publicar(diretorio_dados: Path) -> ResumoPublicacao:
 
 
 def pastas_da_silver(diretorio_silver: Path) -> list[Path]:
-    # Aceita a Silver plana da E1 e a particionada por ano (ano_censo=AAAA/).
     pastas = sorted({arquivo.parent for arquivo in diretorio_silver.rglob(f"{TABELA}.parquet")})
     if not pastas:
         raise RuntimeError(f"{TABELA}.parquet não encontrado em {diretorio_silver}: rode a carga antes")
@@ -122,8 +112,7 @@ def gravar(
         "partition_by": list(particoes) or None,
         "writer_properties": WriterProperties(compression=COMPRESSAO),
     }
-    # Troca só as linhas do ano: recarregar um ano não mexe nos outros, e a
-    # troca é um único commit no log.
+    # troca só as linhas do ano. recarregar um ano não mexe nos outros, e a troca é um único commit no log.
     if substituir_ano is not None:
         opcoes["predicate"] = f"ano_censo = {substituir_ano}"
 
@@ -159,8 +148,7 @@ def contar_no_duckdb(caminho: Path) -> dict[int, int]:
 
 
 def contar_no_oltp(dsn: str) -> dict[int, int]:
-    # A tabela analítica guarda as vistorias de linha de base do Censo; as
-    # vistorias do aplicativo chegam pela captura de mudanças (issue #25).
+    # A tabela analítica guarda as vistorias de linha de base do Censo
     with psycopg.connect(dsn) as conexao:
         linhas = conexao.execute(
             """
