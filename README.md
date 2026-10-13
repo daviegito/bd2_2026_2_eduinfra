@@ -175,12 +175,13 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
 | `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
 | `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
-| `docker compose run --rm carga tudo` | os três primeiros em sequência; é o padrão do compose |
 | `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
 | `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
 | `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
-| `docker compose run --rm carga tudo` | migrar, carregar, publicar o analítico e caracterizar; é o padrão do compose |
+| `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
+| `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
+| `docker compose run --rm carga tudo` | migrar, carregar, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -240,6 +241,26 @@ dia, estimativa da Squad que ainda será medida. A leitura do estado atual de um
 escola deve ficar abaixo de 300 ms; medida com as estatísticas do banco
 atualizadas, ela leva menos de 1 ms.
 
+## Camada analítica (E2)
+
+A carga termina gravando uma tabela Delta, particionada por ano do Censo e UF,
+com um registro por item de vistoria.
+Critérios, medições e o que se perde estão em
+[docs/camada-analitica.md](docs/camada-analitica.md).
+
+| O quê | No contêiner | Fora do Docker |
+| --- | --- | --- |
+| Dados da tabela | `/dados/warehouse/vistoria_item/ano_censo=AAAA/sg_uf=UF/` | `dados/warehouse/vistoria_item/...` |
+| Log de transações (catálogo) | `/dados/warehouse/vistoria_item/_delta_log/` | `dados/warehouse/vistoria_item/_delta_log/` |
+
+Os dois ficam no volume `dados_censo`. Para consultar com o DuckDB:
+
+```sql
+install delta;
+load delta;
+select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by all;
+```
+
 ## Estrutura do repositório
 
 ```
@@ -250,6 +271,8 @@ src/eduinfra/       CLI, download, transformação e carga
   transformacao.py  valida o cabeçalho e gera o Parquet intermediário
   carga.py          staging, consolidação idempotente e resumo
   caracterizacao.py contagens e tamanhos da base populada
+  camada_analitica.py tabela Delta da camada analítica e conferência com o OLTP
+  comparacao_particionamento.py medição de particionamento e compactação
 docs/adr/           registros de decisão de arquitetura
 docker-compose.yml  banco PostgreSQL e serviço de carga
 Dockerfile          imagem da carga, com uv
