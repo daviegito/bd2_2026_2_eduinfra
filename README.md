@@ -172,6 +172,9 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga carregar` | baixa o Censo, se preciso, e carrega; é idempotente |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
+| `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
+| `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
+| `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
 | `docker compose run --rm carga tudo` | migrar, carregar, caracterizar e publicar-analitica em sequência; é o padrão do compose |

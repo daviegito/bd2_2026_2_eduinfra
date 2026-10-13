@@ -12,6 +12,7 @@ nav:
   - Início: index.md
   - Caracterização da Carga: caracterizacao.md
   - Serialização e Compressão: serializacao-compressao.md
+  - Dado Atrasado: dado-atrasado.md
   - Camada Analítica: camada-analitica.md
   - ADRs:
       - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
