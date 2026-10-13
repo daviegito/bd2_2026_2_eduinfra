@@ -7,9 +7,11 @@ dependencies = [
     "alembic>=1.20.0",
     "certifi>=2026.7.22",
     "cryptography>=50.0.1",
+    "deltalake>=1.6.6",
     "duckdb>=1.1",
     "httpx>=0.27",
     "psycopg[binary]>=3.2",
+    "pyarrow>=26.0.0",
 ]
 
 [project.scripts]
