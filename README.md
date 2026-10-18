@@ -221,15 +221,26 @@ Mecanismo, semântica de entrega, demonstração e medições estão em
 
 ### Ingestão em lote idempotente (E2)
 
-Cada ingestão calcula o SHA-256 do CSV de origem e consulta a tabela
-`ingestao_execucao` (o manifesto). Se o ano e o hash já constam, a execução é
-ignorada. A linha do manifesto é gravada na mesma transação da carga, então
-"consta no manifesto" significa "foi carregado por inteiro"; falha no meio faz
-rollback de tudo, inclusive do manifesto.
+A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
+na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
+arquivo que a gerou em `origem.sha256`. A execução só é ignorada quando o
+arquivo de origem coincide com **as duas** versões vigentes; por isso a sequência
+A → B → A reprocessa a última execução em vez de ignorá-la.
 
-Os Parquet da camada Silver ficam em `silver/ano_censo=AAAA/`. São escritos em
-arquivos temporários e trocados no fim, e reingerir um ano só substitui a
-partição dele.
+Ordem de uma ingestão:
+
+1. a Silver é montada num diretório de preparo em `_publicacao/`, fora de `silver/`;
+2. o banco é carregado e a linha do manifesto é gravada na mesma transação;
+3. confirmado o commit, a partição `silver/ano_censo=AAAA/` é trocada **inteira**
+   (o diretório é renomeado, nunca arquivo a arquivo), então município, escola e
+   itens são sempre da mesma versão.
+
+Consequências: falha antes do commit deixa banco, manifesto e Silver como
+estavam. Falha depois do commit deixa a Silver antiga; a próxima execução vê o
+manifesto vigente com outra Silver, republica só a Silver e não recarrega o
+banco. Uma queda entre os dois renames da troca é desfeita automaticamente na
+execução seguinte. Entre os dois renames existe uma janela de microssegundos em
+que a partição do ano não existe; um leitor nunca vê uma mistura de versões.
 
 Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parquet
 é substituída e o OLTP recebe apenas chaves novas: `vistoria` é insert-only

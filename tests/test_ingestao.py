@@ -17,7 +17,7 @@ from alembic import command
 from alembic.config import Config
 from urllib.parse import urlsplit
 
-from eduinfra import ingestao
+from eduinfra import ingestao, transformacao
 from eduinfra.configuracao import Configuracao
 from eduinfra.ingestao import ingerir
 
@@ -59,12 +59,19 @@ def colunas_do_catalogo(dsn_teste) -> list[str]:
         return [l[0] for l in conexao.execute("select coluna_censo from item_infraestrutura order by codigo")]
 
 
-def escrever_censo(pasta: Path, colunas: list[str], ano: int = 2024, nome_escola_um: str = "ESCOLA UM") -> Path:
+def escrever_censo(
+    pasta: Path,
+    colunas: list[str],
+    ano: int = 2024,
+    nome_escola_um: str = "ESCOLA UM",
+    nome_municipio_df: str = "Brasília",
+) -> Path:
     cabecalho = ["NU_ANO_CENSO", "CO_UF", "SG_UF", "NO_MUNICIPIO", "CO_MUNICIPIO", "NO_ENTIDADE",
                  "CO_ENTIDADE", "TP_DEPENDENCIA", "TP_LOCALIZACAO", "TP_SITUACAO_FUNCIONAMENTO", *colunas]
     linhas = [";".join(cabecalho)]
     for codigo, nome, municipio, nome_mun, dependencia, localizacao in ESCOLAS:
         nome = nome_escola_um if codigo == 53000001 else nome
+        nome_mun = nome_municipio_df if municipio == 5300108 else nome_mun
         fixos = [str(ano), "53", "DF", nome_mun, str(municipio), nome, str(codigo),
                  str(dependencia), str(localizacao), "1"]
         linhas.append(";".join([*fixos, *["1"] * len(colunas)]))
@@ -109,6 +116,25 @@ def impressao_do_oltp(dsn: str) -> str:
         ).fetchall()
 
     return hashlib.sha256(repr(linhas).encode()).hexdigest()
+
+
+def ler_silver(cfg: Configuracao, tabela: str, coluna: str) -> set[str]:
+    arquivo = transformacao.particao_silver(cfg) / f"{tabela}.parquet"
+    consulta = f"select {coluna} from read_parquet('{arquivo.as_posix()}', hive_partitioning=false)"
+
+    return {linha[0] for linha in duckdb.connect().execute(consulta).fetchall()}
+
+
+def marcador_da_silver(cfg: Configuracao) -> str | None:
+    arquivo = transformacao.particao_silver(cfg) / transformacao.MARCADOR_ORIGEM
+
+    return arquivo.read_text().strip() if arquivo.exists() else None
+
+
+def sobras_de_publicacao(cfg: Configuracao) -> list[str]:
+    area = transformacao.area_de_publicacao(cfg)
+
+    return sorted(p.name for p in area.iterdir()) if area.exists() else []
 
 
 def limpar_oltp(dsn: str) -> None:
@@ -193,6 +219,8 @@ def test_falha_no_meio_nao_deixa_estado_parcial(cfg, colunas_do_catalogo, monkey
     assert contagens(cfg.dsn) == {
         "municipio": 0, "escola": 0, "vistoria": 0, "vistoria_item": 0, "ingestao_execucao": 0,
     }
+    assert not transformacao.particao_silver(cfg).exists()
+    assert sobras_de_publicacao(cfg) == []
 
     monkeypatch.setattr(ingestao, "_consolidar", consolidar_real)
     refeita = ingerir(cfg)
@@ -207,4 +235,131 @@ def test_parquet_e_gravado_sem_arquivo_temporario_sobrando(cfg, colunas_do_catal
 
     particao = cfg.diretorio_dados / "silver" / "ano_censo=2024"
 
-    assert sorted(p.name for p in particao.iterdir()) == ["escola.parquet", "municipio.parquet", "vistoria_item.parquet"]
+    assert sorted(p.name for p in particao.iterdir()) == [
+        "escola.parquet",
+        "municipio.parquet",
+        "origem.sha256",
+        "vistoria_item.parquet",
+    ]
+    assert sobras_de_publicacao(cfg) == []
+
+
+def hash_de(arquivo: Path) -> str:
+    return ingestao.hash_do_arquivo(arquivo)
+
+
+def test_falha_durante_a_troca_da_silver_nao_mistura_versoes(cfg, colunas_do_catalogo, monkeypatch):
+    a = escrever_censo(cfg.diretorio_dados, colunas_do_catalogo)
+    hash_a = hash_de(a)
+    ingerir(cfg)
+
+    b = escrever_censo(
+        cfg.diretorio_dados, colunas_do_catalogo, nome_escola_um="ESCOLA UM B", nome_municipio_df="Brasília B"
+    )
+    hash_b = hash_de(b)
+
+    renomeacoes = []
+    rename_real = transformacao.os.rename
+
+    def rename_que_falha_na_segunda(origem, destino):
+        renomeacoes.append((origem, destino))
+        if len(renomeacoes) == 2:
+            raise OSError("falha simulada na segunda troca")
+        return rename_real(origem, destino)
+
+    monkeypatch.setattr(transformacao.os, "rename", rename_que_falha_na_segunda)
+
+    with pytest.raises(OSError, match="segunda troca"):
+        ingerir(cfg)
+
+    # O banco foi confirmado ANTES da publicação: o manifesto já registra B, mesmo com a Silver falhando.
+    assert contagens(cfg.dsn)["ingestao_execucao"] == 2
+
+    # Município e escola continuam da MESMA versão (A): a referência entre eles não quebra.
+    assert ler_silver(cfg, "municipio", "no_municipio") == {"Brasília", "Goiânia"}
+    assert "ESCOLA UM" in ler_silver(cfg, "escola", "no_entidade")
+    assert "ESCOLA UM B" not in ler_silver(cfg, "escola", "no_entidade")
+    assert marcador_da_silver(cfg) == hash_a
+    assert sobras_de_publicacao(cfg) == []
+
+    # O banco já tinha confirmado a versão B: o manifesto registra B e a Silver ficou para trás.
+    monkeypatch.setattr(transformacao.os, "rename", rename_real)
+    recuperada = ingerir(cfg)
+
+    assert recuperada.silver_republicada
+    assert recuperada.carga is None
+    assert ler_silver(cfg, "municipio", "no_municipio") == {"Brasília B", "Goiânia"}
+    assert "ESCOLA UM B" in ler_silver(cfg, "escola", "no_entidade")
+    assert marcador_da_silver(cfg) == hash_b
+    assert contagens(cfg.dsn)["ingestao_execucao"] == 2
+    assert sobras_de_publicacao(cfg) == []
+
+
+def test_interrupcao_antes_do_commit_nao_publica_a_silver(cfg, colunas_do_catalogo, monkeypatch):
+    a = escrever_censo(cfg.diretorio_dados, colunas_do_catalogo)
+    hash_a = hash_de(a)
+    ingerir(cfg)
+    banco_antes = contagens(cfg.dsn), impressao_do_oltp(cfg.dsn)
+
+    escrever_censo(cfg.diretorio_dados, colunas_do_catalogo, nome_escola_um="ESCOLA UM B", nome_municipio_df="Brasília B")
+    registrar_real = ingestao._registrar
+
+    def registrar_e_interromper(*argumentos, **nomeados):
+        registrar_real(*argumentos, **nomeados)
+        raise RuntimeError("interrupção simulada depois do INSERT no manifesto, antes do commit")
+
+    monkeypatch.setattr(ingestao, "_registrar", registrar_e_interromper)
+
+    with pytest.raises(RuntimeError, match="antes do commit"):
+        ingerir(cfg)
+
+    # Rollback real preservou o banco e o manifesto...
+    assert (contagens(cfg.dsn), impressao_do_oltp(cfg.dsn)) == banco_antes
+    # ...e a Silver publicada continua a de antes: a nova nunca foi publicada.
+    assert marcador_da_silver(cfg) == hash_a
+    assert ler_silver(cfg, "municipio", "no_municipio") == {"Brasília", "Goiânia"}
+    assert "ESCOLA UM B" not in ler_silver(cfg, "escola", "no_entidade")
+    assert sobras_de_publicacao(cfg) == []
+
+
+def test_voltar_ao_arquivo_anterior_republica_a_silver(cfg, colunas_do_catalogo):
+    a = escrever_censo(cfg.diretorio_dados, colunas_do_catalogo)
+    hash_a = hash_de(a)
+    ingerir(cfg)
+    apos_a = impressao_do_oltp(cfg.dsn)
+
+    escrever_censo(cfg.diretorio_dados, colunas_do_catalogo, nome_escola_um="ESCOLA UM B", nome_municipio_df="Brasília B")
+    ingerir(cfg)
+    assert "ESCOLA UM B" in ler_silver(cfg, "escola", "no_entidade")
+
+    # A -> B -> A: a última execução NÃO pode ser ignorada, porque a versão vigente é B.
+    escrever_censo(cfg.diretorio_dados, colunas_do_catalogo)
+    volta = ingerir(cfg)
+
+    assert not volta.ignorada
+    assert marcador_da_silver(cfg) == hash_a
+    assert ler_silver(cfg, "municipio", "no_municipio") == {"Brasília", "Goiânia"}
+    assert "ESCOLA UM" in ler_silver(cfg, "escola", "no_entidade")
+    assert "ESCOLA UM B" not in ler_silver(cfg, "escola", "no_entidade")
+    assert impressao_do_oltp(cfg.dsn) == apos_a
+    assert contagens(cfg.dsn)["ingestao_execucao"] == 3
+
+    # Agora sim A é a versão vigente no manifesto e na Silver: repetir é ignorado.
+    assert ingerir(cfg).ignorada
+
+
+def test_queda_entre_as_duas_trocas_e_recuperada_na_proxima_execucao(cfg, colunas_do_catalogo):
+    escrever_censo(cfg.diretorio_dados, colunas_do_catalogo)
+    ingerir(cfg)
+
+    # Estado deixado por um processo morto entre os dois renames: a cópia antiga existe e a partição não.
+    antigo = transformacao.area_de_publicacao(cfg) / f"antigo-ano_censo={cfg.ano_censo}"
+    antigo.parent.mkdir(parents=True, exist_ok=True)
+    transformacao.particao_silver(cfg).rename(antigo)
+
+    reexecucao = ingerir(cfg)
+
+    assert reexecucao.ignorada
+    assert transformacao.particao_silver(cfg).exists()
+    assert ler_silver(cfg, "municipio", "no_municipio") == {"Brasília", "Goiânia"}
+    assert sobras_de_publicacao(cfg) == []

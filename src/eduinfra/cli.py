@@ -94,6 +94,8 @@ def main(argumentos: list[str] | None = None) -> int:
         resultado = ingerir(configuracao, forcar=opcoes.forcar)
         if resultado.ignorada:
             log.info("ingestão ignorada: arquivo já registrado no manifesto (use --forcar para reexecutar)")
+        elif resultado.silver_republicada:
+            log.info("Silver republicada: o banco já estava na versão deste arquivo")
         else:
             resumo = resultado.carga
             log.info(

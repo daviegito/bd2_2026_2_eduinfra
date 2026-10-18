@@ -1,9 +1,16 @@
 """Ingestão em lote idempotente do Censo Escolar (E2).
 
-Reexecutar com o mesmo arquivo de origem não muda nada: o hash do arquivo é
-comparado com o manifesto e a execução é ignorada. Com um arquivo diferente
-para o mesmo ano, a partição Parquet daquele ano é reescrita e o OLTP recebe só
-o que ainda não existe (ADR 0001: o passado não é reescrito).
+A versão vigente de um ano é o hash do arquivo da última execução registrada
+no manifesto, e a Silver publicada só vale se carregar esse mesmo hash. Se os
+dois coincidem com o arquivo de origem, a execução é ignorada. Com um arquivo
+diferente, a partição Parquet do ano é substituída e o OLTP recebe só o que
+ainda não existe (ADR 0001: o passado não é reescrito).
+
+Ordem de uma ingestão: a Silver é montada num preparo privado, o banco é
+carregado e confirmado, e só então a Silver é publicada. Falha antes do commit
+deixa banco, manifesto e Silver exatamente como estavam. Falha depois do commit
+deixa a Silver antiga, que a próxima execução reconhece como desatualizada
+(manifesto vigente, Silver com outro hash) e republica sem recarregar o banco.
 """
 
 import hashlib
@@ -23,7 +30,12 @@ from eduinfra.carga import (
 )
 from eduinfra.configuracao import Configuracao
 from eduinfra.microdados import garantir_microdados
-from eduinfra.transformacao import preparar_camada_silver
+from eduinfra.transformacao import (
+    descartar_preparo,
+    hash_da_silver,
+    montar_camada_silver,
+    publicar_particao,
+)
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +47,7 @@ class ResumoIngestao:
     ignorada: bool
     hash_sha256: str
     carga: ResumoCarga | None
+    silver_republicada: bool = False
 
 
 def hash_do_arquivo(caminho: Path) -> str:
@@ -48,6 +61,7 @@ def hash_do_arquivo(caminho: Path) -> str:
 
 def ingerir(configuracao: Configuracao, forcar: bool = False) -> ResumoIngestao:
     iniciado_em = datetime.now(timezone.utc)
+    ano = configuracao.ano_censo
 
     with psycopg.connect(configuracao.dsn) as conexao:
         colunas_por_item = _catalogo_de_itens(conexao)
@@ -55,50 +69,73 @@ def ingerir(configuracao: Configuracao, forcar: bool = False) -> ResumoIngestao:
         csv_bruto = garantir_microdados(configuracao)
         hash_origem = hash_do_arquivo(csv_bruto)
 
-        if not forcar and _ja_ingerido(conexao, configuracao.ano_censo, hash_origem):
-            log.info(
-                "ano %d já ingerido com este arquivo (sha256 %s…); nada a fazer. Use --forcar para reexecutar.",
-                configuracao.ano_censo,
-                hash_origem[:12],
-            )
-            return ResumoIngestao(ignorada=True, hash_sha256=hash_origem, carga=None)
+        vigente_no_banco = _hash_vigente(conexao, ano)
 
-        if _ano_ja_ingerido_com_outro_arquivo(conexao, configuracao.ano_censo, hash_origem):
+        if not forcar and vigente_no_banco == hash_origem:
+            if hash_da_silver(configuracao) == hash_origem:
+                log.info(
+                    "ano %d já ingerido com este arquivo (sha256 %s…); nada a fazer. Use --forcar para reexecutar.",
+                    ano,
+                    hash_origem[:12],
+                )
+                return ResumoIngestao(ignorada=True, hash_sha256=hash_origem, carga=None)
+
+            log.warning(
+                "ano %d consta no manifesto com este arquivo, mas a Silver publicada é de outra versão; republicando a Silver.",
+                ano,
+            )
+            _publicar_silver(configuracao, csv_bruto, colunas_por_item, hash_origem)
+            return ResumoIngestao(ignorada=False, hash_sha256=hash_origem, carga=None, silver_republicada=True)
+
+        if vigente_no_banco is not None and vigente_no_banco != hash_origem:
             log.warning(
                 "ano %d já foi ingerido com um arquivo diferente: a partição Parquet será substituída; "
                 "o OLTP só recebe chaves novas, porque vistoria é insert-only.",
-                configuracao.ano_censo,
+                ano,
             )
 
-        camada = preparar_camada_silver(configuracao, csv_bruto, colunas_por_item)
+        # As leituras acima abriram uma transação implícita. Encerrá-la aqui faz do bloco abaixo a
+        # transação de fato (e não um savepoint), de modo que o commit acontece ao sair dele,
+        # antes de a Silver ser publicada.
+        conexao.commit()
 
-        with conexao.transaction():
-            conexao.execute(TABELAS_DE_APOIO)
-            _copiar_camada_silver(conexao, camada)
-            carga = _consolidar(conexao, configuracao)
-            _registrar(conexao, configuracao, csv_bruto, hash_origem, forcar, carga, iniciado_em)
+        camada, preparo = montar_camada_silver(configuracao, csv_bruto, colunas_por_item, hash_origem)
+        try:
+            with conexao.transaction():
+                conexao.execute(TABELAS_DE_APOIO)
+                _copiar_camada_silver(conexao, camada)
+                carga = _consolidar(conexao, configuracao)
+                _registrar(conexao, configuracao, csv_bruto, hash_origem, forcar, carga, iniciado_em)
+
+            # Só depois do commit: até aqui a Silver publicada não foi tocada.
+            publicar_particao(configuracao, preparo)
+        finally:
+            descartar_preparo(preparo)
 
     return ResumoIngestao(ignorada=False, hash_sha256=hash_origem, carga=carga)
 
 
-def _ja_ingerido(conexao: psycopg.Connection, ano: int, hash_origem: str) -> bool:
-    return (
-        conexao.execute(
-            "select 1 from ingestao_execucao where ano_censo = %s and hash_sha256 = %s limit 1",
-            (ano, hash_origem),
-        ).fetchone()
-        is not None
-    )
+def _publicar_silver(
+    configuracao: Configuracao,
+    csv_bruto: Path,
+    colunas_por_item: dict[str, str],
+    hash_origem: str,
+) -> None:
+    _, preparo = montar_camada_silver(configuracao, csv_bruto, colunas_por_item, hash_origem)
+    try:
+        publicar_particao(configuracao, preparo)
+    finally:
+        descartar_preparo(preparo)
 
 
-def _ano_ja_ingerido_com_outro_arquivo(conexao: psycopg.Connection, ano: int, hash_origem: str) -> bool:
-    return (
-        conexao.execute(
-            "select 1 from ingestao_execucao where ano_censo = %s and hash_sha256 <> %s limit 1",
-            (ano, hash_origem),
-        ).fetchone()
-        is not None
-    )
+def _hash_vigente(conexao: psycopg.Connection, ano: int) -> str | None:
+    """Hash do arquivo da última execução concluída do ano (a versão vigente)."""
+    linha = conexao.execute(
+        "select hash_sha256 from ingestao_execucao where ano_censo = %s order by id desc limit 1",
+        (ano,),
+    ).fetchone()
+
+    return linha[0] if linha else None
 
 
 def _registrar(
