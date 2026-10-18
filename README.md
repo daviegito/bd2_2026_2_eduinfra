@@ -169,7 +169,9 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | aplica as migrações até a última revisão |
 | `docker compose run --rm carga reverter --revisao 0003` | volta o esquema até a revisão indicada |
-| `docker compose run --rm carga carregar` | baixa o Censo, se preciso, e carrega; é idempotente |
+| `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
+| `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
+| `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
 | `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
@@ -216,6 +218,38 @@ docker compose start cdc
 
 Mecanismo, semântica de entrega, demonstração e medições estão em
 [docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
+
+### Ingestão em lote idempotente (E2)
+
+A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
+na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
+arquivo que a gerou em `origem.sha256`. A execução só é ignorada quando o
+arquivo de origem coincide com **as duas** versões vigentes; por isso a sequência
+A → B → A reprocessa a última execução em vez de ignorá-la.
+
+Ordem de uma ingestão:
+
+1. a Silver é montada num diretório de preparo em `_publicacao/`, fora de `silver/`;
+2. o banco é carregado e a linha do manifesto é gravada na mesma transação;
+3. confirmado o commit, a partição `silver/ano_censo=AAAA/` é trocada **inteira**
+   (o diretório é renomeado, nunca arquivo a arquivo), então município, escola e
+   itens são sempre da mesma versão.
+
+Consequências: falha antes do commit deixa banco, manifesto e Silver como
+estavam. Falha depois do commit deixa a Silver antiga; a próxima execução vê o
+manifesto vigente com outra Silver, republica só a Silver e não recarrega o
+banco. Uma queda entre os dois renames da troca é desfeita automaticamente na
+execução seguinte. Entre os dois renames existe uma janela de microssegundos em
+que a partição do ano não existe; um leitor nunca vê uma mistura de versões.
+
+Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parquet
+é substituída e o OLTP recebe apenas chaves novas: `vistoria` é insert-only
+(ADR 0001), então corrigir um evento passado exige registrar uma nova vistoria.
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
+```
 
 ## O que a carga produz
 
