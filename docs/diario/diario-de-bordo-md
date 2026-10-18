@@ -244,6 +244,28 @@ Quem iria apresentar o quê na apresentação; o formato dos slides - se PowerPo
 
 **O que foi medido**
 
+O desenvolvimento mostrou que as principais decisões do banco analítico foram orientadas por medições reais, e não apenas por preferência técnica. A escolha de Parquet com zstd reduziu drasticamente o armazenamento sem penalizar leitura; a partição por ano e UF acelerou consultas filtradas; e o CDC via slot lógico garantiu rastreabilidade e tolerância a falhas, ainda que com custo maior que a recarga incremental no volume testado.
+
+**O que surpreendeu**
+
+Compressão pode reduzir muito o armazenamento sem afetar sensivelmente o tempo de consulta; Dado atrasado pode ser tratado por reprocessamento idempotente, em vez de descarte; Uma alteração pequena no WAL lógico pode ser a base indispensável de todo o fluxo de CDC; CDC não é automaticamente mais rápido que recarga incremental; seu benefício está na captura confiável de mudanças; Muitas gravações pequenas fragmentam a tabela e pioram consultas, mas a compactação corrige isso rapidamente.
+
+**O que foi decidido**
+
+As decisões técnicas convergiram para um pipeline analítico baseado em PostgreSQL como origem, Parquet zstd na Silver, Delta Lake particionado por ano e UF na camada analítica e CDC por slot lógico para captura de mudanças.
+
+Essas escolhas privilegiaram três critérios: reduzir armazenamento sem prejudicar consulta, garantir reprocessamento idempotente diante de dados atrasados e assegurar entrega controlada dos eventos mesmo após falhas do consumidor.
+
+**Pendências para a Semana seguinte**
+
+- [ ] Revisar documentação
+- [ ] Resolver pendências
+- [ ] Elaborar funcionalidades para a E2
+
+## Semana 10 — Ajustes finais (14/10–21/10)
+
+**O que foi medido**
+
 Nenhuma métrica de dado ainda.
 
 **O que surpreendeu**
@@ -269,4 +291,5 @@ disponibilização — detalhe que ninguém conseguiu esclarecer melhor depois.
 - [ ] Definir a arquitetura da E1 (origem transacional) a partir do que foi
       discutido em sala
 - [ ] Esclarecer com a professora ou monitoria o que ela quis dizer com
+      GitHub Pages no lugar de Power BI
       GitHub Pages no lugar de Power BI
