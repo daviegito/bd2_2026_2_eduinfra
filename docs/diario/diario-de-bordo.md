@@ -4,7 +4,6 @@ Registro semanal curto. Três perguntas, uma entrada por Semana. É insumo das
 retrospectivas e da defesa final, e é a evidência que sustenta o componente de
 processo da avaliação de Entrega.
 
-
 ## Semana 1 — Formação da Squad (11–17/08)
 
 **O que foi medido**
@@ -26,7 +25,6 @@ via link de convite, em vez de recrutar ativamente.
 **Pendências para a Semana seguinte**
 
 - [x] Ver se mais alguém entra pelo link antes de fechar os 4 membros iniciais
-
 
 ## Semana 2 — Primeiras ideias de domínio (18–24/08)
 
@@ -53,7 +51,6 @@ novos nomes da planilha.
 
 - [ ] Decidir se e como convidar os 3 nomes que apareceram na planilha
 - [ ] Amadurecer as duas ideias de domínio
-
 
 ## Semana 3 — Domínio escolhido: ENEM × Infraestrutura Escolar (25–31/08)
 
@@ -87,7 +84,6 @@ ENEM × Infraestrutura Escolar venceu o de trajetórias acadêmicas por 5 votos 
 - [ ] Entender o que a professora espera do formato final da entrega (não
       ficou claro se o projeto vira uma "plataforma")
 
-
 ## Semana 4 — Organização de ferramentas (01–07/09)
 
 **O que foi medido**
@@ -111,7 +107,6 @@ sexta 11/09.
 
 - [ ] Cada integrante preencher sua cópia da planilha até 09/09
 - [ ] Marcar a primeira reunião da Squad pelo When2Meet
-
 
 ## Semana 5 — Primeira reunião, repositório e primeiro obstáculo de dados (08–14/09)
 
@@ -149,7 +144,6 @@ provisória, já que o 2025 não tem resultados disponíveis.
       conseguiu
 - [ ] Confirmar se dá para usar o ENEM 2024 sem prejuízo do projeto
 
-
 ## Semana 6 — Validação do domínio e mudança de prazo (15–21/09)
 
 **O que foi medido**
@@ -180,7 +174,6 @@ disponibilização — detalhe que ninguém conseguiu esclarecer melhor depois.
       discutido em sala
 - [ ] Esclarecer com a professora ou monitoria o que ela quis dizer com
       GitHub Pages no lugar de Power BI
-
 
 ## Semana 7 — Implementação da origem transacional (22–28/09)
 
@@ -230,3 +223,94 @@ em 4 migrações Alembic, carga automatizada e idempotente via Docker Compose.
 - [ ] Mergear a PR que adequa o ADR 0001 ao template da disciplina e adiciona
       o índice de ADRs
 - [ ] Definir o plano de ingestão para a E2 (Semana 10)
+
+## Semana 8 — Apresentação e feedback (29–05/10)
+
+**O que foi medido**
+
+Nenhuma métrica de dado ainda.
+
+**O que surpreendeu**
+
+Para a apresentação, não sabíamos qual formato seria o melhor para apresentar e nos impressionamos que muitos dos grupos tinham criado GitPages para isso. Aproveitamos a ideia e acabamos criando um para o nosso projeto também.
+
+**O que foi decidido**
+
+Quem iria apresentar o quê na apresentação; o formato dos slides - se PowerPoint ou GitPages;
+
+**Pendências para a Semana seguinte**
+
+- [ ] Consolidar o feedback recebido em issues do GitHub
+- [ ] Quem iria fazer o quê no pós-feedback
+
+## Semana 9 — Pós-feedback (06–13/10)
+
+**O que foi medido**
+
+O desenvolvimento mostrou que as principais decisões do banco analítico foram orientadas por medições reais, e não apenas por preferência técnica. A escolha de Parquet com zstd reduziu drasticamente o armazenamento sem penalizar leitura; a partição por ano e UF acelerou consultas filtradas; e o CDC via slot lógico garantiu rastreabilidade e tolerância a falhas, ainda que com custo maior que a recarga incremental no volume testado.
+
+**O que surpreendeu**
+
+Compressão pode reduzir muito o armazenamento sem afetar sensivelmente o tempo de consulta; Dado atrasado pode ser tratado por reprocessamento idempotente, em vez de descarte; Uma alteração pequena no WAL lógico pode ser a base indispensável de todo o fluxo de CDC; CDC não é automaticamente mais rápido que recarga incremental; seu benefício está na captura confiável de mudanças; Muitas gravações pequenas fragmentam a tabela e pioram consultas, mas a compactação corrige isso rapidamente.
+
+**O que foi decidido**
+
+As decisões técnicas convergiram para um pipeline analítico baseado em PostgreSQL como origem, Parquet zstd na Silver, Delta Lake particionado por ano e UF na camada analítica e CDC por slot lógico para captura de mudanças.
+
+Essas escolhas privilegiaram três critérios: reduzir armazenamento sem prejudicar consulta, garantir reprocessamento idempotente diante de dados atrasados e assegurar entrega controlada dos eventos mesmo após falhas do consumidor.
+
+**Pendências para a Semana seguinte**
+
+- [ ] Revisar documentação
+- [ ] Resolver pendências
+- [ ] Elaborar funcionalidades para a E2
+
+## Semana 10 — Revisão da ingestão e ADR 0004 (14–21/10)
+
+**O que foi medido**
+
+Nenhum benchmark novo. O que se mediu nesta Semana foi o comportamento sob
+falha da ingestão em lote: a revisão da PR #36 acrescentou 4 testes
+(falha durante a troca da Silver, interrupção antes do commit, retorno ao
+arquivo anterior A→B→A e queda entre os dois renames). As medições de captura
+da Semana 9 foram consolidadas no
+[ADR 0004](../adr/0004-ingestao.md): o slot lógico foi mais rápido só com 1
+vistoria (19,7 ms contra 72,1 ms) e mais lento com 5.000 vistorias
+(4.890,7 ms contra 1.011,0 ms), com contagens idênticas. Latência de ponta a
+ponta e p95 seguem sem medição.
+
+**O que surpreendeu**
+
+A revisão da PR encontrou três falhas que os testes originais não pegavam.
+A Silver podia ficar com uma mistura de versões, porque era trocada arquivo
+a arquivo. Ela também era publicada antes do commit no banco: o bloco
+transacional virava um savepoint, e o commit de fato só vinha depois da
+publicação. Por fim, um arquivo que voltava a uma versão anterior
+era ignorado, porque o hash era comparado com todo o histórico, não só com a
+versão vigente. A ingestão "idempotente" estava correta no caminho feliz,
+mas não na falha.
+
+**O que foi decidido**
+
+A partição `ano_censo=AAAA` passa a ser trocada inteira, por rename de
+diretório, e só depois do commit do banco e do manifesto. A versão vigente
+de cada ano é o hash da última execução do manifesto junto com o marcador
+`origem.sha256` da Silver. A decisão de combinar lote idempotente e CDC pelo
+slot lógico foi registrada no ADR 0004 (status: proposto), escolhida pelo
+requisito da E2 e pela captura por ordem de commit, e não por velocidade.
+Também foram definidos gatilhos de revisão: atraso do slot acima de 100 MB,
+reprocessamento acima de 1 minuto ou 1 GB, e mais de 5% de eventos fora da
+tolerância de 7 dias.
+
+**Pendências para a Semana seguinte**
+
+- [ ] Dividir as tarefas da E3 (camada analítica transformada, testada e
+      orquestrada, prazo 03/11) entre a Squad
+- [ ] Escrever o ADR 0005 (transformação, testes de dados e orquestração,
+      issue #6)
+- [ ] Escolher a ferramenta de orquestração sem usar Airflow, conforme a
+      orientação da professora registrada na Semana 6
+- [ ] Unificar os dois caminhos de atraso (Parquet por janelas e CDC em
+      Delta) antes de construir a transformação sobre eles
+- [ ] Escrever o ADR 0003 (armazenamento analítico em formato aberto), ainda
+      "a escrever"
