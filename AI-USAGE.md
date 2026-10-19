@@ -171,3 +171,24 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Aproveitado:** rascunho sobre lote idempotente, CDC, alternativas, medições, perdas e gatilhos de revisão.
 - **Verificação:** comparação com a issue #5, código e documentação da `main` após o merge da PR #36. Os benchmarks citados são os já registrados pela equipe.
 - **Quem revisou:** pendente.
+
+### 2026-10-19 — Diário de bordo da Semana 10 e revisão do AI-USAGE.md da E2
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório)
+- **Onde:** `docs/diario/diario-de-bordo-md` (Semana 10) e `AI-USAGE.md`
+- **O que foi pedido:** ler o histórico do git (commits, branches remotas e
+  ADR 0004) e sugerir o conteúdo da Semana 10, que ainda era uma cópia da
+  Semana 6; depois ajustar as pendências para a preparação da E3, já que a E2
+  é entregue hoje. Em seguida, comparar este arquivo com as PRs da E2 e com as
+  outras branches para achar entradas faltando
+- **O que foi aproveitado:** o texto das quatro seções da Semana 10 e as
+  pendências da E3; a identificação de que a entrada do Davi sobre a migração
+  0005 só existia na branch `docs/ai-usage` e nunca tinha sido integrada,
+  trazida para cá por merge para manter a autoria dele
+- **Como foi verificado:** os números da Semana 10 foram conferidos no ADR
+  0004 e as falhas corrigidas no commit `dce18df`; a IA apontou que os
+  benchmarks citados são de 12/10 (Semana 9), para não registrá-los como
+  medição nova. A ausência da entrada do Davi foi confirmada com
+  `git branch -a --contains 5e4c802` e buscando o texto em todas as branches.
+  Os commits foram feitos à mão, sem a IA
+- **Quem revisou:** Marcos Vinícius
