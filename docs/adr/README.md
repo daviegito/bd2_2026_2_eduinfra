@@ -13,7 +13,7 @@ Os 5 ADRs obrigatórios da disciplina, um por tema.
 | --- | --- | --- | --- | --- |
 | [0001](0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem | E1 | Aceito | #3 |
 | 0003 | Armazenamento analítico em formato aberto | Tema livre | A escrever | #4 |
-| 0004 | Ingestão em lote e captura de mudanças | E2 | A escrever | #5 |
+| [0004](0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL | E2 | Proposto | #5 |
 | 0005 | Transformação, testes de dados e orquestração | E3 | A escrever | #6 |
 | 0006 | Consumo (painel e camada semântica) e ETL reverso | E4 | A escrever | #7 |
 
