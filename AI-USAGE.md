@@ -144,6 +144,45 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** migrações 0001 a 0005 do zero num banco vazio, `publicar-analitico`, `demonstrar-cdc` (51 itens na entrega normal, 68 após o consumidor parado, 34 reentregues e 0 inseridos após a falha, 17 e depois 0 no reprocessamento) e 40 testes passando. Ficaram sem verificação o healthcheck do serviço `cdc` no Compose e a latência ponta a ponta, como registrado no PR
 - **Quem revisou:** Gabriel (PR #34)
 
+### 2026-10-12 — Serialização e compressão da camada Silver (issue #28)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/comparacao_compressao.py`, `tests/test_comparacao_compressao.py`,
+  o comando `comparar-compressao`, a constante `COMPRESSAO_PARQUET` em
+  `transformacao.py` e `docs/serializacao-compressao.md` (PR #31)
+- **O que foi pedido:** apoio para implementar a issue #28, no escopo definido por
+  Gabriel: comparar CSV e Parquet (sem compressão, snappy e zstd) sobre a Silver real,
+  a partir do padrão de acesso analítico
+- **O que foi aproveitado:** sugestões e trechos de código para o comando de medição e
+  as consultas típicas, a ideia de intercalar as leituras entre formatos para reduzir o
+  ruído da máquina e a redação inicial do documento, revisados e ajustados por Gabriel
+- **Como foi verificado:** Gabriel executou `comparar-compressao --repeticoes 15` sobre
+  o Censo 2024 (3.078.105 itens), conferiu que as respostas eram idênticas em todos os
+  formatos e que os testes do módulo passavam
+- **Quem revisou:** Davi (PR #31)
+
+### 2026-10-12 — Dado atrasado e reprocessamento de janela (issue #27)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/janelas.py`, `src/eduinfra/demonstracao_atraso.py`, os comandos
+  `processar-janelas`, `reprocessar-janela` e `demonstrar-atraso`, `tests/test_janelas.py`,
+  `tests/test_janelas_integracao.py` e `docs/dado-atrasado.md` (PR #32)
+- **O que foi pedido:** apoio para implementar a issue #27, no escopo definido por
+  Gabriel: janelas pelo mês de `ocorrido_em`, tolerância a atraso e reprocessamento
+  idempotente de uma janela
+- **O que foi aproveitado:** sugestões de desenho discutidas e aprovadas por Gabriel
+  (janela mensal, tolerância de 7 dias, reabrir a janela em vez de descartar o atraso),
+  trechos de código, testes e a redação inicial do documento, revisados e ajustados
+  por ele
+- **Como foi verificado:** Gabriel rodou `demonstrar-atraso` contra o banco com o
+  Censo 2024 e `reprocessar-janela --mes 2024-05` duas vezes, com a mesma impressão
+  (7,9 s e 8,1 s); 11 testes de unidade e 5 de integração passando. A primeira versão
+  estourou a memória nessa janela, o que levou ao limite de 1 GB no DuckDB. A mensagem
+  de erro dos testes de integração foi corrigida depois da revisão do Davi
+- **Quem revisou:** Davi (PR #32)
+
 ### 2026-10-13 — Ingestão em lote idempotente (issue #23)
 
 - **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
