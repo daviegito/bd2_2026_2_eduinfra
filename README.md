@@ -23,16 +23,43 @@ camada de serviço (Gold) e o consumo pelo assistente.
 
 ```mermaid
 flowchart LR
-    INEP["INEP<br/>ENEM, Censo, INSE,<br/>dicionários"] -->|extração anual| LAKE["Bronze / Silver<br/>Parquet + DuckDB"]
-    IBGE["API do IBGE"] -->|enriquecimento| LAKE
-    APP["Aplicativo de vistorias"] --> OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
-    OLTP -->|ingestão, E2| LAKE
-    LAKE -->|transformação| GOLD[("Gold<br/>PostgreSQL")]
-    LAKE -->|embeddings| VET[("Banco vetorial<br/>pgvector")]
-    GOLD --> AGENTE["Assistente RAG<br/>ferramentas MCP"]
+    INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
+    IBGE["API do IBGE"]
+    APP["Aplicativo<br/>de vistorias"]
+
+    BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
+    LOTE["Ingestão em lote<br/>Validação e padronização"]
+    SILVER["Silver<br/>Dados tratados<br/>Parquet / Delta"]
+
+    OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
+    CDC["CDC<br/>Captura pelo WAL"]
+    DUCK["DuckDB<br/>Consulta e processamento"]
+    GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
+
+    EMB["Geração de<br/>embeddings"]
+    VET[("Banco vetorial<br/>pgvector")]
+    AGENTE["Assistente RAG<br/>ferramentas MCP"]
+    CACHE[("Cache<br/>Redis")]
+    USER["Gestor / pesquisador"]
+
+    INEP -->|extração anual| BRONZE
+    IBGE -->|extração para enriquecimento| BRONZE
+    BRONZE --> LOTE
+    LOTE --> SILVER
+
+    APP --> OLTP
+    OLTP --> CDC
+    CDC --> SILVER
+
+    SILVER --> DUCK
+    DUCK -->|transformação| GOLD
+    SILVER -->|conteúdo selecionado| EMB
+    EMB --> VET
+
+    GOLD --> AGENTE
     VET --> AGENTE
-    CACHE[("Cache<br/>Redis")] <--> AGENTE
-    AGENTE --> USER["Gestor / pesquisador"]
+    CACHE <--> AGENTE
+    AGENTE --> USER
 ```
 
 Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e
