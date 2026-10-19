@@ -18,8 +18,7 @@ dos seus alunos no ENEM?
 
 ## Arquitetura
 
-O dado passa por três estágios: o armazenamento bruto (Bronze e Silver), a
-camada de serviço (Gold) e o consumo pelo assistente.
+O fluxo separa a origem transacional, as camadas de dados e os componentes de consumo. A Bronze preserva os dados recebidos; a Silver contém dados validados e padronizados; e a Gold prepara os dados para consultas de negócio.
 
 ```mermaid
 flowchart LR
@@ -62,22 +61,25 @@ flowchart LR
     AGENTE --> USER
 ```
 
-Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e
-a captura de mudanças da origem para a camada analítica em Delta Lake. Gold,
-banco vetorial, cache e assistente chegam nas próximas entregas.
+Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
 
-| Estágio | O que guarda | Tecnologia | Por quê |
+| Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |
-| Origem transacional | vistorias de infraestrutura registradas pela secretaria | PostgreSQL, insert-only | escrita concorrente com integridade forte, sem apagar o histórico da escola |
-| Bronze e Silver (Data Lake) | microdados do INEP convertidos para formato colunar | Parquet (zstd) + DuckDB | a análise lê poucas colunas de milhões de linhas; DuckDB faz isso numa máquina só, sem cluster |
-| Gold (Serving e Camada Semântica) | tabela fato escola × desempenho, pronta para consulta | PostgreSQL | o assistente e o painel precisam de respostas exatas e rápidas, por chave e com filtro |
-| Banco vetorial | embeddings das escolas e do dicionário de variáveis | pgvector | a busca por escolas parecidas é distância entre vetores, não SQL |
-| Cache semântico | respostas e gráficos já gerados | Redis | a mesma pergunta não gasta latência nem tokens duas vezes |
+| Origem transacional | Armazenar escolas e vistorias de infraestrutura | PostgreSQL; vistorias insert-only | Garantir integridade e preservar o histórico das vistorias |
+| Bronze | Preservar arquivos e respostas originais das fontes | Arquivos recebidos, como ZIP, CSV e JSON | Permitir rastreabilidade e reprocessamento |
+| Ingestão em lote | Validar e padronizar os dados recebidos | Python | Controlar as cargas e evitar duplicações em reexecuções |
+| CDC | Capturar novas vistorias pelo log do banco | WAL e slot lógico do PostgreSQL | Propagar mudanças e permitir retomada após interrupções |
+| Silver | Armazenar dados tratados para análise | Parquet com compressão zstd e tabelas Delta | Permitir leitura colunar eficiente e, nas tabelas Delta, controle transacional |
+| Consulta e processamento | Consultar e transformar os dados analíticos | DuckDB | Executar SQL diretamente sobre os arquivos, sem exigir um cluster |
+| Gold — camada de serviço | Disponibilizar dados modelados e indicadores para análise | PostgreSQL | Atender consultas estruturadas do painel e do assistente |
+| Banco vetorial | Armazenar embeddings de conteúdos selecionados | pgvector | Permitir buscas por similaridade usando distância entre vetores |
+| Cache | Reutilizar respostas e resultados válidos | Redis | Reduzir processamento repetido e tempo de resposta |
 
-O assistente responde por ferramentas MCP. Perguntas numéricas ("gere um gráfico
-da média do ENEM no DF comparando quem tem e quem não tem quadra") viram SQL
-exato no PostgreSQL. Perguntas abstratas ("quais escolas têm perfil parecido com
-a escola X?") vão para a busca por similaridade no banco vetorial.
+Bronze e Silver representam camadas de organização dos dados. Parquet é um formato de arquivo, e Delta acrescenta um log de transações aos arquivos Parquet. O DuckDB atua como mecanismo de consulta e processamento; ele não define, sozinho, um Data Lake.
+
+Na arquitetura prevista, o assistente acessará os dados por ferramentas MCP. Perguntas numéricas, como “qual é a média do ENEM no DF entre escolas com e sem quadra?”, serão atendidas por consultas SQL aos dados modelados na Gold. Perguntas sobre similaridade, como “quais escolas têm perfil parecido com a escola X?”, poderão utilizar o pgvector.
+
+O Redis poderá reutilizar resultados conforme as regras de validade e atualização do cache.
 
 ## Estado atual: Entrega 2
 
