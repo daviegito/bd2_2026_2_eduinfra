@@ -1,0 +1,1711 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/camada-analitica/">
+      
+      
+        <link rel="prev" href="../dado-atrasado/">
+      
+      
+        <link rel="next" href="../adr/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Camada analítica - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#camada-analitica-em-formato-aberto" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href=".." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Camada analítica
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#por-que-delta-e-nao-iceberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Por que Delta e não Iceberg
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-rodar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como rodar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resultados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultados
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resultados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#divisao-por-ano-e-uf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Divisão por ano e UF
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#juntar-arquivos-pequenos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Juntar arquivos pequenos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acrescentar-uma-coluna" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acrescentar uma coluna
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitacoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitações
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentacao-relacionada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentação relacionada
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#por-que-delta-e-nao-iceberg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Por que Delta e não Iceberg
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-rodar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como rodar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resultados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultados
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Resultados">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#divisao-por-ano-e-uf" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Divisão por ano e UF
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#juntar-arquivos-pequenos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Juntar arquivos pequenos
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#acrescentar-uma-coluna" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Acrescentar uma coluna
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limitacoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limitações
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentacao-relacionada" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentação relacionada
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="camada-analitica-em-formato-aberto">Camada analítica em formato aberto<a class="headerlink" href="#camada-analitica-em-formato-aberto" title="Permanent link">&para;</a></h1>
+<p>Esta página descreve a tabela <code>warehouse/vistoria_item</code>, derivada da Silver do
+Censo. O CDC grava em outra tabela, <code>warehouse/eventos_vistoria</code>. A publicação
+descrita aqui não incorpora automaticamente as novas vistorias do CDC; consulte
+a <a href="../arquitetura/#caminhos-implementados-na-e2">arquitetura</a> para distinguir os destinos.</p>
+<p>A camada analítica ficou guardada como uma tabela Delta na pasta
+<code>dados/warehouse/vistoria_item</code>. Os dados estão em arquivos Parquet com
+compressão zstd, a mesma usada na camada Silver, e são divididos em pastas por
+ano do Censo e por UF. O DuckDB consegue ler essa tabela, e a contagem de linhas
+é igual à do banco de origem, com 3.078.105 itens do Censo 2024 nos dois lados.</p>
+<p>Cada linha da tabela é um item de vistoria de uma escola, e junto com ele já vêm
+a UF, o município, a rede (federal, estadual, municipal ou privada) e a
+localização da escola. Essas informações estão separadas em três arquivos na
+camada Silver. Preferimos juntar tudo uma vez só, na hora de gravar, porque quase
+toda consulta analítica filtra por UF ou por rede, e assim ninguém precisa
+cruzar as três tabelas a cada consulta. As linhas também são gravadas em ordem
+de UF, município, escola e item, o que deixa valores iguais lado a lado e faz a
+compressão render mais.</p>
+<h2 id="por-que-delta-e-nao-iceberg">Por que Delta e não Iceberg<a class="headerlink" href="#por-que-delta-e-nao-iceberg" title="Permanent link">&para;</a></h2>
+<p>Delta e Iceberg fazem basicamente a mesma coisa. Os dois guardam os dados em
+Parquet, garantem que uma gravação entra inteira ou não entra, guardam as
+versões anteriores da tabela e deixam acrescentar colunas depois.</p>
+<p>A diferença que decidiu a escolha foi o catálogo, que é o lugar onde fica
+registrado quais arquivos fazem parte da tabela. No Delta, esse registro fica
+numa pasta dentro da própria tabela (<code>_delta_log</code>). Então a tabela inteira é só
+uma pasta no volume do Docker, e quem baixar o projeto não precisa subir mais
+nada. No Iceberg, o catálogo é separado dos dados. Teríamos que manter, por
+exemplo, um banco SQLite ao lado da tabela e cuidar para que os dois nunca
+ficassem diferentes.</p>
+<p>Também pesou o fato de a biblioteca do Delta para Python (<code>deltalake</code>) já
+conseguir juntar arquivos pequenos e apagar versões antigas sozinha, sem
+precisar do Spark. Foi com ela que as medições abaixo foram feitas.</p>
+<p>O Iceberg não chegou a ser testado. A comparação foi feita lendo a documentação
+das duas bibliotecas. Com essa escolha perdemos algumas vantagens do Iceberg. Ele
+é mais adotado por ferramentas de fornecedores diferentes e permite mais tipos
+de mudança no esquema, como renomear uma coluna sem regravar os dados. Se um dia
+for preciso trocar, regravar a tabela leva poucos segundos com o volume atual,
+mas o histórico de versões não vem junto.</p>
+<h2 id="como-rodar">Como rodar<a class="headerlink" href="#como-rodar" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>publicar-analitica
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>comparar-particionamento<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">15</span>
+</span></code></pre></div>
+<p>O comando <code>publicar-analitica</code> grava a tabela, conta as linhas pelo DuckDB e
+compara com o banco de origem. Se as contagens forem diferentes, ele termina com
+erro. Esse comando também roda no final do <code>tudo</code>. Cada ano é gravado
+substituindo apenas as linhas daquele ano, então rodar de novo não duplica nada.</p>
+<p>O comando <code>comparar-particionamento</code> está em
+<code>src/eduinfra/comparacao_particionamento.py</code>. Ele grava a mesma tabela de cinco
+formas diferentes numa pasta temporária, mede cada uma e apaga a pasta no final.
+As cinco formas são estas.</p>
+<ul>
+<li>Tudo de uma vez, sem dividir em pastas.</li>
+<li>Tudo de uma vez, dividido por ano.</li>
+<li>Tudo de uma vez, dividido por ano e UF.</li>
+<li>Em 20 gravações pequenas, dividido por ano e UF. Isso simula uma carga que
+  roda várias vezes e grava um pouco de cada vez, que é o que vai acontecer com
+  a captura de mudanças.</li>
+<li>As mesmas 20 gravações pequenas, depois de juntar os arquivos, apagar os que
+  sobraram e resumir o registro de alterações.</li>
+</ul>
+<p>Em cada forma rodamos três consultas. A primeira conta as escolas do DF sem
+laboratório de ciências. A segunda conta os itens que faltam nas escolas da
+Bahia, separados por rede e localização. A terceira conta os itens que faltam em
+cada UF do país. Cada consulta roda uma vez antes de começar a contar o tempo, e
+o resultado é a mediana das repetições. As consultas se alternam entre as cinco
+formas, como fizemos no documento de
+<a href="../serializacao-compressao/">serialização e compressão</a>, para que uma lentidão
+momentânea da máquina não prejudique só uma delas. O script também confere se
+todas as formas dão as mesmas respostas.</p>
+<h2 id="resultados">Resultados<a class="headerlink" href="#resultados" title="Permanent link">&para;</a></h2>
+<p>As medições foram feitas dentro do contêiner <code>carga</code>, numa
+máquina Linux com 16 processadores, usando DuckDB 1.5.5, <code>deltalake</code> 1.6.6 e
+os dados do Censo 2024, com 15 repetições. Todas as formas deram as mesmas
+respostas.</p>
+<table>
+<thead>
+<tr>
+<th>Forma</th>
+<th style="text-align: right;">Arquivos</th>
+<th style="text-align: right;">Em disco</th>
+<th style="text-align: right;">Tamanho médio</th>
+<th style="text-align: right;">Gravação (s)</th>
+<th style="text-align: right;">DF (ms)</th>
+<th style="text-align: right;">Bahia por rede (ms)</th>
+<th style="text-align: right;">País (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sem divisão</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1,6 MB</td>
+<td style="text-align: right;">1599 kB</td>
+<td style="text-align: right;">0,54</td>
+<td style="text-align: right;">9,7</td>
+<td style="text-align: right;">31,5</td>
+<td style="text-align: right;">75,7</td>
+</tr>
+<tr>
+<td>Por ano</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1,6 MB</td>
+<td style="text-align: right;">1590 kB</td>
+<td style="text-align: right;">0,62</td>
+<td style="text-align: right;">10,4</td>
+<td style="text-align: right;">31,4</td>
+<td style="text-align: right;">73,3</td>
+</tr>
+<tr>
+<td>Por ano e UF</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">1,6 MB</td>
+<td style="text-align: right;">58 kB</td>
+<td style="text-align: right;">0,17</td>
+<td style="text-align: right;">5,6</td>
+<td style="text-align: right;">23,4</td>
+<td style="text-align: right;">44,3</td>
+</tr>
+<tr>
+<td>20 gravações pequenas</td>
+<td style="text-align: right;">540</td>
+<td style="text-align: right;">3,1 MB</td>
+<td style="text-align: right;">6 kB</td>
+<td style="text-align: right;">0,74</td>
+<td style="text-align: right;">25,0</td>
+<td style="text-align: right;">27,8</td>
+<td style="text-align: right;">66,5</td>
+</tr>
+<tr>
+<td>20 gravações, depois de juntar</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">1,7 MB</td>
+<td style="text-align: right;">62 kB</td>
+<td style="text-align: right;">0,25*</td>
+<td style="text-align: right;">12,8</td>
+<td style="text-align: right;">34,8</td>
+<td style="text-align: right;">55,0</td>
+</tr>
+</tbody>
+</table>
+<p>* Nessa linha, o tempo é o de juntar os arquivos, apagar os antigos e resumir o
+registro.</p>
+<p>Rodamos tudo uma segunda vez e a ordem entre as formas se manteve. Na consulta
+do DF, por exemplo, deu 10,9 ms sem divisão e 6,3 ms por ano e UF. Os tempos
+mudam um pouco de uma rodada para outra, mas o número de arquivos e os tamanhos
+são sempre os mesmos.</p>
+<h3 id="divisao-por-ano-e-uf">Divisão por ano e UF<a class="headerlink" href="#divisao-por-ano-e-uf" title="Permanent link">&para;</a></h3>
+<p>Dividir por ano e UF foi a forma mais rápida nas três consultas. Na consulta do
+DF isso era esperado, porque o DuckDB só precisa abrir o arquivo do DF e ignora
+os outros 26. Na consulta do país inteiro ele lê todos os arquivos, mas consegue
+ler vários ao mesmo tempo, um em cada processador. Com um arquivo só isso não
+acontece.</p>
+<p>Dividir só por ano não muda nada hoje, porque só temos o ano de 2024. Mantivemos
+o ano mesmo assim porque é ele que permite substituir um ano inteiro quando o
+INEP corrigir o arquivo, sem mexer nos outros anos.</p>
+<p>O ponto negativo é que os arquivos ficam pequenos, com 58 kB em média. O
+recomendado para Parquet são arquivos de centenas de MB. Isso acontece porque o
+Censo inteiro, depois de comprimido, ocupa só 1,6 MB. Mesmo assim, abrir 27
+arquivos pequenos por ano ainda custa menos do que o tempo que se ganha
+ignorando as UFs que a consulta não usa.</p>
+<h3 id="juntar-arquivos-pequenos">Juntar arquivos pequenos<a class="headerlink" href="#juntar-arquivos-pequenos" title="Permanent link">&para;</a></h3>
+<p>O problema que realmente preocupa é cada execução da carga criar arquivos
+novos. Com 20 gravações pequenas, a tabela chegou a 540 arquivos de 6 kB e
+dobrou de tamanho, indo para 3,1 MB, porque cada arquivo repete o próprio
+cabeçalho. Depois de juntar os arquivos, a tabela voltou para 27 arquivos e
+1,7 MB em 0,25 segundo, e a consulta do DF caiu de 25,0 para 12,8 ms.</p>
+<p>Medindo, percebemos duas coisas que não esperávamos.</p>
+<p>A primeira é que, sem resumir o registro de alterações, a tabela ficava mais
+lenta depois de juntar os arquivos do que antes. Na consulta do DF deu 34,8 ms
+contra 28,2 ms. Isso acontecia porque o DuckDB precisava ler os 22 arquivos do
+registro, um para cada gravação, antes de cada consulta. O resumo transforma
+esse registro num arquivo só, e por isso passou a fazer parte do processo.</p>
+<p>A segunda é que, mesmo depois de juntar, a tabela não fica tão rápida quanto a
+gravada de uma vez só. Na consulta do DF foram 12,8 ms contra 5,6 ms. A consulta
+da Bahia por rede chegou a ficar mais lenta do que antes de juntar, com 34,8 ms
+contra 27,8 ms, e isso se repetiu na segunda rodada, com 35,0 ms contra 28,9 ms.</p>
+<h3 id="acrescentar-uma-coluna">Acrescentar uma coluna<a class="headerlink" href="#acrescentar-uma-coluna" title="Permanent link">&para;</a></h3>
+<p>Para mostrar que dá para mudar o esquema sem regravar os dados, acrescentamos
+na tabela a coluna <code>lsn_origem</code>, que guarda a posição de cada alteração no
+registro do PostgreSQL.</p>
+<h2 id="limitacoes">Limitações<a class="headerlink" href="#limitacoes" title="Permanent link">&para;</a></h2>
+<p>Os arquivos são pequenos, e cada execução da captura de mudanças pode criar até
+27 arquivos novos. Por isso será preciso juntar os arquivos de tempos em tempos.</p>
+<p>A UF, o município e a rede de cada escola se repetem nos 17 itens dela. A
+compressão compensa isso, mas se uma escola mudar de município, a correção só
+aparece depois que o ano dela for gravado de novo.</p>
+<p>O DuckDB baixa da internet o complemento que lê tabelas Delta na primeira vez
+que é usado. Sem internet nesse momento, a leitura falha.</p>
+<p>Cada nova gravação deixa no disco os arquivos da versão anterior até que eles
+sejam apagados. Hoje isso dá poucos MB.</p>
+<p>Vale rever essa decisão se o tamanho médio dos arquivos passar de 128 MB, se a
+pasta de uma UF passar de 1 GB, se a consulta do país ficar mais lenta dividida
+por ano e UF do que só por ano, se a tabela passar de 500 arquivos sem que eles
+sejam juntados, ou se alguma ferramenta escolhida na E3 ou na E4 só ler Iceberg.</p>
+<p>Os caminhos são relativos ao diretório de dados (<code>/dados</code> no Docker). Cada
+tabela Delta mantém seu registro <code>_delta_log</code> junto dos arquivos Parquet.
+Veja também o <a href="../execucao/">guia de execução</a>.</p>
+<h2 id="documentacao-relacionada">Documentação relacionada<a class="headerlink" href="#documentacao-relacionada" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../serializacao-compressao/">Compressão</a>: medições de formatos e codecs.</li>
+<li><a href="../cdc-e-semantica-de-entrega/">CDC e semântica de entrega</a>: tabela de eventos.</li>
+<li><a href="../adr/">Índice dos ADRs</a>: estado da decisão de armazenamento.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

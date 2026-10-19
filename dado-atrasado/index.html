@@ -1,0 +1,1844 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/dado-atrasado/">
+      
+      
+        <link rel="prev" href="../cdc-e-semantica-de-entrega/">
+      
+      
+        <link rel="next" href="../camada-analitica/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Dados atrasados - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#dados-atrasados-e-reprocessamento" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href=".." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Dados atrasados
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#as-decisoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As decisões
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="As decisões">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-janela-e-o-mes-de-ocorrido_em" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A janela é o mês de ocorrido_em
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Janela mensal, aberta até 7 dias depois do fim do mês
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-o-que-chega-depois-da-tolerancia-reabre-a-janela-e-fica-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. O que chega depois da tolerância reabre a janela, e fica registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-reprocessar-e-regravar-a-particao-inteira" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Reprocessar é regravar a partição inteira
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-a-margem-da-marca-dagua" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. A margem da marca d'água
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#onde-ficam-os-dados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Onde ficam os dados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-usar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como usar
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Como usar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#testes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demonstracao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demonstração
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medicoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medições
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-se-perde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que se perde
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quando-revisar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quando revisar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisao-de-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisão de ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#as-decisoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        As decisões
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="As decisões">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-a-janela-e-o-mes-de-ocorrido_em" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. A janela é o mês de ocorrido_em
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Janela mensal, aberta até 7 dias depois do fim do mês
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-o-que-chega-depois-da-tolerancia-reabre-a-janela-e-fica-registrado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. O que chega depois da tolerância reabre a janela, e fica registrado
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-reprocessar-e-regravar-a-particao-inteira" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Reprocessar é regravar a partição inteira
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-a-margem-da-marca-dagua" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. A margem da marca d'água
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#onde-ficam-os-dados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Onde ficam os dados
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-usar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como usar
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Como usar">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#testes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#demonstracao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Demonstração
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medicoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medições
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-se-perde" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que se perde
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quando-revisar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quando revisar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisao-de-ingestao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisão de ingestão
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="dados-atrasados-e-reprocessamento">Dados atrasados e reprocessamento<a class="headerlink" href="#dados-atrasados-e-reprocessamento" title="Permanent link">&para;</a></h1>
+<p>Os eventos de vistoria chegam à camada analítica em <strong>janelas mensais pelo mês
+de <code>ocorrido_em</code></strong>, a data em que a realidade mudou na escola. Uma vistoria
+registrada com atraso cai no mês em que aconteceu, nunca no mês em que o sistema
+soube dela. Reprocessar uma janela regrava a partição inteira a partir da
+origem, e rodar duas vezes dá o mesmo resultado. Responde à issue #27.</p>
+<h2 id="as-decisoes">As decisões<a class="headerlink" href="#as-decisoes" title="Permanent link">&para;</a></h2>
+<h3 id="1-a-janela-e-o-mes-de-ocorrido_em">1. A janela é o mês de <code>ocorrido_em</code><a class="headerlink" href="#1-a-janela-e-o-mes-de-ocorrido_em" title="Permanent link">&para;</a></h3>
+<p>A origem guarda duas datas por vistoria (ADR 0001). <code>ocorrido_em</code> é quando a
+escola mudou; <code>registrado_em</code> é quando o dado entrou no banco.</p>
+<p>A pergunta de gestão é temporal: a escola tinha laboratório na época da prova?
+Ela só tem resposta se o evento estiver no mês em que aconteceu. Janela por
+<code>registrado_em</code> colocaria uma vistoria feita em agosto e digitada em outubro no
+mês de outubro, e a série mostraria uma mudança que não aconteceu em outubro.</p>
+<p><code>registrado_em</code> continua tendo um papel: é a <strong>marca d'água</strong>. Cada execução
+pega as vistorias registradas depois da anterior e descobre quais meses elas
+tocam. A marca diz <em>o que é novo</em>; <code>ocorrido_em</code> diz <em>onde o novo entra</em>.</p>
+<h3 id="2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes">2. Janela mensal, aberta até 7 dias depois do fim do mês<a class="headerlink" href="#2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Mensal</strong> porque a escrita esperada do aplicativo é de cerca de 500
+  vistorias por dia (estimativa da caracterização da E1): em torno de 15 mil
+  vistorias e 250 mil itens por mês. Janela diária geraria um arquivo pequeno
+  por dia, que é o problema dos arquivos pequenos.</li>
+<li><strong>Tolerância de 7 dias</strong> porque é o prazo razoável para um técnico digitar
+  uma vistoria feita em campo, e porque o planejamento da secretaria olha o mês
+  depois que ele termina. A constante é <code>TOLERANCIA</code> em <code>src/eduinfra/janelas.py</code>.</li>
+</ul>
+<h3 id="3-o-que-chega-depois-da-tolerancia-reabre-a-janela-e-fica-registrado">3. O que chega depois da tolerância reabre a janela, e fica registrado<a class="headerlink" href="#3-o-que-chega-depois-da-tolerancia-reabre-a-janela-e-fica-registrado" title="Permanent link">&para;</a></h3>
+<p>Havia três destinos possíveis para um evento que chega com a janela já fechada:</p>
+<table>
+<thead>
+<tr>
+<th>Destino</th>
+<th>Por que não, ou por que sim</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Descartar</td>
+<td>Perde dado que a origem tem. A camada analítica passaria a ter menos que a origem, e a diferença só cresceria.</td>
+</tr>
+<tr>
+<td>Guardar à parte</td>
+<td>Cada consumidor teria que lembrar de somar a área "atrasados" ao mês certo. Na prática, alguém esquece.</td>
+</tr>
+<tr>
+<td><strong>Corrigir a janela e registrar a reabertura</strong></td>
+<td>Escolhido. A origem é insert-only e guarda tudo, então a janela pode ser recalculada a qualquer momento. O registro avisa quem já usou o número do mês fechado que ele mudou.</td>
+</tr>
+</tbody>
+</table>
+<p>A reabertura fica em <code>_controle.json</code>, com o mês, quando foi reaberta, quantos
+eventos chegaram e o maior atraso. O processamento também emite um aviso no log.</p>
+<h3 id="4-reprocessar-e-regravar-a-particao-inteira">4. Reprocessar é regravar a partição inteira<a class="headerlink" href="#4-reprocessar-e-regravar-a-particao-inteira" title="Permanent link">&para;</a></h3>
+<p>A janela é recalculada da origem, ordenada por <code>vistoria_id</code> e <code>item_codigo</code>, e
+gravada numa pasta temporária. Depois, um <code>os.replace</code> troca a partição de uma
+vez: quem lê vê a versão antiga ou a nova, nunca uma escrita pela metade. Se a
+conversão falhar, a partição anterior continua intacta (há teste para isso).</p>
+<p>Cada janela tem uma <strong>impressão</strong>: a soma dos hashes de todas as linhas. Ela não
+depende da ordem física no arquivo e muda se qualquer valor mudar. É assim que
+se confere, com um número, que reprocessar duas vezes deu o mesmo resultado.</p>
+<h3 id="5-a-margem-da-marca-dagua">5. A margem da marca d'água<a class="headerlink" href="#5-a-margem-da-marca-dagua" title="Permanent link">&para;</a></h3>
+<p><code>registrado_em</code> recebe <code>now()</code>, que é a hora do <strong>início</strong> da transação, não a do
+commit. Uma transação longa pode confirmar depois da execução, com
+<code>registrado_em</code> anterior à marca, e escaparia. Por isso cada execução também
+relê os 10 minutos anteriores à marca (<code>MARGEM_DA_MARCA</code>). Para a margem não
+regravar janelas à toa, só conta como novo o evento cujo <code>vistoria_id</code> ainda não
+está na partição do seu mês.</p>
+<h2 id="onde-ficam-os-dados">Onde ficam os dados<a class="headerlink" href="#onde-ficam-os-dados" title="Permanent link">&para;</a></h2>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dados/analitico/eventos_vistoria/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  _controle.json                    marca d'água, impressão de cada janela, reaberturas
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ocorrido_mes=2024-05/eventos.parquet
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ocorrido_mes=2026-08/eventos.parquet
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  ocorrido_mes=2026-10/eventos.parquet
+</span></code></pre></div>
+<p>Cada linha é um item de uma vistoria: <code>vistoria_id</code>, <code>co_entidade</code>, <code>origem</code>,
+<code>ocorrido_em</code>, <code>registrado_em</code>, <code>item_codigo</code>, <code>situacao</code> e <code>quantidade</code>. O
+técnico não sai da origem.</p>
+<h2 id="como-usar">Como usar<a class="headerlink" href="#como-usar" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>processar-janelas<span class="w">            </span><span class="c1"># incorpora o que foi registrado desde a última vez</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>reprocessar-janela<span class="w"> </span>--mes<span class="w"> </span><span class="m">2024</span>-05
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>demonstrar-atraso<span class="w">            </span><span class="c1"># a demonstração abaixo</span>
+</span></code></pre></div>
+<p>A demonstração insere duas vistorias na origem. Como a origem é insert-only,
+elas ficam lá, marcadas na observação. Rode num ambiente de desenvolvimento.</p>
+<h3 id="testes">Testes<a class="headerlink" href="#testes" title="Permanent link">&para;</a></h3>
+<p>Os testes sem banco rodam direto:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_janelas.py
+</span></code></pre></div>
+<p>Os de integração precisam do banco carregado e do <code>DATABASE_URL</code> do <code>.env</code>,
+que aponta para a porta publicada pelo compose:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w">                 </span><span class="c1"># sobe o banco e roda a carga</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">set</span><span class="w"> </span>-a<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.env<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span>+a<span class="w">              </span><span class="c1"># exporta DATABASE_URL</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_janelas_integracao.py
+</span></code></pre></div>
+<p>Como a demonstração, eles inserem vistorias de teste na origem.</p>
+<h2 id="demonstracao">Demonstração<a class="headerlink" href="#demonstracao" title="Permanent link">&para;</a></h2>
+<p>Saída real de <code>demonstrar-atraso</code> em 12/10/2026, sobre o banco carregado com o
+Censo 2024:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>## 1. Estado de partida
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>marca d'água: 2026-09-26T16:41:44.889635+00:00 -&gt; 2026-09-26T16:41:44.889635+00:00
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>vistorias novas desde a marca: 0
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>## 2. Vistoria da escola 53002580 ocorrida há 3 dias (2026-10-09), registrada agora
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>marca d'água: 2026-09-26T16:41:44.889635+00:00 -&gt; 2026-10-12T15:46:26.539992+00:00
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>vistorias novas desde a marca: 1
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>  janela 2026-10: 17 linhas, impressão 924855e5adcda8679
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>  vistoria 181070: ocorreu 2026-10-09, registrada 2026-10-12, atraso 3.0 dias -&gt; janela 2026-10 (dentro da tolerância)
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>## 3. Vistoria ocorrida em 2026-08-15, com a janela 2026-08 fechada desde 2026-09-08, registrada agora
+</span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>marca d'água: 2026-10-12T15:46:26.539992+00:00 -&gt; 2026-10-12T15:46:27.942649+00:00
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>vistorias novas desde a marca: 1
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>  janela 2026-08: 17 linhas, impressão 9388db934a447aebd
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>  vistoria 181071: ocorreu 2026-08-15, registrada 2026-10-12, atraso 58.7 dias -&gt; janela 2026-08 (FORA da tolerância: janela reaberta)
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>## 4. Reprocessar a janela 2026-10 duas vezes
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>1ª: 17 linhas, impressão 924855e5adcda8679
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>2ª: 17 linhas, impressão 924855e5adcda8679
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>idênticas: sim
+</span></code></pre></div>
+<p>O que ela mostra:</p>
+<ul>
+<li>A vistoria de três dias atrás entrou em <strong>outubro</strong>, o mês em que ocorreu,
+  dentro da tolerância.</li>
+<li>A vistoria de agosto chegou 58,7 dias depois de ocorrer, com agosto fechado
+  desde 08/09. Ela <strong>reabriu agosto</strong>, e a reabertura ficou registrada em
+  <code>_controle.json</code>.</li>
+<li>A primeira execução não reprocessou nada: a margem trouxe de volta as 181.065
+  vistorias da carga, mas todas já estavam na partição.</li>
+<li>Reprocessar outubro duas vezes deu a mesma impressão.</li>
+</ul>
+<h2 id="medicoes">Medições<a class="headerlink" href="#medicoes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operação</th>
+<th style="text-align: right;">Tempo</th>
+<th style="text-align: right;">Memória máxima</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Demonstração completa (passos 1 a 4)</td>
+<td style="text-align: right;">3,7 s</td>
+<td style="text-align: right;">196 MB</td>
+</tr>
+<tr>
+<td>Reprocessar a janela 2024-05 (carga do Censo, 3.078.105 linhas)</td>
+<td style="text-align: right;">7,9 s e 8,1 s</td>
+<td style="text-align: right;">755 MB</td>
+</tr>
+</tbody>
+</table>
+<p>Reprocessar 2024-05 duas vezes deu a impressão <code>177cbda0abd575cc091396</code> nas duas,
+a mesma da primeira carga. A partição ocupa 2,8 MB em Parquet zstd.</p>
+<p>A primeira versão deste código não limitava a memória do DuckDB e foi encerrada
+pelo sistema por falta de memória nessa mesma janela. Agora a gravação usa
+<code>memory_limit = 1GB</code> e transborda para disco quando precisa.</p>
+<h2 id="o-que-se-perde">O que se perde<a class="headerlink" href="#o-que-se-perde" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Números de mês fechado podem mudar.</strong> Quem publicou o total de agosto em
+  setembro pode ver o número mudar em outubro. A reabertura registrada é o aviso,
+  mas o consumidor precisa olhar para ela.</li>
+<li><strong>Reprocessar custa a janela inteira.</strong> Um único evento atrasado em 2024-05
+  regrava 3 milhões de linhas, cerca de 8 segundos. Com a janela mensal e o
+  volume atual, é aceitável; a carga anual do Censo concentra quase tudo num mês
+  só.</li>
+<li><strong>A marca d'água vive num arquivo.</strong> <code>_controle.json</code> é gravado por troca
+  atômica, mas não é transacional com a origem. Se o arquivo se perder, a próxima
+  execução trata tudo como carga inicial e regrava todas as janelas: fica certo,
+  só mais caro.</li>
+<li><strong>A margem tem um limite.</strong> Uma transação aberta por mais de 10 minutos antes
+  do commit ainda pode escapar da marca. O reprocessamento manual da janela
+  corrige.</li>
+</ul>
+<h2 id="quando-revisar">Quando revisar<a class="headerlink" href="#quando-revisar" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Se reprocessar uma janela passar de 1 minuto, ou a janela mais pesada passar
+  de 1 GB de memória: particionar também por UF dentro do mês.</li>
+<li>Se a fração de eventos fora da tolerância passar de 5% num mês: a tolerância de
+  7 dias está curta para o ritmo real de digitação.</li>
+<li>Avaliar a unificação com o CDC já implementado. Atualmente, as janelas
+  continuam usando marca d'água em arquivo, enquanto o CDC mantém seu próprio
+  destino Delta e confirma o LSN; a substituição automática não foi implementada.</li>
+</ul>
+<h2 id="decisao-de-ingestao">Decisão de ingestão<a class="headerlink" href="#decisao-de-ingestao" title="Permanent link">&para;</a></h2>
+<p>O <a href="../adr/0004-ingestao/">ADR 0004</a> consolida essa decisão, seus custos e a
+coexistência das janelas em Parquet com o CDC em Delta.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
