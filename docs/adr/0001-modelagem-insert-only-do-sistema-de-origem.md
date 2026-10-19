@@ -17,7 +17,7 @@ sobrescreve o registro a cada vistoria deixa o banco sabendo apenas o presente, 
 a pergunta perde a resposta antes de chegar à camada analítica.
 
 **Carga**, medida na base populada com o Censo Escolar 2024 (detalhes em
-[caracterizacao-carga.md](../caracterizacao-carga.md)):
+[caracterizacao-carga.md](../caracterizacao.md)):
 
 | Dimensão | Valor |
 | --- | --- |
@@ -87,7 +87,7 @@ custo de C; a diferença entre elas é de correção, não de desempenho.
 ## Decisão
 
 Escolhemos C. Cada vistoria gera uma nova linha em
-[vistoria](../../alembic/versions/0003_vistoria_insert_only.py), e `UPDATE`,
+[vistoria](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/alembic/versions/0003_vistoria_insert_only.py), e `UPDATE`,
 `DELETE` e `TRUNCATE` nas tabelas de evento são bloqueados por gatilho no banco,
 não por convenção de aplicação.
 

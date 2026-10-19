@@ -1,22 +1,79 @@
 site_name: EduInfra AI
-site_description: Documentação de EduInfra
+site_description: Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)
 site_url: https://daviegito.github.io/bd2_2026_2_eduinfra/
+site_author: Squad EduInfra (UnB / FCTE, 2026.2)
+repo_url: https://github.com/daviegito/bd2_2026_2_eduinfra
+repo_name: daviegito/bd2_2026_2_eduinfra
+
 theme:
   name: material
+  language: pt
   palette:
-    scheme: default
-    primary: indigo
-    accent: indigo
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Mudar para modo escuro
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Mudar para modo claro
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - content.code.copy
+    - search.highlight
+    - toc.follow
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Início: index.md
-  - Caracterização da Carga: caracterizacao.md
-  - Serialização e Compressão: serializacao-compressao.md
-  - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
-  - Dado Atrasado: dado-atrasado.md
-  - Camada Analítica: camada-analitica.md
-  - ADRs:
-      - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
-      - ADR 0002: adr/0002-cadeia-tls-incompleta-do-inep.md
-      - ADR 0004: adr/0004-ingestao.md
-  - Diário de bordo: diario/diario-de-bordo.md
+  - Projeto:
+      - Arquitetura: arquitetura.md
+      - Modelo da origem: modelo-origem.md
+      - Fontes, equipe e entregas: projeto.md
+  - Execução:
+      - Como executar e demonstrar: execucao.md
+      - Testes: testes.md
+  - Dados e ingestão:
+      - Caracterização da carga: caracterizacao.md
+      - Compressão: serializacao-compressao.md
+      - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
+      - Dados atrasados: dado-atrasado.md
+      - Camada analítica: camada-analitica.md
+  - Decisões:
+      - Índice dos ADRs: adr/README.md
+      - ADR 0001 — Insert-only: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
+      - ADR 0002 — TLS: adr/0002-cadeia-tls-incompleta-do-inep.md
+      - ADR 0004 — Ingestão: adr/0004-ingestao.md
+  - Processo:
+      - Diário de bordo: diario/diario-de-bordo.md
+      - Uso de IA: https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md
