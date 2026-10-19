@@ -169,9 +169,21 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | aplica as migrações até a última revisão |
 | `docker compose run --rm carga reverter --revisao 0003` | volta o esquema até a revisão indicada |
-| `docker compose run --rm carga carregar` | baixa o Censo, se preciso, e carrega; é idempotente |
+| `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
+| `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
+| `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
-| `docker compose run --rm carga tudo` | os três primeiros em sequência; é o padrão do compose |
+| `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
+| `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
+| `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
+| `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
+| `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
+| `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
+| `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
+| `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
+| `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
+| `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
+| `docker compose run --rm carga tudo` | migrar, carregar, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -180,6 +192,63 @@ compose publicado na porta do `.env`:
 uv sync
 set -a && source .env && set +a
 uv run eduinfra tudo
+```
+
+### Camada analítica e CDC (E2)
+
+O serviço `banco` sobe com `wal_level=logical` e a migração `0005` publica
+`vistoria` e `vistoria_item` na publicação `eduinfra_cdc`. O dado analítico fica
+numa tabela Delta Lake, `eventos_vistoria`, em
+`$DIRETORIO_DADOS/warehouse/eventos_vistoria` (volume `dados_censo` no Docker),
+particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
+
+```bash
+docker compose run --rm carga publicar-analitico      # linha de base: origem -> Delta, idempotente
+docker compose run --rm carga cdc                     # uma passada do consumidor do slot lógico
+docker compose run --rm carga demonstrar-cdc          # insere na origem e mostra o efeito até o Delta
+```
+
+O serviço `cdc` do Compose roda o consumidor de forma contínua, a cada 2
+segundos, depois que a carga termina. Para parar e retomar sem perder eventos:
+
+```bash
+docker compose stop cdc
+docker compose start cdc
+```
+
+Mecanismo, semântica de entrega, demonstração e medições estão em
+[docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
+
+### Ingestão em lote idempotente (E2)
+
+A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
+na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
+arquivo que a gerou em `origem.sha256`. A execução só é ignorada quando o
+arquivo de origem coincide com **as duas** versões vigentes; por isso a sequência
+A → B → A reprocessa a última execução em vez de ignorá-la.
+
+Ordem de uma ingestão:
+
+1. a Silver é montada num diretório de preparo em `_publicacao/`, fora de `silver/`;
+2. o banco é carregado e a linha do manifesto é gravada na mesma transação;
+3. confirmado o commit, a partição `silver/ano_censo=AAAA/` é trocada **inteira**
+   (o diretório é renomeado, nunca arquivo a arquivo), então município, escola e
+   itens são sempre da mesma versão.
+
+Consequências: falha antes do commit deixa banco, manifesto e Silver como
+estavam. Falha depois do commit deixa a Silver antiga; a próxima execução vê o
+manifesto vigente com outra Silver, republica só a Silver e não recarrega o
+banco. Uma queda entre os dois renames da troca é desfeita automaticamente na
+execução seguinte. Entre os dois renames existe uma janela de microssegundos em
+que a partição do ano não existe; um leitor nunca vê uma mistura de versões.
+
+Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parquet
+é substituída e o OLTP recebe apenas chaves novas: `vistoria` é insert-only
+(ADR 0001), então corrigir um evento passado exige registrar uma nova vistoria.
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
 ```
 
 ## O que a carga produz
@@ -206,6 +275,26 @@ dia, estimativa da Squad que ainda será medida. A leitura do estado atual de um
 escola deve ficar abaixo de 300 ms; medida com as estatísticas do banco
 atualizadas, ela leva menos de 1 ms.
 
+## Camada analítica (E2)
+
+A carga termina gravando uma tabela Delta, particionada por ano do Censo e UF,
+com um registro por item de vistoria.
+Critérios, medições e o que se perde estão em
+[docs/camada-analitica.md](docs/camada-analitica.md).
+
+| O quê | No contêiner | Fora do Docker |
+| --- | --- | --- |
+| Dados da tabela | `/dados/warehouse/vistoria_item/ano_censo=AAAA/sg_uf=UF/` | `dados/warehouse/vistoria_item/...` |
+| Log de transações (catálogo) | `/dados/warehouse/vistoria_item/_delta_log/` | `dados/warehouse/vistoria_item/_delta_log/` |
+
+Os dois ficam no volume `dados_censo`. Para consultar com o DuckDB:
+
+```sql
+install delta;
+load delta;
+select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by all;
+```
+
 ## Estrutura do repositório
 
 ```
@@ -216,6 +305,8 @@ src/eduinfra/       CLI, download, transformação e carga
   transformacao.py  valida o cabeçalho e gera o Parquet intermediário
   carga.py          staging, consolidação idempotente e resumo
   caracterizacao.py contagens e tamanhos da base populada
+  camada_analitica.py tabela Delta da camada analítica e conferência com o OLTP
+  comparacao_particionamento.py medição de particionamento e compactação
 docs/adr/           registros de decisão de arquitetura
 docker-compose.yml  banco PostgreSQL e serviço de carga
 Dockerfile          imagem da carga, com uv
@@ -261,7 +352,7 @@ sem pseudonimização.
 
 | Entrega | Tema | Data prevista |
 | --- | --- | --- |
-| E1 | Fonte transacional modelada e populada | 22/09/2026 |
+| E1 | Fonte transacional modelada e populada | 28/09/2026 |
 | E2 | Ingestão em lote e captura de mudanças | 13/10/2026 |
 | E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 |
 | E4 | Plataforma completa, governada e defendida | 24/11/2026 |
@@ -277,9 +368,9 @@ ainda provisórias.
 | Davi Coelho | [@daviegito](https://github.com/daviegito) |
 | Gabriel Lopes de Amorim | [@BrzGab](https://github.com/BrzGab) |
 | Lucas Mendonça Arruda | [@lucasarruda9](https://github.com/lucasarruda9) |
-| Marcos Vinícius | — |
+| Marcos Vinícius | [@MarcosViniciusG](https://github.com/MarcosViniciusG) |
 | Pedro Sanchez | [@PedroDev-sketch](https://github.com/PedroDev-sketch) |
-| Pedro Vargas | — |
+| Pedro Vargas | [@Pedrovargas10](https://github.com/Pedrovargas10) |
 
 ## Licença
 
