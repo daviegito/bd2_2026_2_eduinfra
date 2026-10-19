@@ -19,3 +19,4 @@ nav:
       - ADR 0001: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
       - ADR 0002: adr/0002-cadeia-tls-incompleta-do-inep.md
       - ADR 0004: adr/0004-ingestao.md
+  - Diário de bordo: diario/diario-de-bordo.md
