@@ -131,15 +131,7 @@ segundo com outro codec, e a origem continua no PostgreSQL e no arquivo bruto.
   mais lenta que em snappy numa medição com este mesmo comando.
 - Se alguma ferramenta escolhida na E3 ou na E4 não ler Parquet com zstd.
 
-## Para o ADR 0003
+## Documentação relacionada
 
-Texto sugerido para a seção de serialização do ADR de armazenamento analítico
-(issue #4):
-
-> A camada Silver é gravada em Parquet com compressão zstd. Medido sobre o Censo
-> 2024 (3.078.105 itens), o zstd ocupa 4,4 MB, contra 6,5 MB do snappy, 11,9 MB
-> do Parquet sem compressão e 116,4 MB do CSV. Leitura e escrita ficam
-> empatadas entre os três codecs, dentro do ruído da medição. Perdemos um pouco
-> de CPU na compressão e a universalidade do snappy, que é o padrão da maioria
-> das ferramentas. Reproduzível com `eduinfra comparar-compressao`; detalhes em
-> `docs/serializacao-compressao.md`.
+- [Camada analítica](camada-analitica.md): tabelas Delta e particionamento.
+- [Índice dos ADRs](adr/README.md): estado das decisões de armazenamento.

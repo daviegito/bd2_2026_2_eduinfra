@@ -1,5 +1,10 @@
 # Camada analítica em formato aberto
 
+Esta página descreve a tabela `warehouse/vistoria_item`, derivada da Silver do
+Censo. O CDC grava em outra tabela, `warehouse/eventos_vistoria`. A publicação
+descrita aqui não incorpora automaticamente as novas vistorias do CDC; consulte
+a [arquitetura](arquitetura.md#caminhos-implementados-na-e2) para distinguir os destinos.
+
 A camada analítica ficou guardada como uma tabela Delta na pasta
 `dados/warehouse/vistoria_item`. Os dados estão em arquivos Parquet com
 compressão zstd, a mesma usada na camada Silver, e são divididos em pastas por
@@ -165,15 +170,12 @@ pasta de uma UF passar de 1 GB, se a consulta do país ficar mais lenta dividida
 por ano e UF do que só por ano, se a tabela passar de 500 arquivos sem que eles
 sejam juntados, ou se alguma ferramenta escolhida na E3 ou na E4 só ler Iceberg.
 
-O lugar onde ficam os dados e o registro de alterações está descrito no README,
-na seção "Camada analítica (E2)".
+Os caminhos são relativos ao diretório de dados (`/dados` no Docker). Cada
+tabela Delta mantém seu registro `_delta_log` junto dos arquivos Parquet.
+Veja também o [guia de execução](execucao.md).
 
-## Números para o ADR 0003
+## Documentação relacionada
 
-- Dividida por ano e UF, a tabela fica com 27 arquivos de 58 kB. Em relação à
-  tabela sem divisão, a consulta do DF caiu de 9,7 para 5,6 ms e a do país, de
-  75,7 para 44,3 ms.
-- Com 20 gravações pequenas, a tabela chegou a 540 arquivos e 3,1 MB. Depois de
-  juntar, ficou com 27 arquivos e 1,7 MB, em 0,25 segundo.
-- Acrescentar uma coluna não regravou nenhum dos 27 arquivos.
-- Para reproduzir, rode `eduinfra comparar-particionamento --repeticoes 15`.
+- [Compressão](serializacao-compressao.md): medições de formatos e codecs.
+- [CDC e semântica de entrega](cdc-e-semantica-de-entrega.md): tabela de eventos.
+- [Índice dos ADRs](adr/README.md): estado da decisão de armazenamento.

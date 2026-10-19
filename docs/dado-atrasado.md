@@ -1,4 +1,4 @@
-# Dado atrasado e reprocessamento de janela
+# Dados atrasados e reprocessamento
 
 Os eventos de vistoria chegam à camada analítica em **janelas mensais pelo mês
 de `ocorrido_em`**, a data em que a realidade mudou na escola. Uma vistoria
@@ -189,21 +189,11 @@ pelo sistema por falta de memória nessa mesma janela. Agora a gravação usa
   de 1 GB de memória: particionar também por UF dentro do mês.
 - Se a fração de eventos fora da tolerância passar de 5% num mês: a tolerância de
   7 dias está curta para o ritmo real de digitação.
-- Quando o CDC (issue #25) entregar os eventos em fluxo: a marca d'água em
-  arquivo passa a ser a posição (LSN) do slot de replicação.
+- Avaliar a unificação com o CDC já implementado. Atualmente, as janelas
+  continuam usando marca d'água em arquivo, enquanto o CDC mantém seu próprio
+  destino Delta e confirma o LSN; a substituição automática não foi implementada.
 
-## Para o ADR 0004
+## Decisão de ingestão
 
-Texto sugerido para a seção de dado atrasado do ADR de ingestão (issue #5):
-
-> Os eventos de vistoria entram na camada analítica em janelas mensais pelo mês
-> de `ocorrido_em`, não de `registrado_em`, para que uma vistoria digitada com
-> atraso fique no mês em que aconteceu. `registrado_em` serve de marca d'água,
-> com uma margem de 10 minutos contra transações confirmadas depois do seu
-> `now()`. A janela fica aberta até 7 dias após o fim do mês. O que chega depois
-> não é descartado: a janela é recalculada da origem, que é insert-only, e a
-> reabertura fica registrada para quem já usou o número. Reprocessar é idempotente:
-> regravar a janela de 3.078.105 linhas duas vezes deu a mesma impressão, em cerca
-> de 8 segundos. Perdemos a estabilidade dos números de um mês fechado e pagamos
-> a janela inteira a cada correção. Demonstração reproduzível com
-> `eduinfra demonstrar-atraso`; detalhes em `docs/dado-atrasado.md`.
+O [ADR 0004](adr/0004-ingestao.md) consolida essa decisão, seus custos e a
+coexistência das janelas em Parquet com o CDC em Delta.
