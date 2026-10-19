@@ -18,42 +18,86 @@ dos seus alunos no ENEM?
 
 ## Arquitetura
 
-O dado passa por três estágios: o armazenamento bruto (Bronze e Silver), a
-camada de serviço (Gold) e o consumo pelo assistente.
+O fluxo separa a origem transacional, as camadas de dados e os componentes de consumo. A Bronze preserva os dados recebidos; a Silver contém dados validados e padronizados; e a Gold prepara os dados para consultas de negócio.
 
 ```mermaid
 flowchart LR
-    INEP["INEP<br/>ENEM, Censo, INSE,<br/>dicionários"] -->|extração anual| LAKE["Bronze / Silver<br/>Parquet + DuckDB"]
-    IBGE["API do IBGE"] -->|enriquecimento| LAKE
-    APP["Aplicativo de vistorias"] --> OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
-    OLTP -->|ingestão, E2| LAKE
-    LAKE -->|transformação| GOLD[("Gold<br/>PostgreSQL")]
-    LAKE -->|embeddings| VET[("Banco vetorial<br/>pgvector")]
-    GOLD --> AGENTE["Assistente RAG<br/>ferramentas MCP"]
+    INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
+    IBGE["API do IBGE"]
+    APP["Aplicativo<br/>de vistorias"]
+
+    BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
+    LOTE["Ingestão em lote<br/>Validação e padronização"]
+    SILVER["Silver<br/>Dados tratados<br/>Parquet / Delta"]
+
+    OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
+    CDC["CDC<br/>Captura pelo WAL"]
+    DUCK["DuckDB<br/>Consulta e processamento"]
+    GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
+
+    EMB["Geração de<br/>embeddings"]
+    VET[("Banco vetorial<br/>pgvector")]
+    AGENTE["Assistente RAG<br/>ferramentas MCP"]
+    CACHE[("Cache<br/>Redis")]
+    USER["Gestor / pesquisador"]
+
+    INEP -->|extração anual| BRONZE
+    IBGE -->|extração para enriquecimento| BRONZE
+    BRONZE --> LOTE
+    LOTE --> SILVER
+
+    APP --> OLTP
+    OLTP --> CDC
+    CDC --> SILVER
+
+    SILVER --> DUCK
+    DUCK -->|transformação| GOLD
+    SILVER -->|conteúdo selecionado| EMB
+    EMB --> VET
+
+    GOLD --> AGENTE
     VET --> AGENTE
-    CACHE[("Cache<br/>Redis")] <--> AGENTE
-    AGENTE --> USER["Gestor / pesquisador"]
+    CACHE <--> AGENTE
+    AGENTE --> USER
 ```
 
-Na E1, só a origem OLTP e a carga do Censo estão implementadas.
+Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
 
-| Estágio | O que guarda | Tecnologia | Por quê |
+| Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |
-| Origem transacional | vistorias de infraestrutura registradas pela secretaria | PostgreSQL, insert-only | escrita concorrente com integridade forte, sem apagar o histórico da escola |
-| Bronze e Silver (Data Lake) | microdados do INEP convertidos para formato colunar | Parquet (zstd) + DuckDB | a análise lê poucas colunas de milhões de linhas; DuckDB faz isso numa máquina só, sem cluster |
-| Gold (Serving e Camada Semântica) | tabela fato escola × desempenho, pronta para consulta | PostgreSQL | o assistente e o painel precisam de respostas exatas e rápidas, por chave e com filtro |
-| Banco vetorial | embeddings das escolas e do dicionário de variáveis | pgvector | a busca por escolas parecidas é distância entre vetores, não SQL |
-| Cache semântico | respostas e gráficos já gerados | Redis | a mesma pergunta não gasta latência nem tokens duas vezes |
+| Origem transacional | Armazenar escolas e vistorias de infraestrutura | PostgreSQL; vistorias insert-only | Garantir integridade e preservar o histórico das vistorias |
+| Bronze | Preservar arquivos e respostas originais das fontes | Arquivos recebidos, como ZIP, CSV e JSON | Permitir rastreabilidade e reprocessamento |
+| Ingestão em lote | Validar e padronizar os dados recebidos | Python | Controlar as cargas e evitar duplicações em reexecuções |
+| CDC | Capturar novas vistorias pelo log do banco | WAL e slot lógico do PostgreSQL | Propagar mudanças e permitir retomada após interrupções |
+| Silver | Armazenar dados tratados para análise | Parquet com compressão zstd e tabelas Delta | Permitir leitura colunar eficiente e, nas tabelas Delta, controle transacional |
+| Consulta e processamento | Consultar e transformar os dados analíticos | DuckDB | Executar SQL diretamente sobre os arquivos, sem exigir um cluster |
+| Gold — camada de serviço | Disponibilizar dados modelados e indicadores para análise | PostgreSQL | Atender consultas estruturadas do painel e do assistente |
+| Banco vetorial | Armazenar embeddings de conteúdos selecionados | pgvector | Permitir buscas por similaridade usando distância entre vetores |
+| Cache | Reutilizar respostas e resultados válidos | Redis | Reduzir processamento repetido e tempo de resposta |
 
-O assistente responde por ferramentas MCP. Perguntas numéricas ("gere um gráfico
-da média do ENEM no DF comparando quem tem e quem não tem quadra") viram SQL
-exato no PostgreSQL. Perguntas abstratas ("quais escolas têm perfil parecido com
-a escola X?") vão para a busca por similaridade no banco vetorial.
+Bronze e Silver representam camadas de organização dos dados. Parquet é um formato de arquivo, e Delta acrescenta um log de transações aos arquivos Parquet. O DuckDB atua como mecanismo de consulta e processamento; ele não define, sozinho, um Data Lake.
 
-## Estado atual: Entrega 1
+Na arquitetura prevista, o assistente acessará os dados por ferramentas MCP. Perguntas numéricas, como “qual é a média do ENEM no DF entre escolas com e sem quadra?”, serão atendidas por consultas SQL aos dados modelados na Gold. Perguntas sobre similaridade, como “quais escolas têm perfil parecido com a escola X?”, poderão utilizar o pgvector.
 
-A E1 pede uma fonte transacional modelada e populada com dado público. Este
-repositório entrega:
+O Redis poderá reutilizar resultados conforme as regras de validade e atualização do cache.
+
+## Estado atual: Entrega 2
+
+A E2 pede ingestão em lote e captura de mudanças sobre a origem da E1. Este
+repositório entrega, além da E1:
+
+- **ingestão em lote idempotente**: cada execução fica registrada num manifesto
+  com o SHA-256 do arquivo, e a Silver em Parquet é trocada inteira, só depois
+  do commit no banco;
+- **CDC pelo slot lógico** do PostgreSQL, com entrega no mínimo uma vez e
+  efeito idempotente numa tabela Delta Lake;
+- **dado atrasado** tratado em janelas mensais reprocessáveis, sem descarte;
+- **camada analítica** em Delta Lake, particionada por ano do Censo e UF.
+
+As decisões estão no [ADR 0004](docs/adr/0004-ingestao.md) e os detalhes na
+seção "Ingestão e camada analítica (E2)", mais abaixo.
+
+Da E1, que pedia uma fonte transacional modelada e populada com dado público:
 
 - **origem de vistorias** em PostgreSQL 16, com esquema versionado em migrações
   Alembic;
@@ -64,8 +108,6 @@ repositório entrega:
 - **carga reprodutível** do Censo Escolar 2024 com um comando: baixa o pacote do
   INEP, valida o cabeçalho e popula o banco como linha de base das vistorias;
 - **carga idempotente**: rodar de novo não duplica nada.
-
-Os estágios analítico, vetorial e de consumo chegam nas próximas entregas.
 
 ### Modelo da origem
 
@@ -142,9 +184,11 @@ cp .env.example .env        # troque POSTGRES_PASSWORD e a senha em DATABASE_URL
 docker compose up --build
 ```
 
-O serviço `carga` roda as migrações, baixa e carrega o Censo 2024, imprime a
-caracterização da base e termina com código 0. O serviço `banco` continua no ar.
-Numa máquina limpa, o processo leva de 3 a 4 minutos.
+O serviço `carga` roda as migrações, baixa e ingere o Censo 2024, publica a
+linha de base nas tabelas Delta, imprime a caracterização da base e termina com
+código 0. Em seguida, o serviço `cdc` sobe e fica consumindo o slot lógico a
+cada 2 segundos. Os serviços `banco` e `cdc` continuam no ar. Na E1, numa
+máquina limpa, o processo levava de 3 a 4 minutos.
 
 Se a porta 5432 já estiver em uso, mude `PORTA_POSTGRES` no `.env`.
 
@@ -183,7 +227,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
-| `docker compose run --rm carga tudo` | migrar, carregar, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
+| `docker compose run --rm carga tudo` | migrar, ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -194,32 +238,64 @@ set -a && source .env && set +a
 uv run eduinfra tudo
 ```
 
-### Camada analítica e CDC (E2)
+## O que a carga produz
 
-O serviço `banco` sobe com `wal_level=logical` e a migração `0005` publica
-`vistoria` e `vistoria_item` na publicação `eduinfra_cdc`. O dado analítico fica
-numa tabela Delta Lake, `eventos_vistoria`, em
-`$DIRETORIO_DADOS/warehouse/eventos_vistoria` (volume `dados_censo` no Docker),
-particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
+Medido numa execução a partir de um clone limpo, em 26/09/2026, com o comando
+`caracterizar`.
 
-```bash
-docker compose run --rm carga publicar-analitico      # linha de base: origem -> Delta, idempotente
-docker compose run --rm carga cdc                     # uma passada do consumidor do slot lógico
-docker compose run --rm carga demonstrar-cdc          # insere na origem e mostra o efeito até o Delta
-```
+| Tabela | Linhas | O que guarda |
+| --- | ---: | --- |
+| `municipio` | 5.570 | municípios onde há escola em atividade |
+| `escola` | 181.065 | escolas em atividade no Censo 2024 |
+| `item_infraestrutura` | 17 | catálogo de itens vistoriados, com a coluna correspondente no Censo |
+| `tecnico` | 1 | operador da carga automática; na operação real, os técnicos da secretaria |
+| `vistoria` | 181.065 | uma vistoria de linha de base por escola, datada de 29/05/2024 |
+| `vistoria_item` | 3.078.105 | a situação de cada item em cada vistoria |
 
-O serviço `cdc` do Compose roda o consumidor de forma contínua, a cada 2
-segundos, depois que a carga termina. Para parar e retomar sem perder eventos:
+`vistoria_item` ocupa 369 MB dos 445 MB do banco, somando dados e índices. É o
+custo do modelo insert-only, discutido no
+[ADR 0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md). Cada
+nova carga anual acrescenta perto de 3 milhões de linhas de item.
 
-```bash
-docker compose stop cdc
-docker compose start cdc
-```
+A escrita esperada do aplicativo da secretaria é de cerca de 500 vistorias por
+dia, estimativa da Squad que ainda será medida. A leitura do estado atual de uma
+escola deve ficar abaixo de 300 ms; medida com as estatísticas do banco
+atualizadas, ela leva menos de 1 ms.
 
-Mecanismo, semântica de entrega, demonstração e medições estão em
-[docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
+## Ingestão e camada analítica (E2)
 
-### Ingestão em lote idempotente (E2)
+A E2 leva o dado para a camada analítica por dois caminhos complementares,
+decididos no [ADR 0004](docs/adr/0004-ingestao.md): a ingestão em lote do
+Censo, idempotente, e a captura de mudanças (CDC) da origem pelo slot lógico do
+PostgreSQL. O `docker compose up --build` de [Como subir](#como-subir) executa os
+dois sem passo manual: o serviço `carga` faz a ingestão e a linha de base, e o
+serviço `cdc` fica consumindo o slot depois que ela termina.
+
+### Onde ficam os dados
+
+Tudo fica no volume `dados_censo`, montado em `/dados` no contêiner. Fora do
+Docker, o diretório é `dados/` na raiz do repositório (variável
+`DIRETORIO_DADOS`).
+
+| Caminho | Formato | Partição | Quem grava |
+| --- | --- | --- | --- |
+| `silver/ano_censo=AAAA/` | Parquet zstd | ano do Censo | `ingerir` (lote) |
+| `warehouse/vistoria_item/` | Delta Lake | `ano_censo` e `sg_uf` | `publicar-analitica` |
+| `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base) e serviço `cdc` |
+| `analitico/eventos_vistoria/` | Parquet zstd | `ocorrido_mes=AAAA-MM` | `processar-janelas` (não roda no `tudo`) |
+
+- `warehouse/vistoria_item` é a tabela da camada analítica, montada a partir da
+  Silver: um registro por item de vistoria, já com escola e município.
+- `warehouse/eventos_vistoria` recebe da origem, pelo CDC, cada item de vistoria
+  confirmado no banco.
+- `analitico/eventos_vistoria` é o caminho de dado atrasado em janelas mensais.
+  Ele coexiste com o CDC; a unificação dos dois destinos ainda não está
+  implementada (ADR 0004).
+
+Os comandos `demonstrar-cdc`, `demonstrar-atraso` e `comparar-ingestao` inserem
+vistorias de teste na origem: rode-os num ambiente de desenvolvimento.
+
+### Ingestão em lote idempotente
 
 A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
 na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
@@ -251,31 +327,79 @@ docker compose exec banco psql -U eduinfra -d eduinfra \
   -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
 ```
 
-## O que a carga produz
+### Captura de mudanças pelo slot lógico
 
-Medido numa execução a partir de um clone limpo, em 26/09/2026, com o comando
-`caracterizar`.
+O serviço `banco` sobe com `wal_level=logical` e a migração `0005` publica
+`vistoria` e `vistoria_item` na publicação `eduinfra_cdc`. O dado analítico fica
+numa tabela Delta Lake, `eventos_vistoria`, em
+`$DIRETORIO_DADOS/warehouse/eventos_vistoria` (volume `dados_censo` no Docker),
+particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
 
-| Tabela | Linhas | O que guarda |
-| --- | ---: | --- |
-| `municipio` | 5.570 | municípios onde há escola em atividade |
-| `escola` | 181.065 | escolas em atividade no Censo 2024 |
-| `item_infraestrutura` | 17 | catálogo de itens vistoriados, com a coluna correspondente no Censo |
-| `tecnico` | 1 | operador da carga automática; na operação real, os técnicos da secretaria |
-| `vistoria` | 181.065 | uma vistoria de linha de base por escola, datada de 29/05/2024 |
-| `vistoria_item` | 3.078.105 | a situação de cada item em cada vistoria |
+```bash
+docker compose run --rm carga publicar-analitico      # linha de base: origem -> Delta, idempotente
+docker compose run --rm carga cdc                     # uma passada do consumidor do slot lógico
+docker compose run --rm carga demonstrar-cdc          # insere na origem e mostra o efeito até o Delta
+```
 
-`vistoria_item` ocupa 369 MB dos 445 MB do banco, somando dados e índices. É o
-custo do modelo insert-only, discutido no
-[ADR 0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md). Cada
-nova carga anual acrescenta perto de 3 milhões de linhas de item.
+O serviço `cdc` do Compose roda o consumidor de forma contínua, a cada 2
+segundos, depois que a carga termina. Para parar e retomar sem perder eventos:
 
-A escrita esperada do aplicativo da secretaria é de cerca de 500 vistorias por
-dia, estimativa da Squad que ainda será medida. A leitura do estado atual de uma
-escola deve ficar abaixo de 300 ms; medida com as estatísticas do banco
-atualizadas, ela leva menos de 1 ms.
+```bash
+docker compose stop cdc
+docker compose start cdc
+```
 
-## Camada analítica (E2)
+Mecanismo, semântica de entrega, demonstração e medições estão em
+[docs/cdc-e-semantica-de-entrega.md](docs/cdc-e-semantica-de-entrega.md).
+
+#### Confirmar o WAL lógico
+
+O PostgreSQL de origem inicia com decodificação lógica habilitada. Para conferir
+os parâmetros carregados pelo servidor:
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "SHOW wal_level;" \
+  -c "SHOW max_replication_slots;" \
+  -c "SHOW max_wal_senders;"
+```
+
+`wal_level` deve retornar `logical`. Para confirmar a publicação e suas tabelas:
+
+```bash
+docker compose exec banco psql -U eduinfra -d eduinfra \
+  -c "SELECT pubname, pubinsert, pubupdate, pubdelete, pubtruncate
+      FROM pg_publication
+      WHERE pubname = 'eduinfra_cdc';" \
+  -c "SELECT pubname, schemaname, tablename
+      FROM pg_publication_tables
+      WHERE pubname = 'eduinfra_cdc'
+      ORDER BY schemaname, tablename;"
+```
+
+A publicação `eduinfra_cdc` inclui `public.vistoria` e
+`public.vistoria_item`. Ambas usam `REPLICA IDENTITY DEFAULT`, isto é, suas
+chaves primárias identificam linhas no WAL lógico. O modelo atual é insert-only,
+mas a identidade por chave evita registrar a linha inteira e deixa a origem
+preparada caso outros eventos sejam publicados no futuro.
+
+### Dado atrasado em janelas mensais
+
+`processar-janelas` leva à camada analítica as vistorias registradas desde a
+última execução, agrupadas pelo mês em que ocorreram. Uma vistoria que chega
+atrasada reabre a janela do mês dela em vez de ser descartada, e reprocessar uma
+janela é idempotente.
+
+```bash
+docker compose run --rm carga processar-janelas                  # janelas tocadas desde a última execução
+docker compose run --rm carga demonstrar-atraso                  # insere vistorias atrasadas e mostra a janela de cada uma
+docker compose run --rm carga reprocessar-janela --mes 2024-05   # regrava um mês a partir da origem
+```
+
+Margem, tolerância, reabertura e medições estão em
+[docs/dado-atrasado.md](docs/dado-atrasado.md).
+
+### Tabela Delta da camada analítica
 
 A carga termina gravando uma tabela Delta, particionada por ano do Censo e UF,
 com um registro por item de vistoria.
@@ -298,28 +422,39 @@ select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by
 ## Estrutura do repositório
 
 ```
-alembic/versions/   migrações do esquema, em ordem (0001 a 0004)
-src/eduinfra/       CLI, download, transformação e carga
+alembic/versions/   migrações do esquema, em ordem (0001 a 0006)
+src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   microdados.py     download retomável do pacote do INEP
   tls.py            completa a cadeia de certificados do INEP (ADR 0002)
-  transformacao.py  valida o cabeçalho e gera o Parquet intermediário
+  transformacao.py  valida o cabeçalho e gera a Silver em Parquet
   carga.py          staging, consolidação idempotente e resumo
-  caracterizacao.py contagens e tamanhos da base populada
+  ingestao.py       ingestão em lote idempotente, com manifesto (E2)
+  cdc.py            leitura do slot de replicação lógica da origem
+  pgoutput.py       decodificação das mensagens do plugin pgoutput
+  fluxo_cdc.py      consumidor do CDC: do slot à tabela Delta de eventos
+  eventos.py        tabela Delta de eventos de vistoria
+  janelas.py        eventos em janelas mensais, com dado atrasado tratado
   camada_analitica.py tabela Delta da camada analítica e conferência com o OLTP
-  comparacao_particionamento.py medição de particionamento e compactação
+  caracterizacao.py contagens e tamanhos da base populada
+  comparacao_*.py   medições citadas nos ADRs e em docs/
+  demonstracao_*.py demonstrações do CDC e do dado atrasado
+tests/              testes unitários e de integração (ver docs/testes.md)
+docs/               medições e decisões de cada tema da E2
 docs/adr/           registros de decisão de arquitetura
-docker-compose.yml  banco PostgreSQL e serviço de carga
+docs/diario/        diário de bordo semanal
+docker-compose.yml  banco PostgreSQL, serviço de carga e consumidor do CDC
 Dockerfile          imagem da carga, com uv
 .env.example        variáveis de ambiente; copie para .env
+AI-USAGE.md         registro de uso de IA
 ```
 
 ## Documentação do processo
 
 | Documento | Onde | Estado |
 | --- | --- | --- |
-| Decisões de arquitetura | [docs/adr/](docs/adr/) | ADRs 0001 e 0002 |
-| Diário de bordo semanal | `docs/diario/` | em construção, issue #8 |
-| Registro de uso de IA | `AI-USAGE.md` | em construção, issue #9 |
+| Decisões de arquitetura | [docs/adr/](docs/adr/README.md) | ADRs 0001, 0002 e 0004; 0003, 0005 e 0006 a escrever |
+| Diário de bordo semanal | [docs/diario/diario-de-bordo.md](docs/diario/diario-de-bordo.md) | Semanas 1 a 10, atualizado a cada Semana |
+| Registro de uso de IA | [AI-USAGE.md](AI-USAGE.md) | E1 e E2, atualizado a cada uso |
 
 ## Fontes de dados
 
@@ -347,13 +482,14 @@ sem pseudonimização.
 | --- | --- |
 | [0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem |
 | [0002](docs/adr/0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação |
+| [0004](docs/adr/0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL |
 
 ## Entregas
 
 | Entrega | Tema | Data prevista |
 | --- | --- | --- |
 | E1 | Fonte transacional modelada e populada | 28/09/2026 |
-| E2 | Ingestão em lote e captura de mudanças | 13/10/2026 |
+| E2 | Ingestão em lote e captura de mudanças | 19/10/2026 |
 | E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 |
 | E4 | Plataforma completa, governada e defendida | 24/11/2026 |
 
