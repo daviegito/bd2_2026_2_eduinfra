@@ -68,6 +68,33 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   - Inspeção e validação do arquivo `.xlsx` gerado para conferir se todas as abas, células e fórmulas de validação atingiam o mínimo exigido pelo template;
 - **Quem revisou:** Pedro Vargas
 
+### 2026-09-23 — Esquema insert-only, migrações Alembic e ADR 0001
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução)
+- **Onde:** `alembic/` (`env.py` e as revisões `0001` a `0004`), `tests/test_insert_only.py`, `src/eduinfra/comparacao_modelagem.py` e `docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md`
+- **O que foi pedido:** Artur definiu a direção: origem transacional insert-only para a E1, `uv` no lugar do `pip` e Alembic no lugar de um executor de arquivos `.sql`. A primeira versão do esquema saiu em `.sql` e foi refeita em Alembic por essa decisão. Ele também exigiu que o que fosse versionado tivesse sido conferido contra o banco real
+- **O que foi aproveitado:** o esquema (cadastro escolar, catálogo de infraestrutura, vistoria e item insert-only, visão do estado atual), as quatro revisões, os testes de insert-only e a comparação reproduzível entre CRUD e insert-only usada no ADR 0001. A escrita final do ADR e a adequação ao template da disciplina passaram pela revisão do PR #13
+- **Como foi verificado:** migrações aplicadas, revertidas e reaplicadas num PostgreSQL 16 em Docker; testes de integridade rodando contra esse banco; subida do zero com `docker compose up`
+- **Quem revisou:** Lucas Mendonça Arruda (PR #11); Davi e Gabriel (PR #13)
+
+### 2026-09-24 — Carga reprodutível do Censo Escolar 2024
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução)
+- **Onde:** `src/eduinfra/carga.py`, `src/eduinfra/microdados.py`, `src/eduinfra/transformacao.py`, `src/eduinfra/cli.py`, `src/eduinfra/configuracao.py`, `Dockerfile`, `docker-compose.yml` e `tests/test_transformacao.py`
+- **O que foi pedido:** um comando que baixe o pacote público do INEP e popule o banco sem passo manual, com volume real e idempotência, como a E1 exige. Artur fixou as restrições: configuração só por variável de ambiente, nenhum dado bruto no repositório e `uv` para as dependências
+- **O que foi aproveitado:** o download, a transformação do CSV nas tabelas da origem e a carga idempotente, que produz 181.065 escolas e 3.078.105 itens de vistoria
+- **Como foi verificado:** `docker compose up` do zero até o fim da carga com os dados reais do INEP e `pytest` da transformação
+- **Quem revisou:** Lucas Mendonça Arruda (PR #11)
+
+### 2026-09-26 — ADR 0002: cadeia TLS incompleta do INEP
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução)
+- **Onde:** `src/eduinfra/tls.py` e `docs/adr/0002-cadeia-tls-incompleta-do-inep.md`
+- **O que foi pedido:** resolver a falha de certificado no download do INEP sem desligar a verificação. Artur ficou com a decisão de manter a verificação ativa
+- **O que foi aproveitado:** a solução que completa a cadeia pelo endereço de emissão do certificado (AIA) e o texto do ADR, que registra a alternativa descartada
+- **Como foi verificado:** o download real do pacote do INEP, com a verificação de certificado ligada, dentro da carga completa
+- **Quem revisou:** Gabriel (PR #12)
+
 ### 2026-09-27 — Documentação de processo da E1 (diário de bordo e AI-USAGE.md)
 
 - **Ferramenta:** Claude (assistente conversacional)
@@ -89,6 +116,24 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   direta do arquivo entre uma geração e outra, corrigindo nome (Marcos) e
   tom de trechos específicos antes de aceitar o conteúdo
 - **Quem revisou:** Pedro Teixeira
+
+### 2026-09-28 — Consolidação da caracterização da carga
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução)
+- **Onde:** `docs/caracterizacao.md` e `src/eduinfra/sample_generator.py`
+- **O que foi pedido:** Artur pediu a caracterização no formato do passo 1 do Método de Decisão e pediu que ela fosse somada ao que o Lucas já tinha escrito no `docs/caracterizacao.md`, sem apagar o que estava correto
+- **O que foi aproveitado:** a consolidação num único `docs/caracterizacao.md` e o gerador de amostra
+- **Como foi verificado:** os pontos sobre índices e restrições foram conferidos nas migrações Alembic, e o texto foi comparado com a versão do Lucas antes de unir
+- **Quem revisou:** Lucas Mendonça Arruda (PR #20)
+
+### 2026-10-12 — CDC pelo slot lógico e semântica de entrega (issues #25 e #26)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução)
+- **Onde:** `src/eduinfra/pgoutput.py`, `cdc.py`, `fluxo_cdc.py`, `eventos.py`, `demonstracao_cdc.py`, `comparacao_ingestao.py`, `vistorias_de_teste.py`, `tests/test_pgoutput.py`, `tests/test_eventos.py`, `tests/test_fluxo_cdc_integracao.py`, o serviço `cdc` do `docker-compose.yml`, `docs/cdc-e-semantica-de-entrega.md` e a seção nova do README (PR #34)
+- **O que foi pedido:** Artur escolheu o escopo: as issues #25 e #26, sem o que fosse só da #24 (que já tinha responsável) e sem nada além do necessário para as duas funcionarem. Também definiu as referências nas issues
+- **O que foi aproveitado:** o decodificador de mensagens `pgoutput`, o consumidor em duas fases (espiar, gravar no Delta, confirmar o slot), a tabela Delta de eventos com `merge` pela chave `(vistoria_id, item_codigo)`, a demonstração do CDC com falha e reprocessamento, a medição contra a recarga incremental e a documentação. A semântica declarada (no mínimo uma vez, com efeito de exatamente uma) é a que o código e a demonstração mostram
+- **Como foi verificado:** migrações 0001 a 0005 do zero num banco vazio, `publicar-analitico`, `demonstrar-cdc` (51 itens na entrega normal, 68 após o consumidor parado, 34 reentregues e 0 inseridos após a falha, 17 e depois 0 no reprocessamento) e 40 testes passando. Ficaram sem verificação o healthcheck do serviço `cdc` no Compose e a latência ponta a ponta, como registrado no PR
+- **Quem revisou:** Gabriel (PR #34)
 
 ### 2026-10-13 — Ingestão em lote idempotente (issue #23)
 
@@ -117,49 +162,3 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Aproveitado:** rascunho sobre lote idempotente, CDC, alternativas, medições, perdas e gatilhos de revisão.
 - **Verificação:** comparação com a issue #5, código e documentação da `main` após o merge da PR #36. Os benchmarks citados são os já registrados pela equipe.
 - **Quem revisou:** pendente.
-
-### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
-
-- **Ferramenta:**
-- **Onde:** `alembic/versions/000X_*.py`
-- **O que foi pedido:**
-- **O que foi aproveitado:**
-- **Como foi verificado:**
-- **Quem revisou:**
-
-> Preencher por quem trabalhou nas migrações (`0001_cadastro_escolar.py` a
-> `0004_estado_atual.py`) e no modelo insert-only, se algum assistente foi
-> usado na implementação ou na revisão do esquema.
-
-### AAAA-MM-DD — [preencher: uso de IA na carga e no download do Censo]
-
-- **Ferramenta:**
-- **Onde:** `src/eduinfra/carga.py`, `src/eduinfra/microdados.py`,
-  `src/eduinfra/transformacao.py`
-- **O que foi pedido:**
-- **O que foi aproveitado:**
-- **Como foi verificado:**
-- **Quem revisou:**
-
-> Preencher por quem implementou a carga idempotente e o download do pacote do
-> INEP.
-
-### AAAA-MM-DD — [preencher: uso de IA no ADR 0002 — cadeia TLS incompleta do INEP]
-
-- **Ferramenta:**
-- **Onde:** `src/eduinfra/tls.py`, `docs/adr/0002-cadeia-tls-incompleta-do-inep.md`
-- **O que foi pedido:**
-- **O que foi aproveitado:**
-- **Como foi verificado:**
-- **Quem revisou:**
-
-> Preencher por quem investigou e resolveu o problema de certificado do INEP.
-
-### AAAA-MM-DD — [preencher: uso de IA na caracterização da carga de trabalho]
-
-- **Ferramenta:**
-- **Onde:** `src/eduinfra/caracterizacao.py`
-- **O que foi pedido:**
-- **O que foi aproveitado:**
-- **Como foi verificado:**
-- **Quem revisou:**
