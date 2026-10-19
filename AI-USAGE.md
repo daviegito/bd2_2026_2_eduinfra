@@ -103,7 +103,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **O que foi pedido:** levantar quais documentos faltavam pra E1 checando o
   site da disciplina, o repositório e as issues abertas; gerar um rascunho do
   diário de bordo (Semanas 1 a 7) a partir do histórico da Squad no WhatsApp
-  e do estado do repositório; auxílio na geração do próprio `AI-USAGE.md`, lendo as 
+  e do estado do repositório; auxílio na geração do próprio `AI-USAGE.md`, lendo as
   conversas do grupo para encontrar pontos importantes; e auxílio para escrever a
   descrição da PR do diário
 - **O que foi aproveitado:** a identificação dos documentos faltantes (issues
@@ -125,6 +125,15 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **O que foi aproveitado:** a consolidação num único `docs/caracterizacao.md` e o gerador de amostra
 - **Como foi verificado:** os pontos sobre índices e restrições foram conferidos nas migrações Alembic, e o texto foi comparado com a versão do Lucas antes de unir
 - **Quem revisou:** Lucas Mendonça Arruda (PR #20)
+
+### 2026-10-12 — [preencher: uso de IA na modelagem/migrações do esquema]
+
+- **Ferramenta:** Perplexity (assistente conversacional)
+- **Onde:** `alembic/versions/0005_habilita_cdc_logico.py`
+- **O que foi pedido:** ajuda para melhor entender os requisitos pedidos
+- **O que foi aproveitado:** a estrutura de outras migrações do alembic
+- **Como foi verificado:** testes foram realizados para confirmar se os critérios de aceite foram feitos e um PR foi aberto para que outra pessoa revisasse também.
+- **Quem revisou:** Davi
 
 ### 2026-10-12 — CDC pelo slot lógico e semântica de entrega (issues #25 e #26)
 
