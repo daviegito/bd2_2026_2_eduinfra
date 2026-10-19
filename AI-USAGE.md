@@ -109,6 +109,15 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   pela camada analítica existente. 
 - **Quem revisou:** Pedro Teixeira
 
+### 2026-10-18 — Elaboração do ADR 0004
+
+- **Ferramenta:** Codex.
+- **Onde:** ADR de ingestão, índice e navegação da documentação.
+- **Pedido:** consolidar a decisão de ingestão com base na implementação e nas evidências do repositório.
+- **Aproveitado:** rascunho sobre lote idempotente, CDC, alternativas, medições, perdas e gatilhos de revisão.
+- **Verificação:** comparação com a issue #5, código e documentação da `main` após o merge da PR #36. Os benchmarks citados são os já registrados pela equipe.
+- **Quem revisou:** pendente.
+
 ### AAAA-MM-DD — [preencher: uso de IA na modelagem/migrações do esquema]
 
 - **Ferramenta:**
