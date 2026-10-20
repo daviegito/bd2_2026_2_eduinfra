@@ -27,12 +27,12 @@ eventos não exportam sua identificação; detalhes no [modelo da origem](modelo
 | Entrega | Escopo | Situação no repositório |
 | --- | --- | --- |
 | E1 | Origem transacional e carga pública reprodutível | Implementada |
-| E2 | Lote idempotente, CDC e armazenamento analítico aberto | Implementada; ADR 0004 proposto |
+| E2 | Lote idempotente, CDC e armazenamento analítico aberto | Implementada; ADR 0004 aceito |
 | E3 | Modelagem analítica, testes de dados e orquestração | Prevista |
 | E4 | Consumo, governança e plataforma integrada | Prevista |
 
 Os prazos devem ser consultados no
-[cronograma da disciplina](https://unb-bd2.github.io/Disciplina/cronograma/).
+[cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/).
 O estado acima descreve a implementação, não a avaliação ou aprovação das entregas.
 
 ## Equipe

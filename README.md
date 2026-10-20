@@ -493,7 +493,7 @@ sem pseudonimização.
 | E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 |
 | E4 | Plataforma completa, governada e defendida | 24/11/2026 |
 
-Datas do [cronograma da disciplina](https://unb-bd2.github.io/Disciplina/cronograma/),
+Datas do [cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/),
 ainda provisórias.
 
 ## Equipe

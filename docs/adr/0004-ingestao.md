@@ -1,6 +1,6 @@
 # 0004 — Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL
 
-- **Status:** proposto — registra a implementação integrada; o texto aguarda revisão da Squad
+- **Status:** aceito — registra a implementação integrada; revisado por Artur Mendonça Arruda e aprovado no PR #37
 - **Data:** 2026-10-18
 - **Decisores:** Squad EduInfra
 
@@ -80,4 +80,4 @@ Adotar B, com as seguintes garantias e limites:
 
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
-| 1.0 | Consolida as decisões e evidências de ingestão da E2 | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 18 de outubro de 2026 |
+| 1.0 | Consolida as decisões e evidências de ingestão da E2 | [Pedro Vargas](https://github.com/Pedrovargas10) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) | 18 de outubro de 2026 |
