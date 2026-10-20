@@ -126,7 +126,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** os pontos sobre índices e restrições foram conferidos nas migrações Alembic, e o texto foi comparado com a versão do Lucas antes de unir
 - **Quem revisou:** Lucas Mendonça Arruda (PR #20)
 
-### 2026-10-12 — [preencher: uso de IA na modelagem/migrações do esquema]
+### 2026-10-12 — Migração 0005: habilitar a decodificação lógica do WAL (issue #22)
 
 - **Ferramenta:** Perplexity (assistente conversacional)
 - **Onde:** `alembic/versions/0005_habilita_cdc_logico.py`
@@ -209,7 +209,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Pedido:** consolidar a decisão de ingestão com base na implementação e nas evidências do repositório.
 - **Aproveitado:** rascunho sobre lote idempotente, CDC, alternativas, medições, perdas e gatilhos de revisão.
 - **Verificação:** comparação com a issue #5, código e documentação da `main` após o merge da PR #36. Os benchmarks citados são os já registrados pela equipe.
-- **Quem revisou:** pendente.
+- **Quem revisou:** Artur, na aprovação da PR #37, que conferiu as medições e as constantes contra o código e a documentação.
 
 ### 2026-10-19 — Diário de bordo da Semana 10 e revisão do AI-USAGE.md da E2
 

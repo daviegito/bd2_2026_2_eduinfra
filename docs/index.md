@@ -22,8 +22,8 @@ por painéis e por um assistente em linguagem natural.
 
 A ingestão usa lote anual para o Censo e CDC para as novas vistorias.
 Os destinos analíticos ainda coexistem; não formam uma tabela única integrada.
-O [ADR 0004](adr/0004-ingestao.md) registra as garantias e limitações e permanece
-com status **proposto**. O diário de bordo está atualizado até a semana 10.
+O [ADR 0004](adr/0004-ingestao.md) registra as garantias e limitações e tem
+status **aceito**. O diário de bordo está atualizado até a semana 10.
 
 ## Explore a documentação
 

@@ -57,7 +57,9 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      # A primeira passada depois de subir leva de 65 a 86 s no Docker Desktop
+      # (medido); só então o consumidor cria /tmp/cdc_vivo.
+      start_period: 120s
 
 volumes:
   dados_postgres:
