@@ -918,6 +918,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#healthcheck-do-servico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Healthcheck do serviço
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#o-que-nao-foi-medido" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1401,6 +1412,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#healthcheck-do-servico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Healthcheck do serviço
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#o-que-nao-foi-medido" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1620,13 +1642,33 @@ comparação e retome ao terminar:</p>
   incremental; o slot entrega por ordem de commit) e em entregar em segundos
   sem agendamento.</li>
 </ul>
+<h2 id="healthcheck-do-servico">Healthcheck do serviço<a class="headerlink" href="#healthcheck-do-servico" title="Permanent link">&para;</a></h2>
+<p>O Compose considera o serviço <code>cdc</code> saudável quando <code>/tmp/cdc_vivo</code>, que o
+consumidor atualiza a cada passada, foi modificado nos últimos 60 s. O arquivo
+só passa a existir ao fim da primeira passada.</p>
+<p>Medido em 19/10/2026, no Docker Desktop (Windows), com 200 escolas geradas por
+<code>gerar_amostra</code> e não com o Censo real; uma execução de cada caso:</p>
+<ul>
+<li>Com carência (<code>start_period</code>) de 30 s, o contêiner ficou <code>unhealthy</code> na
+  partida e só virou <code>healthy</code> aos 84 s, porque a primeira passada levou mais
+  que a carência.</li>
+<li>Com 120 s, foi de <code>starting</code> a <code>healthy</code> em 52 s, sem <code>unhealthy</code> e sem
+  reinícios.</li>
+<li>Parando o contêiner, inserindo 10 itens e religando, os 15 itens inseridos
+  desde a linha de base chegaram ao Delta 86 s depois do <code>start</code>, e o slot ficou
+  sem atraso. Com o consumidor em execução, 5 itens chegaram em cerca de 9 s.</li>
+<li>Depois do <code>stop</code> e <code>start</code>, o contêiner voltou <code>healthy</code> em 15 s porque o
+  arquivo de antes da parada ainda estava recente; esse estado não prova que o
+  novo processo estava vivo, a entrega dos itens é que prova.</li>
+</ul>
 <h2 id="o-que-nao-foi-medido">O que não foi medido<a class="headerlink" href="#o-que-nao-foi-medido" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Debezium com Kafka Connect ou Debezium Server.</li>
 <li>Latência ponta a ponta do commit até a linha visível no Delta, com o
-  consumidor em modo contínuo.</li>
+  consumidor em modo contínuo, além da medição pontual acima.</li>
 <li>Crescimento do WAL com o consumidor parado por horas.</li>
-<li>O healthcheck do serviço <code>cdc</code> no Compose.</li>
+<li>O healthcheck do serviço <code>cdc</code> com o Censo real e com o consumidor travado
+  (não parado).</li>
 </ul>
 <h2 id="gatilho-de-revisao">Gatilho de revisão<a class="headerlink" href="#gatilho-de-revisao" title="Permanent link">&para;</a></h2>
 <p>Revisar o consumidor próprio se a origem passar a emitir <code>UPDATE</code> ou <code>DELETE</code>,
@@ -1650,6 +1692,13 @@ se surgir um segundo consumidor do mesmo fluxo, ou se o atraso do slot passar de
 <td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
 <td></td>
 <td>12 de outubro de 2026</td>
+</tr>
+<tr>
+<td>1.1</td>
+<td>Medição do healthcheck do serviço <code>cdc</code> e do stop/start</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>19 de outubro de 2026</td>
 </tr>
 </tbody>
 </table>
