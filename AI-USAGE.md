@@ -2,7 +2,7 @@
 
 Registro de uso de assistentes e agentes de IA no Projeto Integrado.
 
-Este arquivo cumpre a [Política de Uso de IA](https://unb-bd2.github.io/Disciplina/uso-de-ia/)
+Este arquivo cumpre a [Política de Uso de IA](https://unb-bd2.github.io/PlanoEnsino/uso-de-ia/)
 da disciplina. Ele não é confissão nem formalidade: é o mesmo tipo de registro
 que um ADR faz para decisões de arquitetura.
 

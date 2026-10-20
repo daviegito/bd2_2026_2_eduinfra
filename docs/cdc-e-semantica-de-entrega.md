@@ -144,13 +144,35 @@ Leitura dos números:
   incremental; o slot entrega por ordem de commit) e em entregar em segundos
   sem agendamento.
 
+## Healthcheck do serviço
+
+O Compose considera o serviço `cdc` saudável quando `/tmp/cdc_vivo`, que o
+consumidor atualiza a cada passada, foi modificado nos últimos 60 s. O arquivo
+só passa a existir ao fim da primeira passada.
+
+Medido em 19/10/2026, no Docker Desktop (Windows), com 200 escolas geradas por
+`gerar_amostra` e não com o Censo real; uma execução de cada caso:
+
+- Com carência (`start_period`) de 30 s, o contêiner ficou `unhealthy` na
+  partida e só virou `healthy` aos 84 s, porque a primeira passada levou mais
+  que a carência.
+- Com 120 s, foi de `starting` a `healthy` em 52 s, sem `unhealthy` e sem
+  reinícios.
+- Parando o contêiner, inserindo 10 itens e religando, os 15 itens inseridos
+  desde a linha de base chegaram ao Delta 86 s depois do `start`, e o slot ficou
+  sem atraso. Com o consumidor em execução, 5 itens chegaram em cerca de 9 s.
+- Depois do `stop` e `start`, o contêiner voltou `healthy` em 15 s porque o
+  arquivo de antes da parada ainda estava recente; esse estado não prova que o
+  novo processo estava vivo, a entrega dos itens é que prova.
+
 ## O que não foi medido
 
 - Debezium com Kafka Connect ou Debezium Server.
 - Latência ponta a ponta do commit até a linha visível no Delta, com o
-  consumidor em modo contínuo.
+  consumidor em modo contínuo, além da medição pontual acima.
 - Crescimento do WAL com o consumidor parado por horas.
-- O healthcheck do serviço `cdc` no Compose.
+- O healthcheck do serviço `cdc` com o Censo real e com o consumidor travado
+  (não parado).
 
 ## Gatilho de revisão
 
@@ -163,3 +185,4 @@ se surgir um segundo consumidor do mesmo fluxo, ou se o atraso do slot passar de
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Mecanismo, semântica de entrega, demonstração e medições do CDC da E2 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 12 de outubro de 2026 |
+| 1.1 | Medição do healthcheck do serviço `cdc` e do stop/start | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 19 de outubro de 2026 |

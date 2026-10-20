@@ -32,7 +32,7 @@ eventos não exportam sua identificação; detalhes no [modelo da origem](modelo
 | E4 | Consumo, governança e plataforma integrada | Prevista |
 
 Os prazos devem ser consultados no
-[cronograma da disciplina](https://unb-bd2.github.io/Disciplina/cronograma/).
+[cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/).
 O estado acima descreve a implementação, não a avaliação ou aprovação das entregas.
 
 ## Equipe

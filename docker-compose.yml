@@ -57,8 +57,8 @@ services:
       interval: 15s
       timeout: 5s
       retries: 3
-      # A primeira passada depois de subir leva de 65 a 86 s no Docker Desktop
-      # (medido); só então o consumidor cria /tmp/cdc_vivo.
+      # A primeira passada depois de subir levou de cerca de 50 a 86 s no Docker
+      # Desktop (medido); só então o consumidor cria /tmp/cdc_vivo.
       start_period: 120s
 
 volumes:
