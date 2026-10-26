@@ -1,0 +1,966 @@
+From 60ba2865fe364cca58a050e8c70f029d5e16828f Mon Sep 17 00:00:00 2001
+From: PedroDev-sketch <PedroDev-sketch@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 20:48:06 +0000
+Subject: [PATCH] =?UTF-8?q?feat(e3):=20modelo=20dimensional=20da=20Gold=20?=
+ =?UTF-8?q?com=20dimens=C3=A3o=20de=20varia=C3=A7=C3=A3o=20lenta=20e=20doi?=
+ =?UTF-8?q?s=20fatos?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- dimensões de item, município e escola (tipo 1)
+- dim_escola_infraestrutura (SCD tipo 2): uma versão por mudança de item, sem
+  versão para vistoria que repete o estado e sem tratar nao_informado como estado
+- chave substituta estável (hash de escola e início): evento atrasado refaz o
+  histórico sem trocar as chaves das versões existentes
+- fato fino (escola x item x vistoria) e fato largo (escola x ano, perfil vigente
+  ao fim do ano), com o grão declarado em docs/modelo-analitico.md
+- comandos construir-gold e comparar-granularidades
+- testes de grão, SCD, evento atrasado, ponto no tempo, consistência com
+  escola_estado_atual, idempotência e atomicidade da construção
+---
+ AI-USAGE.md                      |  22 ++
+ README.md                        |   2 +
+ docs/modelo-analitico.md         | 100 ++++++++
+ mkdocs.yml                       |   1 +
+ src/eduinfra/cli.py              |  19 +-
+ src/eduinfra/modelo_analitico.py | 414 +++++++++++++++++++++++++++++++
+ tests/test_modelo_analitico.py   | 292 ++++++++++++++++++++++
+ 7 files changed, 849 insertions(+), 1 deletion(-)
+ create mode 100644 docs/modelo-analitico.md
+ create mode 100644 src/eduinfra/modelo_analitico.py
+ create mode 100644 tests/test_modelo_analitico.py
+
+diff --git a/AI-USAGE.md b/AI-USAGE.md
+index 03a9357..5bdaa7f 100644
+--- a/AI-USAGE.md
++++ b/AI-USAGE.md
+@@ -231,3 +231,25 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
+   `git branch -a --contains 5e4c802` e buscando o texto em todas as branches.
+   Os commits foram feitos à mão, sem a IA
+ - **Quem revisou:** Marcos Vinícius
++
++### 2026-10-26 — Modelo dimensional da Gold e dimensão de variação lenta (E3-3 e E3-4)
++
++- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
++- **Onde:** `src/eduinfra/modelo_analitico.py`, `src/eduinfra/cli.py`,
++  `tests/test_modelo_analitico.py`, `docs/modelo-analitico.md`, `mkdocs.yml` e README
++- **O que foi pedido:** desenhar e implementar as dimensões, a dimensão de
++  variação lenta (tipo 2) e os dois fatos de granularidades diferentes, com testes
++  e o comando de medição, a partir do esquema da origem
++- **O que foi aproveitado:** o código, os testes e a documentação. Decisões de
++  projeto sugeridas e a revisar pela Squad: o histórico da dimensão vem dos eventos
++  insert-only e não de um segundo ano do Censo, `nao_informado` não é estado, a
++  chave substituta é um hash de (escola, início) e o fato largo usa o perfil
++  vigente ao fim do ano
++- **Como foi verificado:** `pytest` com PostgreSQL 16 real e banco descartável por
++  teste (11 testes novos, 32 com os de ingestão, transformação e insert-only); três
++  defeitos reintroduzidos de propósito (tratar `nao_informado` como estado, criar
++  versão a cada vistoria, chave instável) e o teste correspondente falhou em cada
++  caso, o que levou a reforçar o teste da chave. A construção e a comparação rodaram
++  num banco **sintético** com o volume do Censo (181 mil escolas, 3 milhões de
++  itens). **Não foi verificado** com o Censo real nem com o Docker Compose
++- **Quem revisou:** [preencher: nome de quem revisar a PR]
+diff --git a/README.md b/README.md
+index 703960f..46474c2 100644
+--- a/README.md
++++ b/README.md
+@@ -227,6 +227,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
+ | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
+ | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
+ | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
++| `docker compose run --rm carga construir-gold` | recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
++| `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
+ | `docker compose run --rm carga tudo` | migrar, ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
+ 
+ Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
+diff --git a/docs/modelo-analitico.md b/docs/modelo-analitico.md
+new file mode 100644
+index 0000000..1b32225
+--- /dev/null
++++ b/docs/modelo-analitico.md
+@@ -0,0 +1,100 @@
++# Modelo analítico (Gold)
++
++A Gold responde à pergunta de gestão do projeto: a infraestrutura de uma escola
++se reflete no desempenho dos seus alunos no ENEM? Esta página declara o grão de
++cada tabela, as regras da dimensão de variação lenta e o que ainda depende de
++outras entregas. O SQL fica em `src/eduinfra/modelo_analitico.py`, em constantes,
++para poder ser movido sem mudanças para dbt ou SQLMesh quando o ADR 0005 escolher
++a ferramenta.
++
++## Como rodar
++
++```bash
++docker compose run --rm carga construir-gold
++docker compose run --rm carga comparar-granularidades --saida docs/granularidades.md
++```
++
++`construir-gold` recria o schema `gold` inteiro numa única transação: quem consulta
++vê o modelo anterior completo ou o novo completo. Rodar duas vezes dá o mesmo
++resultado. `comparar-granularidades` mede os dois fatos abaixo; rode com a carga
++real e faça o commit de `docs/granularidades.md`, que é a evidência do ADR 0005.
++
++## Tabelas e grãos
++
++| Tabela | Tipo | Grão (uma linha por...) |
++| --- | --- | --- |
++| `gold.dim_item` | dimensão, tipo 1 | item de infraestrutura do catálogo |
++| `gold.dim_municipio` | dimensão, tipo 1 | município |
++| `gold.dim_escola` | dimensão, tipo 1 | escola (atributos do Censo) |
++| `gold.dim_escola_infraestrutura` | dimensão, **tipo 2** | escola, por intervalo em que o perfil de infraestrutura não mudou |
++| `gold.fato_vistoria_item` | fato fino | escola, por item, por vistoria |
++| `gold.fato_infra_escola_ano` | fato largo | escola, por ano civil em que houve vistoria, com o perfil vigente ao fim do ano |
++
++```mermaid
++erDiagram
++    dim_municipio ||--o{ dim_escola : "co_municipio"
++    dim_escola ||--o{ dim_escola_infraestrutura : "co_entidade"
++    dim_escola ||--o{ fato_infra_escola_ano : "co_entidade"
++    dim_escola_infraestrutura ||--o{ fato_infra_escola_ano : "escola_infra_sk"
++    dim_escola ||--o{ fato_vistoria_item : "co_entidade"
++    dim_item ||--o{ fato_vistoria_item : "item_codigo"
++```
++
++## Dimensão de variação lenta: `dim_escola_infraestrutura`
++
++Cada versão é o perfil de infraestrutura de uma escola durante um intervalo
++`[valid_from, valid_to)`. A versão atual tem `valid_to = 'infinity'` e
++`is_current = true`.
++
++Regras:
++
++- **Uma versão nova nasce quando algum item muda** de situação ou de quantidade.
++  Uma vistoria que repete o estado anterior não cria versão.
++- **`nao_informado` não é estado.** Não cria versão nem apaga o que já se sabia
++  do item. É a mesma regra da view `escola_estado_atual` da origem, e um teste
++  confere os dois contra o mesmo dado.
++- **O histórico vem dos eventos insert-only** (`ocorrido_em` da vistoria), não de
++  um segundo ano do Censo. Os atributos de `dim_escola` vêm de um único ano e por
++  isso não têm histórico a guardar ainda.
++- **A chave substituta é função de `(co_entidade, valid_from)`.** Um evento
++  atrasado, com `ocorrido_em` no passado, muda o histórico da escola ao reconstruir,
++  mas as chaves das versões que já existiam continuam apontando para a mesma versão.
++- Cada versão guarda `itens` (item para situação), `quantidades`, contagens por
++  situação e `vistoria_origem_id`, a vistoria que a originou.
++
++Consulta de um dia específico (ponto no tempo):
++
++```sql
++select itens ->> 'lab_ciencias'
++from gold.dim_escola_infraestrutura
++where co_entidade = 53000001
++  and valid_from <= '2025-04-01' and '2025-04-01' < valid_to;
++```
++
++## Duas granularidades
++
++O fato **fino** é o evento: preserva tudo, mas responder "como a escola estava no
++ano X" exige escolher a última vistoria de cada escola e não herda o estado de
++anos anteriores. O fato **largo** guarda o perfil do ano, herdado pela dimensão
++de variação lenta, com um item por coluna. `comparar-granularidades` roda a mesma
++pergunta nos dois (% de escolas com laboratório de ciências por UF e rede, no ano
++de maior cobertura) e confere se as respostas são iguais.
++
++A escolha final é do ADR 0005, com a medição feita sobre a carga real. Em dados
++sintéticos do mesmo volume do Censo (181 mil escolas), o fino teve cerca de 15
++vezes mais linhas e consulta várias vezes mais lenta que o largo, com resposta
++idêntica; isso só indica a ordem de grandeza, não substitui a medição real.
++
++## O que ainda depende de outras entregas
++
++- **ENEM.** O fato de desempenho ainda não existe, porque o ENEM ainda não foi
++  ingerido. Interface esperada: `fato_desempenho_escola_ano`, com uma linha por
++  escola por ano do ENEM, chave `(co_entidade, ano)`. Para saber se a escola tinha
++  laboratório **na época da prova**, a junção correta é pelo ponto no tempo:
++  `d.valid_from <= data_da_prova and data_da_prova < d.valid_to`.
++- **Fonte de eventos única.** A Gold lê as tabelas da origem (`public.vistoria` e
++  `public.vistoria_item`). Quando a unificação dos caminhos de dado atrasado
++  decidir a fonte canônica, só o bloco de staging (`stg_mudanca_item`) muda.
++- **Histórico real só cresce com o tempo.** Com apenas a carga do Censo, cada
++  escola tem uma versão. Versões novas aparecem conforme as vistorias presenciais
++  chegam.
+diff --git a/mkdocs.yml b/mkdocs.yml
+index f5534bb..8c44783 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -59,6 +59,7 @@ nav:
+   - Projeto:
+       - Arquitetura: arquitetura.md
+       - Modelo da origem: modelo-origem.md
++      - Modelo analítico: modelo-analitico.md
+       - Fontes, equipe e entregas: projeto.md
+   - Execução:
+       - Como executar e demonstrar: execucao.md
+diff --git a/src/eduinfra/cli.py b/src/eduinfra/cli.py
+index 128763d..b2b09a5 100644
+--- a/src/eduinfra/cli.py
++++ b/src/eduinfra/cli.py
+@@ -16,6 +16,7 @@ from eduinfra import (
+     demonstracao_cdc,
+     fluxo_cdc,
+     janelas,
++    modelo_analitico,
+ )
+ from eduinfra.ingestao import ingerir
+ from eduinfra.configuracao import Configuracao, carregar_configuracao
+@@ -29,7 +30,7 @@ def main(argumentos: list[str] | None = None) -> int:
+     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
+                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
+                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
+-                                           "publicar-analitica", "comparar-particionamento"))
++                                           "publicar-analitica", "comparar-particionamento", "construir-gold", "comparar-granularidades"))
+     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao e comparar-particionamento")
+     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
+     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
+@@ -38,6 +39,7 @@ def main(argumentos: list[str] | None = None) -> int:
+     parser.add_argument("--forcar", action="store_true", help="reexecuta mesmo que o resultado já exista: em ingerir, ignora o manifesto; em publicar-analitico, relê a origem")
+     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
+     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
++    parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir")
+     parser.add_argument("--verboso", action="store_true")
+     opcoes = parser.parse_args(argumentos)
+ 
+@@ -55,6 +57,21 @@ def main(argumentos: list[str] | None = None) -> int:
+     if opcoes.comando in COMANDOS_ANALITICOS:
+         return _executar_analitico(opcoes, configuracao)
+ 
++    if opcoes.comando == "construir-gold":
++        resumo = modelo_analitico.construir(configuracao.dsn)
++        for tabela, linhas in resumo.linhas.items():
++            log.info("gold.%s: %d linhas", tabela, linhas)
++        return 0
++
++    if opcoes.comando == "comparar-granularidades":
++        texto = modelo_analitico.formatar_markdown(
++            modelo_analitico.comparar(configuracao.dsn, opcoes.repeticoes)
++        )
++        print(texto)
++        if opcoes.saida:
++            opcoes.saida.write_text(texto + "\n", encoding="utf-8")
++        return 0
++
+     if opcoes.comando == "comparar-modelagem":
+         print(comparacao_modelagem.formatar_markdown(comparacao_modelagem.comparar(configuracao.dsn)))
+         return 0
+diff --git a/src/eduinfra/modelo_analitico.py b/src/eduinfra/modelo_analitico.py
+new file mode 100644
+index 0000000..5fd4e03
+--- /dev/null
++++ b/src/eduinfra/modelo_analitico.py
+@@ -0,0 +1,414 @@
++"""Modelo dimensional da camada Gold (E3): dimensões, SCD tipo 2 e fatos de duas granularidades.
++
++Tudo é SQL sobre a origem OLTP, executado numa única transação: quem consulta a
++Gold vê o modelo anterior inteiro ou o novo inteiro. O SQL fica em constantes de
++propósito, para poder ser movido sem mudanças para dbt ou SQLMesh quando o ADR
++0005 escolher a ferramenta. As tabelas `stg_*` são o único ponto que lê a
++origem; trocar a fonte de eventos (issue de unificação) é mudar só elas.
++"""
++
++import logging
++import re
++import statistics
++import time
++from collections.abc import Callable
++from dataclasses import dataclass
++
++import psycopg
++
++log = logging.getLogger(__name__)
++
++PADRAO_DE_CODIGO_DE_ITEM = re.compile(r"^[a-z_]+$")
++
++# Itens que aparecem como coluna booleana na tabela larga. Todos os itens do catálogo
++# viram coluna; a lista é lida do banco para não divergir da migração 0002.
++CONSULTAS_DA_DIMENSAO = [
++    "drop schema if exists gold cascade",
++    "create schema gold",
++    # --- dimensões de atributo estável (tipo 1) ---
++    """
++    create table gold.dim_item as
++    select codigo as item_codigo, descricao, categoria
++    from public.item_infraestrutura
++    """,
++    "alter table gold.dim_item add primary key (item_codigo)",
++    """
++    create table gold.dim_municipio as
++    select co_municipio, no_municipio, sg_uf, co_uf
++    from public.municipio
++    """,
++    "alter table gold.dim_municipio add primary key (co_municipio)",
++    # Atributos vêm de um único ano do Censo; enquanto só um ano for ingerido não há
++    # histórico a preservar, e a variação lenta mora no perfil de infraestrutura.
++    """
++    create table gold.dim_escola as
++    select
++        e.co_entidade,
++        e.no_entidade,
++        e.co_municipio,
++        e.tp_dependencia,
++        case e.tp_dependencia
++            when 1 then 'federal' when 2 then 'estadual'
++            when 3 then 'municipal' else 'privada'
++        end as rede,
++        case e.tp_localizacao when 1 then 'urbana' else 'rural' end as localizacao,
++        e.ano_censo_referencia
++    from public.escola e
++    """,
++    "alter table gold.dim_escola add primary key (co_entidade)",
++    "create index dim_escola_por_municipio on gold.dim_escola (co_municipio)",
++]
++
++# Staging: a única leitura da origem. Cada linha é uma MUDANÇA no estado de um item de
++# uma escola, com o intervalo [desde, ate) em que aquele estado valeu. 'nao_informado'
++# não é estado: não cria versão nem apaga o que se sabia (mesma regra de escola_estado_atual).
++CONSULTAS_DE_STAGING = [
++    """
++    create temp table stg_mudanca_item on commit drop as
++    with eventos as (
++        select v.co_entidade, vi.item_codigo, vi.situacao::text as situacao, vi.quantidade,
++               v.ocorrido_em as desde, v.id as vistoria_id
++        from public.vistoria v
++        join public.vistoria_item vi on vi.vistoria_id = v.id
++        where vi.situacao <> 'nao_informado'
++    ),
++    comparados as (
++        select *,
++               lag(situacao) over janela as situacao_anterior,
++               lag(quantidade) over janela as quantidade_anterior,
++               row_number() over janela as ordem
++        from eventos
++        window janela as (partition by co_entidade, item_codigo order by desde, vistoria_id)
++    ),
++    mudancas as (
++        select co_entidade, item_codigo, situacao, quantidade, desde, vistoria_id
++        from comparados
++        where ordem = 1
++           or situacao is distinct from situacao_anterior
++           or quantidade is distinct from quantidade_anterior
++    )
++    select *,
++           coalesce(
++               lead(desde) over (partition by co_entidade, item_codigo order by desde, vistoria_id),
++               'infinity'::timestamptz
++           ) as ate
++    from mudancas
++    """,
++    "create index on stg_mudanca_item (co_entidade, desde)",
++    "analyze stg_mudanca_item",
++]
++
++# SCD tipo 2: uma versão do perfil de infraestrutura da escola a cada instante em que ALGUM
++# item mudou. A chave substituta é função de (escola, início): reconstruir a dimensão depois
++# de um evento atrasado não troca a chave das versões que já existiam.
++CONSULTAS_DA_SCD = [
++    """
++    create table gold.dim_escola_infraestrutura as
++    with inicios as (
++        select co_entidade, desde as valid_from, max(vistoria_id) as vistoria_origem_id
++        from stg_mudanca_item
++        group by co_entidade, desde
++    ),
++    perfis as (
++        select i.co_entidade, i.valid_from, i.vistoria_origem_id,
++               count(*) as n_itens_conhecidos,
++               count(*) filter (where m.situacao = 'existente') as n_existentes,
++               count(*) filter (where m.situacao = 'inexistente') as n_inexistentes,
++               count(*) filter (where m.situacao = 'em_obra') as n_em_obra,
++               count(*) filter (where m.situacao = 'inutilizavel') as n_inutilizaveis,
++               jsonb_object_agg(m.item_codigo, m.situacao) as itens,
++               coalesce(jsonb_object_agg(m.item_codigo, m.quantidade)
++                        filter (where m.quantidade is not null), '{}'::jsonb) as quantidades
++        from inicios i
++        join stg_mudanca_item m
++          on m.co_entidade = i.co_entidade
++         and m.desde <= i.valid_from
++         and i.valid_from < m.ate
++        group by i.co_entidade, i.valid_from, i.vistoria_origem_id
++    )
++    select
++        hashtextextended(co_entidade::text || '|' || valid_from::text, 0) as escola_infra_sk,
++        co_entidade,
++        valid_from,
++        coalesce(lead(valid_from) over proxima, 'infinity'::timestamptz) as valid_to,
++        lead(valid_from) over proxima is null as is_current,
++        vistoria_origem_id,
++        n_itens_conhecidos, n_existentes, n_inexistentes, n_em_obra, n_inutilizaveis,
++        itens, quantidades
++    from perfis
++    window proxima as (partition by co_entidade order by valid_from)
++    """,
++    "alter table gold.dim_escola_infraestrutura add primary key (escola_infra_sk)",
++    "alter table gold.dim_escola_infraestrutura add constraint escola_infra_unica_por_inicio unique (co_entidade, valid_from)",
++    "create index dim_escola_infra_vigencia on gold.dim_escola_infraestrutura (co_entidade, valid_from, valid_to)",
++]
++
++# Fato fino. Grão: uma linha por escola, por item de infraestrutura, por vistoria.
++CONSULTAS_DO_FATO_FINO = [
++    """
++    create table gold.fato_vistoria_item as
++    select v.id as vistoria_id,
++           vi.item_codigo,
++           v.co_entidade,
++           (v.ocorrido_em at time zone 'UTC')::date as data_ocorrencia,
++           v.origem,
++           vi.situacao::text as situacao,
++           vi.quantidade
++    from public.vistoria v
++    join public.vistoria_item vi on vi.vistoria_id = v.id
++    """,
++    "alter table gold.fato_vistoria_item add primary key (vistoria_id, item_codigo)",
++    "create index fato_vistoria_item_por_item on gold.fato_vistoria_item (item_codigo, situacao) include (co_entidade, data_ocorrencia)",
++]
++
++
++def _consultas_do_fato_largo(itens: list[str]) -> list[str]:
++    """Fato grosso. Grão: uma linha por escola, por ano civil em que houve vistoria, com o
++    perfil vigente ao fim desse ano (ou agora, no ano corrente). Um item por coluna."""
++    for codigo in itens:
++        if not PADRAO_DE_CODIGO_DE_ITEM.fullmatch(codigo):
++            raise ValueError(f"código de item inesperado no catálogo: {codigo!r}")
++
++    colunas = ",\n           ".join(
++        f"(d.itens ->> '{codigo}') = 'existente' as {codigo}" for codigo in itens
++    )
++
++    return [
++        f"""
++        create table gold.fato_infra_escola_ano as
++        with anos as (
++            select distinct co_entidade,
++                   extract(year from ocorrido_em at time zone 'UTC')::int as ano
++            from public.vistoria
++        ),
++        referencia as (
++            select co_entidade, ano,
++                   least(make_timestamptz(ano, 12, 31, 23, 59, 59.999, 'UTC'), now()) as em
++            from anos
++        )
++        select r.co_entidade,
++               r.ano,
++               d.escola_infra_sk,
++               coalesce(d.n_itens_conhecidos, 0) as n_itens_conhecidos,
++               coalesce(d.n_existentes, 0) as n_existentes,
++               coalesce(d.n_inexistentes, 0) as n_inexistentes,
++               coalesce(d.n_em_obra, 0) as n_em_obra,
++               coalesce(d.n_inutilizaveis, 0) as n_inutilizaveis,
++               round(100.0 * d.n_existentes / nullif(d.n_itens_conhecidos, 0), 2) as pct_existentes,
++               {colunas}
++        from referencia r
++        left join gold.dim_escola_infraestrutura d
++          on d.co_entidade = r.co_entidade
++         and d.valid_from <= r.em
++         and r.em < d.valid_to
++        """,
++        "alter table gold.fato_infra_escola_ano add primary key (co_entidade, ano)",
++        "create index fato_infra_escola_ano_por_ano on gold.fato_infra_escola_ano (ano)",
++    ]
++
++
++@dataclass(frozen=True)
++class ResumoGold:
++    linhas: dict[str, int]
++    segundos: float
++
++
++TABELAS_DA_GOLD = (
++    "dim_item",
++    "dim_municipio",
++    "dim_escola",
++    "dim_escola_infraestrutura",
++    "fato_vistoria_item",
++    "fato_infra_escola_ano",
++)
++
++
++def construir(dsn: str) -> ResumoGold:
++    inicio = time.perf_counter()
++
++    with psycopg.connect(dsn) as conexao:
++        with conexao.transaction():
++            itens = [
++                linha[0]
++                for linha in conexao.execute("select codigo from public.item_infraestrutura order by codigo")
++            ]
++            for etapa in _etapas(itens):
++                etapa(conexao)
++
++        linhas = {
++            tabela: conexao.execute(f"select count(*) from gold.{tabela}").fetchone()[0]
++            for tabela in TABELAS_DA_GOLD
++        }
++
++    resumo = ResumoGold(linhas=linhas, segundos=time.perf_counter() - inicio)
++    log.info("gold construída em %.1f s: %s", resumo.segundos, linhas)
++
++    return resumo
++
++
++def _etapas(itens: list[str]) -> list[Callable[[psycopg.Connection], None]]:
++    return [
++        lambda c: _rodar(c, CONSULTAS_DA_DIMENSAO),
++        lambda c: _rodar(c, CONSULTAS_DE_STAGING),
++        lambda c: _rodar(c, CONSULTAS_DA_SCD),
++        lambda c: _rodar(c, CONSULTAS_DO_FATO_FINO),
++        lambda c: _rodar(c, _consultas_do_fato_largo(itens)),
++        lambda c: _rodar(c, [f"analyze gold.{tabela}" for tabela in TABELAS_DA_GOLD]),
++    ]
++
++
++def _rodar(conexao: psycopg.Connection, comandos: list[str]) -> None:
++    for comando in comandos:
++        conexao.execute(comando)
++
++
++# --- Medição das duas granularidades (insumo do ADR 0005) -------------------------------
++
++# A mesma pergunta em cada grão: % de escolas com laboratório de ciências por UF e rede,
++# no ano de maior cobertura. O grão fino precisa escolher a última vistoria de cada escola; o largo
++# já guarda o perfil do ano.
++CONSULTA_NO_GRAO_FINO = """
++    with ultima as (
++        select distinct on (f.co_entidade) f.co_entidade, f.situacao
++        from gold.fato_vistoria_item f
++        where f.item_codigo = 'lab_ciencias'
++          and f.situacao <> 'nao_informado'
++          and extract(year from f.data_ocorrencia) = %(ano)s
++        order by f.co_entidade, f.data_ocorrencia desc, f.vistoria_id desc
++    )
++    select m.sg_uf, e.rede,
++           count(*) as escolas,
++           round(100.0 * count(*) filter (where u.situacao = 'existente') / count(*), 1) as pct_com_lab
++    from ultima u
++    join gold.dim_escola e using (co_entidade)
++    join gold.dim_municipio m using (co_municipio)
++    group by m.sg_uf, e.rede
++    order by m.sg_uf, e.rede
++"""
++
++CONSULTA_NO_GRAO_LARGO = """
++    select m.sg_uf, e.rede,
++           count(*) as escolas,
++           round(100.0 * count(*) filter (where f.lab_ciencias) / count(*), 1) as pct_com_lab
++    from gold.fato_infra_escola_ano f
++    join gold.dim_escola e using (co_entidade)
++    join gold.dim_municipio m using (co_municipio)
++    where f.ano = %(ano)s and f.lab_ciencias is not null
++    group by m.sg_uf, e.rede
++    order by m.sg_uf, e.rede
++"""
++
++
++@dataclass(frozen=True)
++class MedidaDeGranularidade:
++    nome: str
++    grao: str
++    linhas: int
++    tamanho_bytes: int
++    mediana_ms: float
++    minimo_ms: float
++    maximo_ms: float
++
++
++@dataclass(frozen=True)
++class ComparacaoDeGranularidades:
++    ano: int
++    escolas: int
++    fino: MedidaDeGranularidade
++    largo: MedidaDeGranularidade
++    mesmo_resultado: bool
++
++
++def comparar(dsn: str, repeticoes: int = 5) -> ComparacaoDeGranularidades:
++    with psycopg.connect(dsn, autocommit=True) as conexao:
++        # O ano de maior cobertura: num ano com poucas revisitas o grão fino não tem o estado
++        # herdado de anos anteriores e a comparação deixaria de ser entre respostas equivalentes.
++        ano = conexao.execute(
++            "select ano from gold.fato_infra_escola_ano group by ano order by count(*) desc, ano desc limit 1"
++        ).fetchone()[0]
++        escolas = conexao.execute("select count(*) from gold.dim_escola").fetchone()[0]
++        parametros = {"ano": ano}
++
++        resultado_fino, tempos_fino = _medir(conexao, CONSULTA_NO_GRAO_FINO, parametros, repeticoes)
++        resultado_largo, tempos_largo = _medir(conexao, CONSULTA_NO_GRAO_LARGO, parametros, repeticoes)
++
++        fino = _medida(
++            conexao, "Fino", "uma linha por escola, por item, por vistoria",
++            "fato_vistoria_item", tempos_fino,
++        )
++        largo = _medida(
++            conexao, "Largo", "uma linha por escola por ano, um item por coluna",
++            "fato_infra_escola_ano", tempos_largo,
++        )
++
++    return ComparacaoDeGranularidades(
++        ano=ano, escolas=escolas, fino=fino, largo=largo, mesmo_resultado=resultado_fino == resultado_largo
++    )
++
++
++def _medir(
++    conexao: psycopg.Connection, consulta: str, parametros: dict, repeticoes: int
++) -> tuple[list, list[float]]:
++    conexao.execute(consulta, parametros).fetchall()  # aquecimento: cache e plano
++
++    tempos = []
++    resultado = []
++    for _ in range(repeticoes):
++        inicio = time.perf_counter()
++        resultado = conexao.execute(consulta, parametros).fetchall()
++        tempos.append((time.perf_counter() - inicio) * 1000)
++
++    return resultado, tempos
++
++
++def _medida(
++    conexao: psycopg.Connection, nome: str, grao: str, tabela: str, tempos: list[float]
++) -> MedidaDeGranularidade:
++    linhas = conexao.execute(f"select count(*) from gold.{tabela}").fetchone()[0]
++    tamanho = conexao.execute("select pg_total_relation_size(%s::regclass)", (f"gold.{tabela}",)).fetchone()[0]
++
++    return MedidaDeGranularidade(
++        nome=nome,
++        grao=grao,
++        linhas=linhas,
++        tamanho_bytes=tamanho,
++        mediana_ms=statistics.median(tempos),
++        minimo_ms=min(tempos),
++        maximo_ms=max(tempos),
++    )
++
++
++def formatar_markdown(comparacao: ComparacaoDeGranularidades) -> str:
++    fino, largo = comparacao.fino, comparacao.largo
++    razao_linhas = fino.linhas / largo.linhas if largo.linhas else float("nan")
++    razao_tempo = fino.mediana_ms / largo.mediana_ms if largo.mediana_ms else float("nan")
++
++    return "\n".join(
++        [
++            "### Granularidade do fato",
++            "",
++            f"Ano medido: {comparacao.ano}. Escolas na dimensão: {_milhar(comparacao.escolas)}.",
++            "",
++            "| Fato | Grão | Linhas | Tamanho com índices | Mediana | Mínimo | Máximo |",
++            "| --- | --- | ---: | ---: | ---: | ---: | ---: |",
++            _linha(fino),
++            _linha(largo),
++            "",
++            f"O grão fino tem {razao_linhas:.1f}x mais linhas e a consulta leva {razao_tempo:.1f}x o tempo do largo.",
++            "As duas consultas respondem à mesma pergunta (% de escolas com laboratório de ciências, por UF e rede).",
++            "Os resultados são idênticos."
++            if comparacao.mesmo_resultado
++            else "ATENÇÃO: os resultados diferem; o grão fino não herda o estado de anos anteriores.",
++        ]
++    )
++
++
++def _milhar(valor: int) -> str:
++    return f"{valor:,}".replace(",", ".")
++
++
++def _linha(medida: MedidaDeGranularidade) -> str:
++    return (
++        f"| {medida.nome} | {medida.grao} | {_milhar(medida.linhas)} | {medida.tamanho_bytes / 1_048_576:.1f} MB "
++        f"| {medida.mediana_ms:.1f} ms | {medida.minimo_ms:.1f} ms | {medida.maximo_ms:.1f} ms |"
++    )
+diff --git a/tests/test_modelo_analitico.py b/tests/test_modelo_analitico.py
+new file mode 100644
+index 0000000..4ec870f
+--- /dev/null
++++ b/tests/test_modelo_analitico.py
+@@ -0,0 +1,292 @@
++"""Modelo dimensional da Gold (E3): grão declarado, SCD tipo 2 e consistência com a origem.
++
++Cada teste cria o próprio banco, porque a origem é insert-only e não há como limpar linhas.
++"""
++
++import hashlib
++import os
++import uuid
++from pathlib import Path
++from urllib.parse import urlsplit
++
++import psycopg
++import pytest
++from alembic import command
++from alembic.config import Config
++
++from eduinfra import modelo_analitico
++
++pytestmark = pytest.mark.integracao
++
++DSN_ADMIN = os.environ.get("DATABASE_URL")
++RAIZ = Path(__file__).resolve().parents[1]
++
++
++@pytest.fixture
++def dsn():
++    if not DSN_ADMIN:
++        pytest.skip("DATABASE_URL não definida")
++
++    nome = f"eduinfra_gold_{uuid.uuid4().hex[:10]}"
++    with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
++        admin.execute(f'create database "{nome}"')
++
++    destino = urlsplit(DSN_ADMIN)._replace(path=f"/{nome}").geturl()
++    os.environ["DATABASE_URL"] = destino
++    try:
++        command.upgrade(Config(str(RAIZ / "alembic.ini")), "head")
++        _semear_cadastro(destino)
++        yield destino
++    finally:
++        os.environ["DATABASE_URL"] = DSN_ADMIN
++        with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
++            admin.execute(f'drop database if exists "{nome}" with (force)')
++
++
++def _semear_cadastro(dsn: str) -> None:
++    with psycopg.connect(dsn, autocommit=True) as conexao:
++        conexao.execute("insert into tecnico (matricula, nome, lotacao_uf) values ('T1', 'Técnico', 'DF')")
++        conexao.execute("insert into municipio values (5300108, 'Brasília', 'DF', 53), (5208707, 'Goiânia', 'GO', 52)")
++        conexao.execute(
++            """
++            insert into escola (co_entidade, no_entidade, co_municipio, tp_dependencia, tp_localizacao, ano_censo_referencia)
++            values (1, 'ESCOLA UM', 5300108, 2, 1, 2024),
++                   (2, 'ESCOLA DOIS', 5300108, 4, 1, 2024),
++                   (3, 'ESCOLA TRES', 5208707, 3, 2, 2024)
++            """
++        )
++
++
++def vistoria(dsn: str, escola: int, ocorrido: str, itens: dict[str, str], origem: str = "vistoria_presencial") -> int:
++    with psycopg.connect(dsn, autocommit=True) as conexao:
++        vistoria_id = conexao.execute(
++            "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
++            "values (%s, (select id from tecnico limit 1), %s, %s) returning id",
++            (escola, origem, ocorrido),
++        ).fetchone()[0]
++        for item, situacao in itens.items():
++            conexao.execute(
++                "insert into vistoria_item (vistoria_id, item_codigo, situacao) values (%s, %s, %s)",
++                (vistoria_id, item, situacao),
++            )
++
++    return vistoria_id
++
++
++def consultar(dsn: str, sql: str, parametros: tuple = ()) -> list[tuple]:
++    with psycopg.connect(dsn) as conexao:
++        return conexao.execute(sql, parametros).fetchall()
++
++
++def impressao_da_gold(dsn: str) -> str:
++    resumo = []
++    for tabela in modelo_analitico.TABELAS_DA_GOLD:
++        # to_jsonb evita converter 'infinity' para datetime, que o Python não representa.
++        linhas = consultar(dsn, f"select to_jsonb(t)::text from gold.{tabela} t order by 1")
++        resumo.append((tabela, linhas))
++
++    return hashlib.sha256(repr(resumo).encode()).hexdigest()
++
++
++def historia_da_escola_um(dsn: str) -> None:
++    """Censo 2024, uma revisita com mudança em 2025 e uma revisita que repete o estado."""
++    vistoria(dsn, 1, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente", "internet": "nao_informado"},
++             origem="censo_escolar")
++    vistoria(dsn, 1, "2025-03-10", {"biblioteca": "existente", "lab_ciencias": "existente"})
++    vistoria(dsn, 1, "2025-06-01", {"biblioteca": "existente", "lab_ciencias": "existente"})
++
++
++def test_cada_mudanca_cria_uma_versao_e_a_anterior_continua_la(dsn):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++
++    versoes = consultar(
++        dsn,
++        "select valid_from::date as inicio, valid_to::text as fim, is_current, n_existentes, itens ->> 'lab_ciencias', valid_from::text as inicio_texto "
++        "from gold.dim_escola_infraestrutura where co_entidade = 1 order by valid_from",
++    )
++
++    # A vistoria de 01/06/2025 repete o estado e não cria versão.
++    assert len(versoes) == 2
++    antiga, atual = versoes
++    assert (str(antiga[0]), antiga[2], antiga[3], antiga[4]) == ("2024-05-29", False, 1, "inexistente")
++    assert (str(atual[0]), atual[1], atual[2], atual[3], atual[4]) == ("2025-03-10", "infinity", True, 2, "existente")
++    # O fim de uma versão é exatamente o começo da seguinte, sem lacuna.
++    assert antiga[1] == atual[5]
++
++
++def test_consulta_por_data_devolve_o_perfil_que_valia_naquele_dia(dsn):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++
++    sql = (
++        "select itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
++        "where co_entidade = 1 and valid_from <= %s and %s < valid_to"
++    )
++
++    assert consultar(dsn, sql, ("2025-01-01", "2025-01-01")) == [("inexistente",)]
++    assert consultar(dsn, sql, ("2025-04-01", "2025-04-01")) == [("existente",)]
++    assert consultar(dsn, sql, ("2024-01-01", "2024-01-01")) == []
++
++
++def test_as_versoes_de_uma_escola_nao_se_sobrepoem_e_ha_uma_so_vigente(dsn):
++    historia_da_escola_um(dsn)
++    vistoria(dsn, 1, "2025-09-01", {"biblioteca": "inexistente"})
++    vistoria(dsn, 2, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
++    modelo_analitico.construir(dsn)
++
++    sobrepostas = consultar(
++        dsn,
++        """
++        select count(*) from gold.dim_escola_infraestrutura a
++        join gold.dim_escola_infraestrutura b
++          on a.co_entidade = b.co_entidade and a.valid_from < b.valid_from and b.valid_from < a.valid_to
++        """,
++    )[0][0]
++    vigentes = consultar(
++        dsn, "select co_entidade, count(*) filter (where is_current) from gold.dim_escola_infraestrutura group by 1"
++    )
++
++    assert sobrepostas == 0
++    assert all(quantidade == 1 for _, quantidade in vigentes)
++
++
++def test_nao_informado_nao_apaga_o_que_ja_se_sabia(dsn):
++    vistoria(dsn, 1, "2024-05-29", {"internet": "existente", "biblioteca": "existente"}, origem="censo_escolar")
++    vistoria(dsn, 1, "2025-02-01", {"internet": "nao_informado", "biblioteca": "inexistente"})
++    modelo_analitico.construir(dsn)
++
++    versoes = consultar(
++        dsn, "select itens ->> 'internet', itens ->> 'biblioteca' from gold.dim_escola_infraestrutura "
++             "where co_entidade = 1 order by valid_from"
++    )
++
++    assert versoes == [("existente", "existente"), ("existente", "inexistente")]
++
++
++def test_evento_atrasado_refaz_o_historico_sem_trocar_as_chaves_das_versoes_antigas(dsn):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++    chaves_antes = dict(consultar(dsn, "select escola_infra_sk, co_entidade::text || '@' || valid_from::text from gold.dim_escola_infraestrutura"))
++
++    # Vistoria feita em janeiro de 2024 e digitada só agora: chega depois, ocorre antes.
++    vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "existente"})
++    modelo_analitico.construir(dsn)
++
++    versoes = consultar(
++        dsn, "select valid_from::date, itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
++             "where co_entidade = 1 order by valid_from"
++    )
++    chaves_depois = dict(consultar(dsn, "select escola_infra_sk, co_entidade::text || '@' || valid_from::text from gold.dim_escola_infraestrutura"))
++
++    assert [(str(v[0]), v[1]) for v in versoes] == [
++        ("2024-01-15", "existente"),
++        ("2024-05-29", "inexistente"),
++        ("2025-03-10", "existente"),
++    ]
++    # Cada chave antiga continua apontando para a MESMA versão (escola e início), não só existindo.
++    assert all(chaves_depois.get(chave) == versao for chave, versao in chaves_antes.items())
++
++
++def test_fato_fino_tem_uma_linha_por_vistoria_e_item(dsn):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++
++    na_origem = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
++    no_fato = consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0]
++    duplicadas = consultar(
++        dsn, "select count(*) from (select 1 from gold.fato_vistoria_item group by vistoria_id, item_codigo having count(*) > 1) d"
++    )[0][0]
++
++    assert (no_fato, duplicadas) == (na_origem, 0)
++
++
++def test_fato_largo_tem_uma_linha_por_escola_e_ano_e_aponta_para_a_versao_vigente_no_fim_do_ano(dsn):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++
++    linhas = consultar(
++        dsn,
++        """
++        select f.ano, f.n_existentes, f.lab_ciencias, f.internet, d.valid_from::date, f.pct_existentes
++        from gold.fato_infra_escola_ano f
++        join gold.dim_escola_infraestrutura d using (escola_infra_sk)
++        where f.co_entidade = 1 order by f.ano
++        """,
++    )
++
++    assert [(l[0], l[1], l[2], l[3], str(l[4])) for l in linhas] == [
++        (2024, 1, False, None, "2024-05-29"),
++        (2025, 2, True, None, "2025-03-10"),
++    ]
++    assert float(linhas[0][5]) == 50.0
++
++
++def test_fato_largo_bate_com_a_view_de_estado_atual_da_origem(dsn):
++    for escola in (1, 2, 3):
++        vistoria(dsn, escola, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente", "quadra_esportes": "existente"},
++                 origem="censo_escolar")
++    modelo_analitico.construir(dsn)
++
++    divergencias = consultar(
++        dsn,
++        """
++        select f.co_entidade
++        from gold.fato_infra_escola_ano f
++        left join (
++            select co_entidade, count(*) as n from public.escola_estado_atual
++            where situacao = 'existente' group by 1
++        ) o using (co_entidade)
++        where f.ano = 2024 and f.n_existentes <> coalesce(o.n, 0)
++        """,
++    )
++
++    assert divergencias == []
++
++
++def test_construir_duas_vezes_da_exatamente_o_mesmo_resultado(dsn):
++    historia_da_escola_um(dsn)
++    vistoria(dsn, 3, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
++
++    modelo_analitico.construir(dsn)
++    primeira = impressao_da_gold(dsn)
++    modelo_analitico.construir(dsn)
++
++    assert impressao_da_gold(dsn) == primeira
++
++
++def test_falha_na_construcao_preserva_a_gold_anterior(dsn, monkeypatch):
++    historia_da_escola_um(dsn)
++    modelo_analitico.construir(dsn)
++    antes = impressao_da_gold(dsn)
++
++    vistoria(dsn, 2, "2025-02-01", {"biblioteca": "existente"})
++    etapas_reais = modelo_analitico._etapas
++
++    def etapas_que_falham_no_fim(itens):
++        etapas = etapas_reais(itens)
++        etapas[-2] = lambda conexao: (_ for _ in ()).throw(RuntimeError("falha simulada no fato largo"))
++        return etapas
++
++    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_que_falham_no_fim)
++
++    with pytest.raises(RuntimeError, match="falha simulada"):
++        modelo_analitico.construir(dsn)
++
++    assert impressao_da_gold(dsn) == antes
++
++
++def test_comparacao_de_granularidades_responde_igual_nos_dois_graos(dsn):
++    for escola, rede_com_lab in ((1, "existente"), (2, "inexistente"), (3, "existente")):
++        vistoria(dsn, escola, "2024-05-29", {"lab_ciencias": rede_com_lab, "biblioteca": "existente"}, origem="censo_escolar")
++    modelo_analitico.construir(dsn)
++
++    comparacao = modelo_analitico.comparar(dsn, repeticoes=2)
++    texto = modelo_analitico.formatar_markdown(comparacao)
++
++    assert comparacao.mesmo_resultado
++    assert comparacao.fino.linhas == 6
++    assert comparacao.largo.linhas == 3
++    assert "uma linha por escola, por item, por vistoria" in texto
++    assert "uma linha por escola por ano, um item por coluna" in texto
++    assert "Os resultados são idênticos." in texto
+-- 
+2.43.0
+
