@@ -11,13 +11,16 @@ a ferramenta.
 
 ```bash
 docker compose run --rm carga construir-gold
-docker compose run --rm carga comparar-granularidades --saida docs/granularidades.md
+docker compose build carga
+docker compose run --rm -v "${PWD}/docs:/app/docs" carga comparar-granularidades --saida docs/granularidades.md
 ```
 
 `construir-gold` recria o schema `gold` inteiro numa única transação: quem consulta
 vê o modelo anterior completo ou o novo completo. Rodar duas vezes dá o mesmo
 resultado. `comparar-granularidades` mede os dois fatos abaixo; rode com a carga
 real e faça o commit de `docs/granularidades.md`, que é a evidência do ADR 0005.
+O `-v` monta a pasta `docs/` no contêiner (a imagem não a contém); sem ele o
+arquivo seria gravado dentro do contêiner e perdido. No bash use `$(pwd)` no lugar de `${PWD}`.
 
 ## Tabelas e grãos
 

@@ -394,7 +394,7 @@ def formatar_markdown(comparacao: ComparacaoDeGranularidades) -> str:
             _linha(fino),
             _linha(largo),
             "",
-            f"O grão fino tem {razao_linhas:.1f}x mais linhas e a consulta leva {razao_tempo:.1f}x o tempo do largo.",
+            f"O grão fino tem {_decimal(razao_linhas)}x mais linhas e a consulta leva {_decimal(razao_tempo)}x o tempo do largo.",
             "As duas consultas respondem à mesma pergunta (% de escolas com laboratório de ciências, por UF e rede).",
             "Os resultados são idênticos."
             if comparacao.mesmo_resultado
@@ -407,8 +407,12 @@ def _milhar(valor: int) -> str:
     return f"{valor:,}".replace(",", ".")
 
 
+def _decimal(valor: float) -> str:
+    return f"{valor:.1f}".replace(".", ",")
+
+
 def _linha(medida: MedidaDeGranularidade) -> str:
     return (
-        f"| {medida.nome} | {medida.grao} | {_milhar(medida.linhas)} | {medida.tamanho_bytes / 1_048_576:.1f} MB "
-        f"| {medida.mediana_ms:.1f} ms | {medida.minimo_ms:.1f} ms | {medida.maximo_ms:.1f} ms |"
+        f"| {medida.nome} | {medida.grao} | {_milhar(medida.linhas)} | {_decimal(medida.tamanho_bytes / 1_048_576)} MB "
+        f"| {_decimal(medida.mediana_ms)} ms | {_decimal(medida.minimo_ms)} ms | {_decimal(medida.maximo_ms)} ms |"
     )

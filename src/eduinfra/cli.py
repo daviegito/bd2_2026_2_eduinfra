@@ -39,7 +39,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--forcar", action="store_true", help="reexecuta mesmo que o resultado já exista: em ingerir, ignora o manifesto; em publicar-analitico, relê a origem")
     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
-    parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir")
+    parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -69,6 +69,7 @@ def main(argumentos: list[str] | None = None) -> int:
         )
         print(texto)
         if opcoes.saida:
+            opcoes.saida.parent.mkdir(parents=True, exist_ok=True)
             opcoes.saida.write_text(texto + "\n", encoding="utf-8")
         return 0
 
