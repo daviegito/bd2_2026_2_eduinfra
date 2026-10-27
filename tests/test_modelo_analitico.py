@@ -290,3 +290,22 @@ def test_comparacao_de_granularidades_responde_igual_nos_dois_graos(dsn):
     assert "uma linha por escola, por item, por vistoria" in texto
     assert "uma linha por escola por ano, um item por coluna" in texto
     assert "Os resultados são idênticos." in texto
+
+
+def test_serie_historica_nao_muda_quando_a_dimensao_ganha_uma_versao_nova(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente"}, origem="censo_escolar")
+    modelo_analitico.construir(dsn)
+    consulta = (
+        "select ano, escola_infra_sk, n_existentes, lab_ciencias "
+        "from gold.fato_infra_escola_ano where co_entidade = 1 and ano = %s"
+    )
+    de_2024_antes = consultar(dsn, consulta, (2024,))
+
+    # A escola passa a ter laboratório em 2025: a dimensão ganha uma versão e fecha a anterior.
+    vistoria(dsn, 1, "2025-03-10", {"lab_ciencias": "existente"})
+    modelo_analitico.construir(dsn)
+
+    # O que já tinha sido dito sobre 2024 continua igual; 2025 nasce com o perfil novo.
+    assert consultar(dsn, consulta, (2024,)) == de_2024_antes
+    assert consultar(dsn, consulta, (2025,))[0][3] is True
+    assert de_2024_antes[0][3] is False
