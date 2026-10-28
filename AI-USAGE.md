@@ -231,3 +231,25 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `git branch -a --contains 5e4c802` e buscando o texto em todas as branches.
   Os commits foram feitos à mão, sem a IA
 - **Quem revisou:** Marcos Vinícius
+
+### 2026-10-26 — Modelo dimensional da Gold e dimensão de variação lenta (E3-3 e E3-4)
+
+- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
+- **Onde:** `src/eduinfra/modelo_analitico.py`, `src/eduinfra/cli.py`,
+  `tests/test_modelo_analitico.py`, `docs/modelo-analitico.md`, `mkdocs.yml` e README
+- **O que foi pedido:** Auxílio no desenho e na implementação das dimensões, da dimensão de
+  variação lenta (tipo 2) e dos dois fatos de granularidades diferentes, com testes
+  e o comando de medição, a partir do esquema da origem
+- **O que foi aproveitado:** o código, os testes e a documentação. Decisões de
+  projeto sugeridas e a revisar pela Squad: o histórico da dimensão vem dos eventos
+  insert-only e não de um segundo ano do Censo, `nao_informado` não é estado, a
+  chave substituta é um hash de (escola, início) e o fato largo usa o perfil
+  vigente ao fim do ano
+- **Como foi verificado:** `pytest` com PostgreSQL 16 real e banco descartável por
+  teste (11 testes novos, 32 com os de ingestão, transformação e insert-only); três
+  defeitos reintroduzidos de propósito (tratar `nao_informado` como estado, criar
+  versão a cada vistoria, chave instável) e o teste correspondente falhou em cada
+  caso, o que levou a reforçar o teste da chave. A construção e a comparação rodaram
+  num banco **sintético** com o volume do Censo (181 mil escolas, 3 milhões de
+  itens).
+- **Quem revisou:** Pedro Teixeira Moriel Sanchez
