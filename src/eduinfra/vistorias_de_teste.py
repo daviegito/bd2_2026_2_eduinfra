@@ -4,6 +4,8 @@ A origem é insert-only: o que este módulo grava não sai mais. Use em banco de
 desenvolvimento. As vistorias levam a observação informada, que as identifica.
 """
 
+from datetime import datetime
+
 import psycopg
 
 
@@ -34,6 +36,30 @@ def inserir_vistorias(conexao: psycopg.Connection, quantidade: int, matricula: s
             """,
             (tecnico, observacao, quantidade),
         )
+
+
+def inserir_vistoria(conexao: psycopg.Connection, matricula: str, observacao: str, ocorrido_em: datetime) -> int:
+    tecnico = garantir_tecnico(conexao, matricula)
+    with conexao.transaction():
+        return conexao.execute(
+            """
+            with nova as (
+                insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, observacao)
+                select min(co_entidade), %s, 'vistoria_presencial', %s, %s from escola
+                returning id
+            ),
+            itens as (
+                insert into vistoria_item (vistoria_id, item_codigo, situacao)
+                select nova.id, item.codigo, 'existente' from nova cross join item_infraestrutura item
+            )
+            select id from nova
+            """,
+            (tecnico, ocorrido_em, observacao),
+        ).fetchone()[0]
+
+
+def contar_itens_por_vistoria(conexao: psycopg.Connection) -> int:
+    return conexao.execute("select count(*) from item_infraestrutura").fetchone()[0]
 
 
 def contar_itens_da_origem(conexao: psycopg.Connection) -> int:
