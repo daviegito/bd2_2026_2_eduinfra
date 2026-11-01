@@ -64,7 +64,17 @@ def test_latencia_do_cdc_cobre_os_dois_cenarios_e_entrega_as_vistorias(configura
 
     assert [medida.tempos.amostras for medida in medidas] == [REPETICOES] * CENARIOS
     assert all(medida.tempos.mediana_s > 0 for medida in medidas)
+    assert all(medida.partes["ponta_a_ponta_s"].mediana_s > 0 for medida in medidas)
     assert eventos.contar(configuracao) == CENARIOS * REPETICOES * contar_itens_por_vistoria(conexao)
+
+
+def test_ordem_sob_escrita_concorrente_entrega_tudo_sem_inverter_o_lsn(configuracao, conexao, consumidor):
+    medida = comparacao_latencia.medir_ordem(configuracao, REPETICOES)
+
+    assert medida.ordem.transacoes == comparacao_latencia.ESCRITORES_CONCORRENTES * REPETICOES
+    assert medida.ordem.inversoes_de_lsn == 0
+    assert medida.perdas_com_margem == 0
+    assert eventos.contar(configuracao) == medida.ordem.transacoes * contar_itens_por_vistoria(conexao)
 
 
 def test_medir_cdc_sem_consumidor_avisa_em_vez_de_esperar_para_sempre(configuracao, conexao):

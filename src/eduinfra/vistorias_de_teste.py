@@ -4,6 +4,7 @@ A origem é insert-only: o que este módulo grava não sai mais. Use em banco de
 desenvolvimento. As vistorias levam a observação informada, que as identifica.
 """
 
+import time
 from datetime import datetime
 
 import psycopg
@@ -56,6 +57,15 @@ def inserir_vistoria(conexao: psycopg.Connection, matricula: str, observacao: st
             """,
             (tecnico, ocorrido_em, observacao),
         ).fetchone()[0]
+
+
+def inserir_vistoria_retida(conexao: psycopg.Connection, matricula: str, observacao: str, ocorrido_em: datetime, retencao_s: float) -> int:
+    # registrado_em é o início da transação: segurar o commit cria a inversão que uma transação longa causa na vida real.
+    with conexao.transaction():
+        vistoria_id = inserir_vistoria(conexao, matricula, observacao, ocorrido_em)
+        time.sleep(retencao_s)
+
+    return vistoria_id
 
 
 def contar_itens_por_vistoria(conexao: psycopg.Connection) -> int:

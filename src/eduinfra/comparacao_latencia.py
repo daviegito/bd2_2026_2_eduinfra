@@ -1,15 +1,16 @@
-"""Latência ponta a ponta do CDC e da recarga periódica, e WAL retido pelo slot (ADR 0004, issue #52).
+"""Medições ativas do CDC e da recarga periódica (ADR 0004, ADR 0007, issue #52).
 
-Mede do commit na origem até a vistoria ficar legível na tabela Delta, com o
-relógio de um único processo. O consumidor contínuo roda em outro contêiner
-(`medir-latencia-cdc`) ou fica parado (`medir-recarga`). A origem é insert-only:
-as vistorias da medição ficam no banco, rode em ambiente de desenvolvimento.
+A latência é vista de dois lados: por fora, do commit até a vistoria ficar legível no
+Delta, com o relógio de um único processo; por dentro, pela telemetria do consumidor.
+O consumidor contínuo roda em outro contêiner (`medir-cdc`) ou fica parado
+(`medir-recarga`). A origem é insert-only: as vistorias da medição ficam no banco,
+rode em ambiente de desenvolvimento.
 """
 
 import random
-import statistics
 import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
@@ -20,23 +21,29 @@ from deltalake import DeltaTable
 from deltalake.exceptions import CommitFailedError
 from psycopg.rows import dict_row
 
-from eduinfra import cdc, eventos
+from eduinfra import auditoria_cdc, cdc, eventos, telemetria_cdc
 from eduinfra.configuracao import Configuracao
-from eduinfra.vistorias_de_teste import contar_itens_por_vistoria, inserir_vistoria
+from eduinfra.pgoutput import interpretar_lsn
+from eduinfra.telemetria_cdc import ResumoDaOrdem, ResumoDeTempos, decimal_br, resumir
+from eduinfra.vistorias_de_teste import contar_itens_por_vistoria, garantir_tecnico, inserir_vistoria, inserir_vistoria_retida
 
 MATRICULA = "MEDICAO-E3-52"
-OBSERVACAO = "Medição de latência ponta a ponta (issue #52)"
+OBSERVACAO = "Medição do CDC (issue #52)"
 INTERVALO_DO_CONSUMIDOR_S = 2.0
 INTERVALO_DE_CONSULTA_S = 0.05
 ESPERA_MAXIMA_S = 300.0
-AMOSTRAS_MINIMAS = 2
-PERCENTIS = 100
-INDICE_DO_P95 = 94
+ESPERA_PELA_TELEMETRIA_S = 60.0
 ATRASO_DO_EVENTO_RECENTE = timedelta(minutes=1)
 PERIODOS_DE_RECARGA_S = (2, 300, 3600)
 VISTORIAS_POR_DIA_ESTIMADAS = 500
+ESCRITORES_CONCORRENTES = 4
+RETENCAO_MAXIMA_S = 1.0
+PERIODO_DA_MARCA_DAGUA_S = 2.0
+# ADR 0004: o processamento por janelas relê dez minutos antes da marca d'água.
+MARGEM_DO_ADR_0004_S = 600.0
 
 MARCA_DAGUA = "select coalesce(max(registrado_em), '-infinity') from vistoria"
+LSN_ATUAL = "select pg_current_wal_insert_lsn()::text"
 
 RECARGA_INCREMENTAL = """
 select v.id as vistoria_id, i.item_codigo, v.co_entidade, m.sg_uf, v.origem, v.ocorrido_em, v.registrado_em,
@@ -67,20 +74,24 @@ class ConsumidorEmExecucao(RuntimeError):
     """O slot avançou durante uma medição que exige o consumidor parado."""
 
 
-@dataclass(frozen=True)
-class ResumoDeTempos:
-    amostras: int
-    mediana_s: float
-    p95_s: float
-    minimo_s: float
-    maximo_s: float
+class ConsumidorSemTelemetria(RuntimeError):
+    """A vistoria chegou ao Delta, mas o consumidor não registrou a passada."""
 
 
 @dataclass(frozen=True)
 class LatenciaDoCdc:
     cenario: str
     tempos: ResumoDeTempos
+    partes: dict[str, ResumoDeTempos]
     arquivos_na_particao: int
+
+
+@dataclass(frozen=True)
+class MedidaDaOrdem:
+    ordem: ResumoDaOrdem
+    perdas_sem_margem: int
+    perdas_com_margem: int
+    latencias: dict[str, ResumoDeTempos]
 
 
 @dataclass(frozen=True)
@@ -104,19 +115,6 @@ class MedidaDaRecarga:
     wal: CustoDeWal
 
 
-def resumir(tempos: list[float]) -> ResumoDeTempos:
-    if len(tempos) < AMOSTRAS_MINIMAS:
-        raise ValueError(f"p95 exige ao menos {AMOSTRAS_MINIMAS} amostras, recebeu {len(tempos)}")
-
-    return ResumoDeTempos(
-        amostras=len(tempos),
-        mediana_s=statistics.median(tempos),
-        p95_s=statistics.quantiles(tempos, n=PERCENTIS, method="inclusive")[INDICE_DO_P95],
-        minimo_s=min(tempos),
-        maximo_s=max(tempos),
-    )
-
-
 def derivar_latencias(execucao: ResumoDeTempos) -> list[LatenciaDeRecarga]:
     # Um commit cai em ponto uniforme do período: espera metade em média e o período inteiro no pior caso.
     return [
@@ -136,19 +134,20 @@ def projetar_wal(bytes_acumulados: int, vistorias: int, limite_em_bytes: int) ->
 def medir_cdc(configuracao: Configuracao, repeticoes: int, espera_maxima_s: float = ESPERA_MAXIMA_S) -> list[LatenciaDoCdc]:
     data_do_censo = datetime.combine(configuracao.data_referencia, datetime.min.time(), timezone.utc)
     cenarios = (
-        ("Evento recente, partição pequena", lambda agora: agora - ATRASO_DO_EVENTO_RECENTE),
+        ("Evento recente, partição do mês corrente", lambda agora: agora - ATRASO_DO_EVENTO_RECENTE),
         ("Evento atrasado, partição da linha de base", lambda _: data_do_censo),
     )
 
     tabela = DeltaTable(str(eventos.garantir_tabela(configuracao)))
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
         return [
-            _medir_cenario(conexao, tabela, nome, ocorrido_em, repeticoes, espera_maxima_s)
+            _medir_cenario(configuracao, conexao, tabela, nome, ocorrido_em, repeticoes, espera_maxima_s)
             for nome, ocorrido_em in cenarios
         ]
 
 
 def _medir_cenario(
+    configuracao: Configuracao,
     conexao: psycopg.Connection,
     tabela: DeltaTable,
     nome: str,
@@ -158,6 +157,7 @@ def _medir_cenario(
 ) -> LatenciaDoCdc:
     tempos = []
     mes = ""
+    lsn_inicial = _lsn_atual(conexao)
     for _ in range(repeticoes):
         # Inserir logo depois de uma entrega cairia sempre na mesma fase do laço do
         # consumidor; o sorteio espalha os commits pelo intervalo entre passadas.
@@ -168,15 +168,23 @@ def _medir_cenario(
         mes = evento.strftime("%Y-%m")
         tempos.append(_esperar_no_delta(tabela, vistoria_id, mes, espera_maxima_s) - commit)
 
-    return LatenciaDoCdc(nome, resumir(tempos), len(tabela.file_uris([(eventos.COLUNA_DE_PARTICAO, "=", mes)])))
+    linhas = _esperar_telemetria(configuracao, lsn_inicial, _lsn_atual(conexao), repeticoes)
+    arquivos = len(tabela.file_uris([(eventos.COLUNA_DE_PARTICAO, "=", mes)]))
+
+    return LatenciaDoCdc(nome, resumir(tempos), auditoria_cdc.resumir_latencias(linhas), arquivos)
+
+
+def _lsn_atual(conexao: psycopg.Connection) -> int:
+    return interpretar_lsn(conexao.execute(LSN_ATUAL).fetchone()[0])
 
 
 def _esperar_no_delta(tabela: DeltaTable, vistoria_id: int, mes: str, espera_maxima_s: float) -> float:
     limite = time.perf_counter() + espera_maxima_s
     versao_lida = None
     while time.perf_counter() < limite:
-        instante = time.perf_counter()
         tabela.update_incremental()
+        # Marcar depois de atualizar: a versão pode ter nascido durante a atualização, e antes dela a latência sairia menor que a real.
+        instante = time.perf_counter()
         if tabela.version() != versao_lida:
             versao_lida = tabela.version()
             if _tem_vistoria(tabela, vistoria_id, mes):
@@ -191,6 +199,44 @@ def _esperar_no_delta(tabela: DeltaTable, vistoria_id: int, mes: str, espera_max
 def _tem_vistoria(tabela: DeltaTable, vistoria_id: int, mes: str) -> bool:
     particao = tabela.to_pyarrow_dataset(partitions=[(eventos.COLUNA_DE_PARTICAO, "=", mes)])
     return particao.to_table(columns=["vistoria_id"], filter=ds.field("vistoria_id") == vistoria_id).num_rows > 0
+
+
+def _esperar_telemetria(configuracao: Configuracao, lsn_inicial: int, lsn_final: int, transacoes: int) -> list[dict]:
+    # O Delta fica legível antes de o consumidor escrever a telemetria da mesma passada.
+    limite = time.perf_counter() + ESPERA_PELA_TELEMETRIA_S
+    while time.perf_counter() < limite:
+        linhas = telemetria_cdc.ler_telemetria(configuracao, lsn_inicial, lsn_final)
+        if sum(1 for linha in linhas if linha["vistorias"]) >= transacoes:
+            return linhas
+        time.sleep(INTERVALO_DE_CONSULTA_S)
+
+    raise ConsumidorSemTelemetria("sem telemetria das vistorias medidas; reconstrua a imagem do serviço cdc antes de medir")
+
+
+def medir_ordem(configuracao: Configuracao, repeticoes: int) -> MedidaDaOrdem:
+    with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
+        garantir_tecnico(conexao, MATRICULA)
+        lsn_inicial = _lsn_atual(conexao)
+        with ThreadPoolExecutor(ESCRITORES_CONCORRENTES) as executor:
+            list(executor.map(lambda _: _escrever_com_retencao(configuracao.dsn, repeticoes), range(ESCRITORES_CONCORRENTES)))
+        lsn_final = _lsn_atual(conexao)
+
+    linhas = _esperar_telemetria(configuracao, lsn_inicial, lsn_final, ESCRITORES_CONCORRENTES * repeticoes)
+    pares = [(linha["registrado_em"], linha["confirmada_em"]) for linha in linhas if linha["registrado_em"]]
+
+    return MedidaDaOrdem(
+        ordem=telemetria_cdc.resumir_ordem(linhas),
+        perdas_sem_margem=telemetria_cdc.perdas_por_marca_dagua(pares, PERIODO_DA_MARCA_DAGUA_S, 0),
+        perdas_com_margem=telemetria_cdc.perdas_por_marca_dagua(pares, PERIODO_DA_MARCA_DAGUA_S, MARGEM_DO_ADR_0004_S),
+        latencias=auditoria_cdc.resumir_latencias(linhas),
+    )
+
+
+def _escrever_com_retencao(dsn: str, transacoes: int) -> None:
+    with psycopg.connect(dsn, autocommit=True) as conexao:
+        for _ in range(transacoes):
+            evento = datetime.now(timezone.utc) - ATRASO_DO_EVENTO_RECENTE
+            inserir_vistoria_retida(conexao, MATRICULA, OBSERVACAO, evento, random.uniform(0, RETENCAO_MAXIMA_S))
 
 
 def medir_recarga(configuracao: Configuracao, repeticoes: int, slot: str = cdc.SLOT_PADRAO) -> MedidaDaRecarga:
@@ -231,41 +277,66 @@ def _medir_ciclo_de_recarga(configuracao: Configuracao, conexao: psycopg.Connect
     return duracao
 
 
-def _decimal(valor: float, casas: int = 2) -> str:
-    return f"{valor:.{casas}f}".replace(".", ",")
-
-
 def formatar_cdc(medidas: list[LatenciaDoCdc]) -> str:
-    linhas = [
-        "| Cenário | Amostras | Mediana (s) | p95 (s) | Mínimo (s) | Máximo (s) | Arquivos na partição ao fim |",
-        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-    ]
+    linhas = ["# Medição ativa do CDC", ""]
     for medida in medidas:
         t = medida.tempos
-        linhas.append(
-            f"| {medida.cenario} | {t.amostras} | {_decimal(t.mediana_s)} | {_decimal(t.p95_s)} "
-            f"| {_decimal(t.minimo_s)} | {_decimal(t.maximo_s)} | {medida.arquivos_na_particao} |"
-        )
+        linhas += [
+            f"## {medida.cenario}",
+            "",
+            f"Por fora, do commit até ficar legível no Delta ({t.amostras} amostras): mediana {decimal_br(t.mediana_s)} s, "
+            f"p95 {decimal_br(t.p95_s)} s, mínimo {decimal_br(t.minimo_s)} s, máximo {decimal_br(t.maximo_s)} s. "
+            f"Arquivos na partição ao fim: {medida.arquivos_na_particao}.",
+            "",
+            "Por dentro, pela telemetria do consumidor:",
+            "",
+            *auditoria_cdc.formatar_latencias(medida.partes),
+            "",
+        ]
 
     return "\n".join(linhas)
+
+
+def formatar_ordem(medida: MedidaDaOrdem) -> str:
+    ordem = medida.ordem
+    percentual = 100 * ordem.inversoes_de_registro / ordem.transacoes if ordem.transacoes else 0.0
+
+    return "\n".join(
+        [
+            "## Ordem sob escrita concorrente",
+            "",
+            f"Carga sintética: {ESCRITORES_CONCORRENTES} escritores segurando cada transação por até {decimal_br(RETENCAO_MAXIMA_S, 1)} s, "
+            f"{ordem.transacoes} transações. A taxa depende dessa carga e não prevê a de produção.",
+            "",
+            f"LSN invertido na entrega: {ordem.inversoes_de_lsn}. Reentregas: {ordem.reentregas}.",
+            f"registrado_em invertido em relação à ordem de commit: {ordem.inversoes_de_registro} ({decimal_br(percentual, 1)}%), "
+            f"maior diferença de {decimal_br(ordem.maior_inversao_de_registro_s)} s.",
+            f"Recarga por marca d'água a cada {decimal_br(PERIODO_DA_MARCA_DAGUA_S, 0)} s, simulada sobre estes commits: "
+            f"perderia {medida.perdas_sem_margem} transações sem margem e {medida.perdas_com_margem} com a margem de "
+            f"{decimal_br(MARGEM_DO_ADR_0004_S / 60, 0)} minutos do ADR 0004.",
+            "",
+            *auditoria_cdc.formatar_latencias(medida.latencias),
+            "",
+        ]
+    )
 
 
 def formatar_recarga(medida: MedidaDaRecarga) -> str:
     execucao, wal = medida.execucao, medida.wal
     linhas = [
-        f"Execução de um ciclo com 1 vistoria nova ({execucao.amostras} amostras): mediana {_decimal(execucao.mediana_s)} s, "
-        f"p95 {_decimal(execucao.p95_s)} s, mínimo {_decimal(execucao.minimo_s)} s, máximo {_decimal(execucao.maximo_s)} s.",
+        f"Execução de um ciclo com 1 vistoria nova ({execucao.amostras} amostras): mediana {decimal_br(execucao.mediana_s)} s, "
+        f"p95 {decimal_br(execucao.p95_s)} s, mínimo {decimal_br(execucao.minimo_s)} s, máximo {decimal_br(execucao.maximo_s)} s.",
         "",
         "| Período da recarga (s) | Latência média derivada (s) | Pior caso derivado (s) |",
         "| ---: | ---: | ---: |",
     ]
     for latencia in medida.latencias:
-        linhas.append(f"| {latencia.periodo_s} | {_decimal(latencia.media_s)} | {_decimal(latencia.pior_caso_s)} |")
+        linhas.append(f"| {latencia.periodo_s} | {decimal_br(latencia.media_s)} | {decimal_br(latencia.pior_caso_s)} |")
     linhas += [
         "",
-        f"WAL retido pelo slot parado: {_decimal(wal.bytes_por_vistoria, 0)} bytes por vistoria. Com a estimativa de "
+        f"WAL retido pelo slot parado: {decimal_br(wal.bytes_por_vistoria, 0)} bytes por vistoria. Com a estimativa de "
         f"{VISTORIAS_POR_DIA_ESTIMADAS} vistorias por dia, o limite de {wal.limite_em_bytes} bytes chega em "
-        f"{_decimal(wal.dias_ate_o_limite, 1)} dias.",
+        f"{decimal_br(wal.dias_ate_o_limite, 1)} dias.",
     ]
 
     return "\n".join(linhas)

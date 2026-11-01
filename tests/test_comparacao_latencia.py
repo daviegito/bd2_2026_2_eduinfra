@@ -3,34 +3,12 @@ import pytest
 from eduinfra.comparacao_latencia import (
     PERIODOS_DE_RECARGA_S,
     VISTORIAS_POR_DIA_ESTIMADAS,
-    ResumoDeTempos,
+    MedidaDaOrdem,
     derivar_latencias,
+    formatar_ordem,
     projetar_wal,
-    resumir,
 )
-
-
-@pytest.mark.parametrize(
-    ("tempos", "mediana", "p95"),
-    [
-        ([1.0, 3.0], 2.0, 2.9),
-        ([5.0, 5.0, 5.0], 5.0, 5.0),
-        ([float(n) for n in range(1, 101)], 50.5, 95.05),
-    ],
-)
-def test_resumo_calcula_mediana_e_p95_sem_extrapolar(tempos, mediana, p95):
-    resumo = resumir(tempos)
-
-    assert resumo.amostras == len(tempos)
-    assert resumo.mediana_s == pytest.approx(mediana)
-    assert resumo.p95_s == pytest.approx(p95)
-    assert resumo.minimo_s <= resumo.p95_s <= resumo.maximo_s
-
-
-@pytest.mark.parametrize("tempos", [[], [1.0]])
-def test_resumo_recusa_amostras_insuficientes_para_p95(tempos):
-    with pytest.raises(ValueError, match="amostras"):
-        resumir(tempos)
+from eduinfra.telemetria_cdc import ResumoDaOrdem, ResumoDeTempos
 
 
 def test_recarga_espera_meio_periodo_em_media_e_o_periodo_inteiro_no_pior_caso():
@@ -55,3 +33,21 @@ def test_projecao_de_wal_divide_o_limite_pelo_volume_diario():
 def test_projecao_de_wal_recusa_wal_que_nao_cresceu(bytes_acumulados):
     with pytest.raises(ValueError, match="WAL"):
         projetar_wal(bytes_acumulados, vistorias=1, limite_em_bytes=1)
+
+
+def test_relatorio_de_ordem_declara_que_a_carga_e_sintetica_e_mostra_as_perdas():
+    ordem = ResumoDaOrdem(
+        transacoes=40,
+        reentregas=0,
+        inversoes_de_lsn=0,
+        inversoes_de_registro=10,
+        maior_inversao_de_registro_s=0.75,
+        fora_de_ordem_no_evento=10,
+        alem_da_tolerancia=0,
+    )
+
+    relatorio = formatar_ordem(MedidaDaOrdem(ordem, perdas_sem_margem=3, perdas_com_margem=0, latencias={}))
+
+    assert "sintética" in relatorio
+    assert "10 (25,0%)" in relatorio
+    assert "perderia 3 transações sem margem e 0 com a margem" in relatorio
