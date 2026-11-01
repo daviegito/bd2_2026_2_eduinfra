@@ -3,6 +3,9 @@
 Ordem de uma passada: espiar as transações pendentes, gravar no destino sem
 duplicar e só então avançar o slot. A falha entre gravar e avançar não perde
 nem duplica nada: as transações voltam na passada seguinte e o merge as ignora.
+
+Uma linha que não converte vai para a fila de erros, e o slot avança mesmo assim:
+sem isso, ela barraria todas as seguintes até o WAL retido estourar (ADR 0007).
 """
 
 import logging
@@ -13,14 +16,18 @@ from datetime import timezone
 import psycopg
 import pyarrow as pa
 
-from eduinfra import cdc, eventos
+from eduinfra import cdc, eventos, fila_de_erros
 from eduinfra.configuracao import Configuracao
-from eduinfra.pgoutput import Insercao, Transacao
+from eduinfra.contrato_cdc import TABELA_DE_ITENS, TABELA_DE_VISTORIAS
+from eduinfra.pgoutput import OPERACAO_INSERT, Insercao, Transacao
 
 log = logging.getLogger(__name__)
 
-TABELA_DE_ITENS = "vistoria_item"
-TABELA_DE_VISTORIAS = "vistoria"
+COLUNAS_OBRIGATORIAS = tuple(campo.name for campo in eventos.ESQUEMA if not campo.nullable)
+# DataError: o banco devolveu uma data que o Python não representa, como -infinity.
+ERROS_DE_CONVERSAO = (KeyError, ValueError, TypeError, OverflowError, psycopg.DataError)
+ERROS_DO_ARROW = (pa.ArrowException, OverflowError, TypeError)
+COLUNA_DE_ID_POR_TABELA = {TABELA_DE_ITENS: "vistoria_id", TABELA_DE_VISTORIAS: "id"}
 
 CABECALHO_DA_VISTORIA = """
 select v.id, v.co_entidade, m.sg_uf, v.origem, v.ocorrido_em, v.registrado_em
@@ -42,10 +49,17 @@ class ResultadoDaPassada:
     itens_lidos: int
     itens_inseridos: int
     lsn_confirmado: int | None
+    itens_rejeitados: int = 0
 
     @property
     def itens_repetidos(self) -> int:
-        return self.itens_lidos - self.itens_inseridos
+        return self.itens_lidos - self.itens_inseridos - self.itens_rejeitados
+
+
+@dataclass(frozen=True)
+class Conversao:
+    eventos: pa.Table
+    rejeicoes: list[dict]
 
 
 def publicar_linha_de_base(configuracao: Configuracao, forcar: bool = False) -> eventos.ResultadoDaGravacao:
@@ -75,7 +89,12 @@ def passar_uma_vez(
 
         itens = [i for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_ITENS]
         vistorias = sum(1 for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_VISTORIAS)
-        gravacao = eventos.gravar_sem_duplicar(configuracao, montar_eventos(conexao, transacoes))
+        conversao = converter_eventos(conexao, transacoes)
+
+        gravacao = eventos.gravar_sem_duplicar(configuracao, conversao.eventos)
+        violacoes = violacoes_do_insert_only(transacoes)
+        fila_de_erros.gravar(configuracao, conversao.rejeicoes + violacoes)
+        _avisar_problemas(conversao.rejeicoes, violacoes)
 
         if falhar_antes_de_confirmar:
             raise FalhaSimulada("processo interrompido antes de avançar o slot")
@@ -83,47 +102,160 @@ def passar_uma_vez(
         lsn = transacoes[-1].lsn_fim
         cdc.confirmar(conexao, lsn, slot)
 
-    return ResultadoDaPassada(len(transacoes), vistorias, len(itens), gravacao.inseridas, lsn)
+    return ResultadoDaPassada(len(transacoes), vistorias, len(itens), gravacao.inseridas, lsn, len(conversao.rejeicoes))
 
 
 def acompanhar(configuracao: Configuracao, intervalo_em_segundos: float, arquivo_de_vida=None) -> None:
     while True:
-        resultado = passar_uma_vez(configuracao)
-        if resultado.transacoes:
-            log.info(
-                "cdc: %d transações, %d itens lidos, %d inseridos, slot em %s",
-                resultado.transacoes,
-                resultado.itens_lidos,
-                resultado.itens_inseridos,
-                resultado.lsn_confirmado,
-            )
+        _passar_e_registrar(configuracao)
         if arquivo_de_vida is not None:
             arquivo_de_vida.touch()
         time.sleep(intervalo_em_segundos)
 
 
+def _passar_e_registrar(configuracao: Configuracao) -> None:
+    resultado = passar_uma_vez(configuracao)
+    if resultado.transacoes:
+        log.info(
+            "cdc: %d transações, %d itens lidos, %d inseridos, %d na fila de erros, slot em %s",
+            resultado.transacoes,
+            resultado.itens_lidos,
+            resultado.itens_inseridos,
+            resultado.itens_rejeitados,
+            resultado.lsn_confirmado,
+        )
+
+
+def _avisar_problemas(rejeicoes: list[dict], violacoes: list[dict]) -> None:
+    if rejeicoes:
+        log.error("cdc: %d itens não converteram e foram para a fila de erros", len(rejeicoes))
+    if violacoes:
+        log.error("cdc: %d alterações desviaram do insert-only e foram para a fila de erros", len(violacoes))
+
+
 def montar_eventos(conexao: psycopg.Connection, transacoes: list[Transacao]) -> pa.Table:
+    return converter_eventos(conexao, transacoes).eventos
+
+
+def converter_eventos(conexao: psycopg.Connection, transacoes: list[Transacao]) -> Conversao:
     itens = [(t, i) for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_ITENS]
-    cabecalhos = _cabecalhos(conexao, {int(i.valores["vistoria_id"]) for _, i in itens})
-    linhas = [_evento(transacao, item, cabecalhos[int(item.valores["vistoria_id"])]) for transacao, item in itens]
+    cabecalhos, falhas = _cabecalhos(conexao, _identificadores(itens))
+    aprovados, rejeicoes = separar_itens(itens, cabecalhos, falhas)
+    tabela, nao_convertidos = montar_tabela(aprovados)
 
-    return pa.Table.from_pylist(linhas, schema=eventos.ESQUEMA)
+    return Conversao(tabela, rejeicoes + nao_convertidos)
 
 
-def _cabecalhos(conexao: psycopg.Connection, identificadores: set[int]) -> dict[int, tuple]:
+def _identificadores(itens: list[tuple[Transacao, Insercao]]) -> set[int]:
+    return {identificador for _, item in itens if (identificador := id_da_vistoria(item.valores, TABELA_DE_ITENS)) is not None}
+
+
+def id_da_vistoria(valores: dict, tabela: str) -> int | None:
+    try:
+        return int(valores[COLUNA_DE_ID_POR_TABELA[tabela]])
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def _cabecalhos(conexao: psycopg.Connection, identificadores: set[int]) -> tuple[dict[int, tuple], dict[int, Exception]]:
     if not identificadores:
-        return {}
+        return {}, {}
 
-    registros = conexao.execute(CABECALHO_DA_VISTORIA, (sorted(identificadores),)).fetchall()
+    try:
+        registros = conexao.execute(CABECALHO_DA_VISTORIA, (sorted(identificadores),)).fetchall()
+    except psycopg.DataError:
+        # Uma data fora do alcance do Python derruba a leitura em bloco; uma a uma, só a vistoria afetada é rejeitada.
+        return _cabecalhos_um_a_um(conexao, identificadores)
 
-    return {registro[0]: registro for registro in registros}
+    return {registro[0]: registro for registro in registros}, {}
+
+
+def _cabecalhos_um_a_um(conexao: psycopg.Connection, identificadores: set[int]) -> tuple[dict[int, tuple], dict[int, Exception]]:
+    cabecalhos, falhas = {}, {}
+    for identificador in identificadores:
+        try:
+            for registro in conexao.execute(CABECALHO_DA_VISTORIA, ([identificador],)).fetchall():
+                cabecalhos[identificador] = registro
+        except psycopg.DataError as erro:
+            falhas[identificador] = erro
+
+    return cabecalhos, falhas
+
+
+def separar_itens(
+    itens: list[tuple[Transacao, Insercao]],
+    cabecalhos: dict[int, tuple],
+    falhas: dict[int, Exception],
+) -> tuple[list[tuple[Transacao, Insercao, dict]], list[dict]]:
+    aprovados, rejeicoes = [], []
+    for transacao, item in itens:
+        try:
+            aprovados.append((transacao, item, _converter_item(transacao, item, cabecalhos, falhas)))
+        except ERROS_DE_CONVERSAO as erro:
+            rejeicoes.append(_rejeicao(transacao, item, erro))
+
+    return aprovados, rejeicoes
+
+
+def montar_tabela(aprovados: list[tuple[Transacao, Insercao, dict]]) -> tuple[pa.Table, list[dict]]:
+    try:
+        return pa.Table.from_pylist([linha for _, _, linha in aprovados], schema=eventos.ESQUEMA), []
+    except ERROS_DO_ARROW:
+        return _montar_linha_a_linha(aprovados)
+
+
+def _montar_linha_a_linha(aprovados: list[tuple[Transacao, Insercao, dict]]) -> tuple[pa.Table, list[dict]]:
+    tabelas, rejeicoes = [], []
+    for transacao, item, linha in aprovados:
+        try:
+            tabelas.append(pa.Table.from_pylist([linha], schema=eventos.ESQUEMA))
+        except ERROS_DO_ARROW as erro:
+            rejeicoes.append(_rejeicao(transacao, item, erro))
+
+    return pa.concat_tables(tabelas) if tabelas else eventos.ESQUEMA.empty_table(), rejeicoes
+
+
+def violacoes_do_insert_only(transacoes: list[Transacao]) -> list[dict]:
+    return [
+        fila_de_erros.montar_linha(
+            transacao.lsn_fim,
+            transacao.confirmada_em,
+            alteracao.tabela,
+            alteracao.operacao,
+            id_da_vistoria(alteracao.valores, alteracao.tabela),
+            alteracao.valores.get("item_codigo"),
+            fila_de_erros.MOTIVO_DE_VIOLACAO,
+        )
+        for transacao in transacoes
+        for alteracao in transacao.alteracoes
+    ]
+
+
+def _rejeicao(transacao: Transacao, item: Insercao, erro: Exception) -> dict:
+    return fila_de_erros.montar_linha(
+        transacao.lsn_fim,
+        transacao.confirmada_em,
+        item.tabela,
+        OPERACAO_INSERT,
+        id_da_vistoria(item.valores, item.tabela),
+        item.valores.get("item_codigo"),
+        f"{type(erro).__name__}: {erro}",
+    )
+
+
+def _converter_item(transacao: Transacao, item: Insercao, cabecalhos: dict[int, tuple], falhas: dict[int, Exception]) -> dict:
+    vistoria_id = int(item.valores["vistoria_id"])
+    if vistoria_id in falhas:
+        raise falhas[vistoria_id]
+
+    return _evento(transacao, item, cabecalhos[vistoria_id])
 
 
 def _evento(transacao: Transacao, item: Insercao, cabecalho: tuple) -> dict:
     _, co_entidade, sg_uf, origem, ocorrido_em, registrado_em = cabecalho
     quantidade = item.valores["quantidade"]
 
-    return {
+    evento = {
         "vistoria_id": int(item.valores["vistoria_id"]),
         "item_codigo": item.valores["item_codigo"],
         "co_entidade": co_entidade,
@@ -136,4 +268,10 @@ def _evento(transacao: Transacao, item: Insercao, cabecalho: tuple) -> dict:
         "mes_ocorrencia": ocorrido_em.astimezone(timezone.utc).strftime("%Y-%m"),
         "lsn_origem": transacao.lsn_fim,
     }
+    # O Arrow aceita o nulo aqui e só o merge recusa, derrubando o lote inteiro.
+    nulas = [coluna for coluna in COLUNAS_OBRIGATORIAS if evento[coluna] is None]
+    if nulas:
+        raise ValueError(f"coluna obrigatória nula: {', '.join(nulas)}")
+
+    return evento
 
