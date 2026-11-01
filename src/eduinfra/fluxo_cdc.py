@@ -16,7 +16,7 @@ from datetime import timezone
 import psycopg
 import pyarrow as pa
 
-from eduinfra import cdc, eventos, fila_de_erros
+from eduinfra import cdc, eventos, fila_de_erros, telemetria_cdc
 from eduinfra.configuracao import Configuracao
 from eduinfra.contrato_cdc import TABELA_DE_ITENS, TABELA_DE_VISTORIAS
 from eduinfra.pgoutput import OPERACAO_INSERT, Insercao, Transacao
@@ -83,17 +83,23 @@ def passar_uma_vez(
 ) -> ResultadoDaPassada:
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
         cdc.garantir_slot(conexao, slot)
+        inicio_da_leitura = telemetria_cdc.agora(conexao)
         transacoes = cdc.ler_transacoes(conexao, slot, limite_de_mudancas=limite_de_mudancas)
         if not transacoes:
+            telemetria_cdc.registrar_frescor(configuracao, inicio_da_leitura)
             return ResultadoDaPassada(0, 0, 0, 0, None)
 
+        fim_da_leitura = telemetria_cdc.agora(conexao)
         itens = [i for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_ITENS]
         vistorias = sum(1 for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_VISTORIAS)
         conversao = converter_eventos(conexao, transacoes)
+        fim_da_conversao = telemetria_cdc.agora(conexao)
 
         gravacao = eventos.gravar_sem_duplicar(configuracao, conversao.eventos)
         violacoes = violacoes_do_insert_only(transacoes)
         fila_de_erros.gravar(configuracao, conversao.rejeicoes + violacoes)
+        relogio = telemetria_cdc.RelogioDaPassada(inicio_da_leitura, fim_da_leitura, fim_da_conversao, telemetria_cdc.agora(conexao))
+        telemetria_cdc.registrar_passada(configuracao, telemetria_cdc.linhas_da_passada(transacoes, relogio, conversao.eventos, conversao.rejeicoes))
         _avisar_problemas(conversao.rejeicoes, violacoes)
 
         if falhar_antes_de_confirmar:
@@ -101,6 +107,10 @@ def passar_uma_vez(
 
         lsn = transacoes[-1].lsn_fim
         cdc.confirmar(conexao, lsn, slot)
+
+    # Tudo o que confirmou antes do início da leitura já está no Delta ou na fila.
+    if limite_de_mudancas is None:
+        telemetria_cdc.registrar_frescor(configuracao, inicio_da_leitura)
 
     return ResultadoDaPassada(len(transacoes), vistorias, len(itens), gravacao.inseridas, lsn, len(conversao.rejeicoes))
 
