@@ -124,7 +124,13 @@ def acompanhar(configuracao: Configuracao, intervalo_em_segundos: float, arquivo
 
 
 def _passar_e_registrar(configuracao: Configuracao) -> None:
-    resultado = passar_uma_vez(configuracao)
+    try:
+        resultado = passar_uma_vez(configuracao)
+    except psycopg.errors.ObjectInUse:
+        # A auditoria espia o mesmo slot: é só esperar a próxima passada, sem derrubar o processo.
+        log.info("cdc: slot em uso por outra sessão, a passada volta no próximo ciclo")
+        return
+
     if resultado.transacoes:
         log.info(
             "cdc: %d transações, %d itens lidos, %d inseridos, %d na fila de erros, slot em %s",

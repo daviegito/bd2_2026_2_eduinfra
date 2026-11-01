@@ -117,6 +117,15 @@ def test_desvio_do_insert_only_vai_para_a_fila_so_com_a_chave(alteracao, vistori
     assert "texto livre" not in str(linha)
 
 
+def test_slot_em_uso_por_outra_sessao_nao_derruba_o_consumidor(monkeypatch):
+    def slot_ocupado(_):
+        raise psycopg.errors.ObjectInUse("replication slot is active")
+
+    monkeypatch.setattr(fluxo_cdc, "passar_uma_vez", slot_ocupado)
+
+    assert fluxo_cdc._passar_e_registrar(None) is None
+
+
 def test_itens_repetidos_descontam_os_que_foram_para_a_fila():
     resultado = fluxo_cdc.ResultadoDaPassada(1, 1, itens_lidos=17, itens_inseridos=10, lsn_confirmado=LSN, itens_rejeitados=2)
 
