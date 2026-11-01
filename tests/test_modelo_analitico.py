@@ -57,17 +57,18 @@ def _semear_cadastro(dsn: str) -> None:
         )
 
 
-def vistoria(dsn: str, escola: int, ocorrido: str, itens: dict[str, str], origem: str = "vistoria_presencial") -> int:
+def vistoria(dsn: str, escola: int, ocorrido: str, itens: dict, origem: str = "vistoria_presencial") -> int:
     with psycopg.connect(dsn, autocommit=True) as conexao:
         vistoria_id = conexao.execute(
             "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
             "values (%s, (select id from tecnico limit 1), %s, %s) returning id",
             (escola, origem, ocorrido),
         ).fetchone()[0]
-        for item, situacao in itens.items():
+        for item, valor in itens.items():
+            situacao, quantidade = valor if isinstance(valor, tuple) else (valor, None)
             conexao.execute(
-                "insert into vistoria_item (vistoria_id, item_codigo, situacao) values (%s, %s, %s)",
-                (vistoria_id, item, situacao),
+                "insert into vistoria_item (vistoria_id, item_codigo, situacao, quantidade) values (%s, %s, %s, %s)",
+                (vistoria_id, item, situacao, quantidade),
             )
 
     return vistoria_id
@@ -309,3 +310,153 @@ def test_serie_historica_nao_muda_quando_a_dimensao_ganha_uma_versao_nova(dsn):
     assert consultar(dsn, consulta, (2024,)) == de_2024_antes
     assert consultar(dsn, consulta, (2025,))[0][3] is True
     assert de_2024_antes[0][3] is False
+
+
+def chaves_por_versao(dsn: str) -> dict[int, str]:
+    return dict(
+        consultar(
+            dsn,
+            "select escola_infra_sk, co_entidade::text || '@' || (valid_from at time zone 'UTC')::text "
+            "from gold.dim_escola_infraestrutura",
+        )
+    )
+
+
+def test_revisita_sem_quantidade_nao_cria_versao_nem_apaga_a_quantidade_conhecida(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": ("existente", 2)}, origem="censo_escolar")
+    vistoria(dsn, 1, "2025-02-01", {"lab_ciencias": "existente"})  # não informa a quantidade
+    modelo_analitico.construir(dsn)
+
+    versoes = consultar(
+        dsn, "select valid_from::date::text, quantidades ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
+             "where co_entidade = 1 order by valid_from"
+    )
+    assert versoes == [("2024-05-29", "2")]
+
+    # Uma quantidade nova é mudança; depois de a situação mudar, a quantidade antiga não volta.
+    vistoria(dsn, 1, "2025-03-01", {"lab_ciencias": ("existente", 3)})
+    vistoria(dsn, 1, "2025-04-01", {"lab_ciencias": "inexistente"})
+    vistoria(dsn, 1, "2025-05-01", {"lab_ciencias": "existente"})
+    modelo_analitico.construir(dsn)
+
+    versoes = consultar(
+        dsn, "select valid_from::date::text, itens ->> 'lab_ciencias', quantidades ->> 'lab_ciencias' "
+             "from gold.dim_escola_infraestrutura where co_entidade = 1 order by valid_from"
+    )
+    assert versoes == [
+        ("2024-05-29", "existente", "2"),
+        ("2025-03-01", "existente", "3"),
+        ("2025-04-01", "inexistente", None),
+        ("2025-05-01", "existente", None),
+    ]
+
+
+def test_chave_substituta_nao_depende_do_fuso_horario_da_sessao(dsn):
+    historia_da_escola_um(dsn)
+    modelo_analitico.construir(dsn)
+    em_utc = chaves_por_versao(dsn)
+
+    banco = urlsplit(dsn).path.lstrip("/")
+    with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
+        admin.execute(f"alter database \"{banco}\" set timezone to 'Asia/Tokyo'")
+    assert consultar(dsn, "show timezone") == [("Asia/Tokyo",)]
+
+    modelo_analitico.construir(dsn)
+
+    assert chaves_por_versao(dsn) == em_utc
+
+
+def test_evento_atrasado_que_repete_o_estado_antecipa_a_versao_e_a_chave_antiga_some(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": "inexistente"}, origem="censo_escolar")
+    modelo_analitico.construir(dsn)
+    antes = chaves_por_versao(dsn)
+
+    vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "inexistente"})  # mesmo estado, data anterior
+    modelo_analitico.construir(dsn)
+    depois = chaves_por_versao(dsn)
+
+    # As duas versões se fundem numa só, que começa em 15/01. A chave de 29/05 deixa de existir...
+    assert list(depois.values()) == ["1@2024-01-15 00:00:00"]
+    assert not set(antes) & set(depois)
+    # ...e nenhuma chave passou a apontar para outra versão.
+    assert all(depois.get(chave, versao) == versao for chave, versao in antes.items())
+
+
+def test_duas_vistorias_no_mesmo_dia_desempatam_igual_nos_dois_graos(dsn):
+    # Registradas na ordem inversa da ocorrência: a das 15h entra primeiro (id menor).
+    vistoria(dsn, 1, "2024-05-29 15:00:00+00", {"lab_ciencias": "inexistente"})
+    vistoria(dsn, 1, "2024-05-29 09:00:00+00", {"lab_ciencias": "existente"})
+    vistoria(dsn, 2, "2024-05-29 10:00:00+00", {"lab_ciencias": "existente"}, origem="censo_escolar")
+    modelo_analitico.construir(dsn)
+
+    parametros = {"ano": 2024}
+    with psycopg.connect(dsn) as conexao:
+        fino = conexao.execute(modelo_analitico.CONSULTA_NO_GRAO_FINO, parametros).fetchall()
+        largo = conexao.execute(modelo_analitico.CONSULTA_NO_GRAO_LARGO, parametros).fetchall()
+    versao_final = consultar(
+        dsn, "select itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura where co_entidade = 1 and is_current"
+    )
+
+    assert versao_final == [("inexistente",)]  # vale a das 15h, não a de maior id
+    assert fino == largo
+    assert modelo_analitico.comparar(dsn, repeticoes=1).mesmo_resultado
+
+
+def test_fato_fino_aponta_para_a_versao_vigente_no_instante_da_vistoria(dsn):
+    historia_da_escola_um(dsn)
+    modelo_analitico.construir(dsn)
+
+    linhas = consultar(
+        dsn,
+        """
+        select f.data_ocorrencia::text, f.item_codigo, d.valid_from::date::text, d.itens ->> 'lab_ciencias'
+        from gold.fato_vistoria_item f
+        join gold.dim_escola_infraestrutura d using (escola_infra_sk)
+        where f.co_entidade = 1 and f.item_codigo = 'lab_ciencias'
+        order by f.ocorrido_em
+        """,
+    )
+
+    # 29/05/2024 aponta para a versão de 2024; 10/03/2025 para a que ela mesma criou; a revisita
+    # de 01/06/2025 repete o estado e aponta para a versão de 10/03/2025.
+    assert linhas == [
+        ("2024-05-29", "lab_ciencias", "2024-05-29", "inexistente"),
+        ("2025-03-10", "lab_ciencias", "2025-03-10", "existente"),
+        ("2025-06-01", "lab_ciencias", "2025-03-10", "existente"),
+    ]
+    sem_versao = consultar(dsn, "select count(*) from gold.fato_vistoria_item where escola_infra_sk is null "
+                                "and situacao <> 'nao_informado'")[0][0]
+    assert sem_versao == 0
+
+
+def test_a_construcao_enxerga_um_unico_retrato_da_origem(dsn, monkeypatch):
+    historia_da_escola_um(dsn)
+    modelo_analitico.construir(dsn)
+    itens_antes = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
+
+    etapas_reais = modelo_analitico._etapas
+
+    def etapas_com_vistoria_no_meio(itens):
+        etapas = etapas_reais(itens)
+        # Depois da dimensão (índice 2) e antes dos fatos, outra sessão confirma uma vistoria.
+        etapas.insert(3, lambda conexao: vistoria(dsn, 2, "2025-07-01", {"biblioteca": "existente"}))
+        return etapas
+
+    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_com_vistoria_no_meio)
+    modelo_analitico.construir(dsn)
+
+    # A vistoria entrou na origem, mas a Gold desta construção não a viu em tabela nenhuma.
+    assert consultar(dsn, "select count(*) from public.vistoria_item")[0][0] == itens_antes + 1
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0] == itens_antes
+    assert consultar(dsn, "select count(*) from gold.fato_infra_escola_ano where co_entidade = 2")[0][0] == 0
+
+    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_reais)
+    modelo_analitico.construir(dsn)
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0] == itens_antes + 1
+
+
+def test_comparar_com_a_gold_vazia_explica_o_que_fazer(dsn):
+    modelo_analitico.construir(dsn)
+
+    with pytest.raises(RuntimeError, match="Gold está vazia"):
+        modelo_analitico.comparar(dsn, repeticoes=1)

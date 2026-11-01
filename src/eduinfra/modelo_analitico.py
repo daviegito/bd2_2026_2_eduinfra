@@ -1,10 +1,13 @@
 """Modelo dimensional da camada Gold (E3): dimensões, SCD tipo 2 e fatos de duas granularidades.
 
-Tudo é SQL sobre a origem OLTP, executado numa única transação: quem consulta a
-Gold vê o modelo anterior inteiro ou o novo inteiro. O SQL fica em constantes de
-propósito, para poder ser movido sem mudanças para dbt ou SQLMesh quando o ADR
-0005 escolher a ferramenta. As tabelas `stg_*` são o único ponto que lê a
-origem; trocar a fonte de eventos (issue de unificação) é mudar só elas.
+Tudo é SQL sobre a origem OLTP, executado numa única transação em REPEATABLE READ
+e com o fuso da sessão fixado em UTC: todas as tabelas veem o mesmo retrato da
+origem, mesmo que uma vistoria entre no meio da construção, e o resultado não
+depende da configuração do servidor. O SQL fica em constantes de propósito, para
+poder ser movido sem mudanças para dbt ou SQLMesh quando o ADR 0005 escolher a
+ferramenta. Leem a origem: as dimensões de atributo, `stg_mudanca_item` (de onde sai
+a dimensão de variação lenta), o fato fino e os anos do fato largo. Trocar a fonte
+de eventos (issue de unificação) é mexer nesses pontos.
 """
 
 import logging
@@ -72,20 +75,50 @@ CONSULTAS_DE_STAGING = [
         join public.vistoria_item vi on vi.vistoria_id = v.id
         where vi.situacao <> 'nao_informado'
     ),
-    comparados as (
+    com_inicio_de_trecho as (
         select *,
-               lag(situacao) over janela as situacao_anterior,
-               lag(quantidade) over janela as quantidade_anterior,
-               row_number() over janela as ordem
+               case when situacao is distinct from lag(situacao) over janela then 1 else 0 end as inicia_trecho
         from eventos
         window janela as (partition by co_entidade, item_codigo order by desde, vistoria_id)
     ),
+    com_trecho as (
+        select *,
+               sum(inicia_trecho) over (
+                   partition by co_entidade, item_codigo order by desde, vistoria_id
+               ) as trecho
+        from com_inicio_de_trecho
+    ),
+    -- Quantidade vigente: dentro de um trecho de mesma situação, uma revisita que não informa
+    -- a quantidade não apaga a última conhecida (mesma ideia do nao_informado). count() só
+    -- avança nas linhas com quantidade, então cada grupo tem exatamente uma linha informada.
+    com_grupo_de_quantidade as (
+        select *,
+               count(quantidade) over (
+                   partition by co_entidade, item_codigo, trecho order by desde, vistoria_id
+               ) as grupo_quantidade
+        from com_trecho
+    ),
+    com_quantidade_vigente as (
+        select *,
+               max(quantidade) over (
+                   partition by co_entidade, item_codigo, trecho, grupo_quantidade
+               ) as quantidade_vigente
+        from com_grupo_de_quantidade
+    ),
+    comparados as (
+        select *,
+               lag(situacao) over janela as situacao_anterior,
+               lag(quantidade_vigente) over janela as quantidade_anterior,
+               row_number() over janela as ordem
+        from com_quantidade_vigente
+        window janela as (partition by co_entidade, item_codigo order by desde, vistoria_id)
+    ),
     mudancas as (
-        select co_entidade, item_codigo, situacao, quantidade, desde, vistoria_id
+        select co_entidade, item_codigo, situacao, quantidade_vigente as quantidade, desde, vistoria_id
         from comparados
         where ordem = 1
            or situacao is distinct from situacao_anterior
-           or quantidade is distinct from quantidade_anterior
+           or quantidade_vigente is distinct from quantidade_anterior
     )
     select *,
            coalesce(
@@ -99,8 +132,10 @@ CONSULTAS_DE_STAGING = [
 ]
 
 # SCD tipo 2: uma versão do perfil de infraestrutura da escola a cada instante em que ALGUM
-# item mudou. A chave substituta é função de (escola, início): reconstruir a dimensão depois
-# de um evento atrasado não troca a chave das versões que já existiam.
+# item mudou. A chave substituta é função de (escola, início em UTC): enquanto o início de uma
+# versão não muda, a chave não muda. Um evento atrasado que ANTECIPA o início de uma versão
+# (mesmo estado, data anterior) funde as duas: a chave antiga deixa de existir, e nenhuma
+# chave passa a apontar para outra versão.
 CONSULTAS_DA_SCD = [
     """
     create table gold.dim_escola_infraestrutura as
@@ -127,7 +162,9 @@ CONSULTAS_DA_SCD = [
         group by i.co_entidade, i.valid_from, i.vistoria_origem_id
     )
     select
-        hashtextextended(co_entidade::text || '|' || valid_from::text, 0) as escola_infra_sk,
+        hashtextextended(
+            co_entidade::text || '|' || to_char(valid_from at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'), 0
+        ) as escola_infra_sk,
         co_entidade,
         valid_from,
         coalesce(lead(valid_from) over proxima, 'infinity'::timestamptz) as valid_to,
@@ -143,22 +180,30 @@ CONSULTAS_DA_SCD = [
     "create index dim_escola_infra_vigencia on gold.dim_escola_infraestrutura (co_entidade, valid_from, valid_to)",
 ]
 
-# Fato fino. Grão: uma linha por escola, por item de infraestrutura, por vistoria.
+# Fato fino. Grão: uma linha por escola, por item de infraestrutura, por vistoria. Aponta para a
+# versão do perfil vigente no instante da vistoria, já com o efeito dela (junção point-in-time).
 CONSULTAS_DO_FATO_FINO = [
     """
     create table gold.fato_vistoria_item as
     select v.id as vistoria_id,
            vi.item_codigo,
            v.co_entidade,
+           v.ocorrido_em,
            (v.ocorrido_em at time zone 'UTC')::date as data_ocorrencia,
            v.origem,
+           d.escola_infra_sk,
            vi.situacao::text as situacao,
            vi.quantidade
     from public.vistoria v
     join public.vistoria_item vi on vi.vistoria_id = v.id
+    left join gold.dim_escola_infraestrutura d
+      on d.co_entidade = v.co_entidade
+     and d.valid_from <= v.ocorrido_em
+     and v.ocorrido_em < d.valid_to
     """,
     "alter table gold.fato_vistoria_item add primary key (vistoria_id, item_codigo)",
-    "create index fato_vistoria_item_por_item on gold.fato_vistoria_item (item_codigo, situacao) include (co_entidade, data_ocorrencia)",
+    "create index fato_vistoria_item_por_item on gold.fato_vistoria_item (item_codigo, situacao) include (co_entidade, data_ocorrencia, ocorrido_em)",
+    "create index fato_vistoria_item_por_versao on gold.fato_vistoria_item (escola_infra_sk)",
 ]
 
 
@@ -227,7 +272,11 @@ def construir(dsn: str) -> ResumoGold:
     inicio = time.perf_counter()
 
     with psycopg.connect(dsn) as conexao:
+        # Um retrato só da origem para todas as tabelas: em READ COMMITTED cada create table
+        # enxergaria o que tivesse sido confirmado até aquele instante.
+        conexao.isolation_level = psycopg.IsolationLevel.REPEATABLE_READ
         with conexao.transaction():
+            conexao.execute("set local timezone to 'UTC'")
             itens = [
                 linha[0]
                 for linha in conexao.execute("select codigo from public.item_infraestrutura order by codigo")
@@ -265,8 +314,8 @@ def _rodar(conexao: psycopg.Connection, comandos: list[str]) -> None:
 # --- Medição das duas granularidades (insumo do ADR 0005) -------------------------------
 
 # A mesma pergunta em cada grão: % de escolas com laboratório de ciências por UF e rede,
-# no ano de maior cobertura. O grão fino precisa escolher a última vistoria de cada escola; o largo
-# já guarda o perfil do ano.
+# no ano de maior cobertura. O grão fino precisa escolher a última vistoria de cada escola (mesmo
+# desempate da dimensão: instante e depois id); o largo já guarda o perfil do ano.
 CONSULTA_NO_GRAO_FINO = """
     with ultima as (
         select distinct on (f.co_entidade) f.co_entidade, f.situacao
@@ -274,7 +323,7 @@ CONSULTA_NO_GRAO_FINO = """
         where f.item_codigo = 'lab_ciencias'
           and f.situacao <> 'nao_informado'
           and extract(year from f.data_ocorrencia) = %(ano)s
-        order by f.co_entidade, f.data_ocorrencia desc, f.vistoria_id desc
+        order by f.co_entidade, f.ocorrido_em desc, f.vistoria_id desc
     )
     select m.sg_uf, e.rede,
            count(*) as escolas,
@@ -323,9 +372,12 @@ def comparar(dsn: str, repeticoes: int = 5) -> ComparacaoDeGranularidades:
     with psycopg.connect(dsn, autocommit=True) as conexao:
         # O ano de maior cobertura: num ano com poucas revisitas o grão fino não tem o estado
         # herdado de anos anteriores e a comparação deixaria de ser entre respostas equivalentes.
-        ano = conexao.execute(
+        linha = conexao.execute(
             "select ano from gold.fato_infra_escola_ano group by ano order by count(*) desc, ano desc limit 1"
-        ).fetchone()[0]
+        ).fetchone()
+        if linha is None:
+            raise RuntimeError("a Gold está vazia: rode construir-gold com a origem carregada antes de comparar")
+        ano = linha[0]
         escolas = conexao.execute("select count(*) from gold.dim_escola").fetchone()[0]
         parametros = {"ano": ano}
 
@@ -398,7 +450,8 @@ def formatar_markdown(comparacao: ComparacaoDeGranularidades) -> str:
             "As duas consultas respondem à mesma pergunta (% de escolas com laboratório de ciências, por UF e rede).",
             "Os resultados são idênticos."
             if comparacao.mesmo_resultado
-            else "ATENÇÃO: os resultados diferem; o grão fino não herda o estado de anos anteriores.",
+            else "ATENÇÃO: os resultados diferem. O grão fino não herda o estado de anos anteriores, "
+            "mas a diferença pode ter outra causa: investigue antes de concluir.",
         ]
     )
 
