@@ -69,6 +69,7 @@ nav:
       - Compressão: serializacao-compressao.md
       - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
       - Métricas do CDC: metricas-cdc.md
+      - Consulta otimizada: consulta-otimizada.md
       - Dados atrasados: dado-atrasado.md
       - Camada analítica: camada-analitica.md
   - Decisões:

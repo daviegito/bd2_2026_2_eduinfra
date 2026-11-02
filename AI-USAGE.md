@@ -281,3 +281,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
   o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
 - **Quem revisou:** Davi, no PR #59, com a revisão em andamento
+
+### 2026-11-01 — Consulta otimizada com EXPLAIN (issue #51)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `src/eduinfra/otimizacao_consulta.py`, o comando `comparar-consulta`, testes
+  correspondentes, `docs/consulta-otimizada.md` e `docs/explain/`
+- **O que foi pedido:** fazer a issue #51 seguindo oito pontos escritos por Artur: planos também em
+  JSON, buffers só da raiz, aquecimento e mediana, investigar a estimativa antes de criar índice,
+  justificar a ordem das colunas, separar diagnóstico de medição, medir o tempo de leitura e conferir
+  se a view é comum ou materializada. Revisando a primeira versão, que otimizava a origem, Artur
+  decidiu refazer sobre a Gold, como a issue pede
+- **O que foi aproveitado:** o código, os testes, as consultas na Gold e o rascunho da documentação.
+  Foram descartados a reescrita do filtro e o índice cobrindo da primeira versão, que não mostraram
+  ganho de tempo com cache quente, e uma leitura inicial que atribuía ao índice uma queda vinda do cache
+- **Como foi verificado:** o aquecimento pedido por Artur expôs o efeito do cache. Duas rodadas sobre
+  uma cópia dos dados reais, com a view e a Gold devolvendo as mesmas linhas, e as hipóteses da origem
+  guardadas em `docs/explain/hipoteses.txt`. 188 testes (unitários e de integração) na mesma cópia
+- **Quem revisou:** a revisão pela squad ainda não aconteceu
