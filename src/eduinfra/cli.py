@@ -41,6 +41,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--verboso", action="store_true")
+    parser.add_argument("comando", choices=(..., "construir-gold", "gerar-painel"))
     opcoes = parser.parse_args(argumentos)
 
     logging.basicConfig(
@@ -166,6 +167,11 @@ def main(argumentos: list[str] | None = None) -> int:
         from eduinfra.sample_generator import gerar_amostra
 
         gerar_amostra(configuracao, opcoes.escolas)
+
+    if opcoes.comando == "gerar-painel":
+        from eduinfra.painel import gerar_painel
+        gerar_painel()
+        return 0
 
     return 0
 
