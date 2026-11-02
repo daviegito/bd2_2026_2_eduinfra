@@ -250,7 +250,8 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   medida por fora marcava o instante antes de atualizar a tabela. Corrigida a medida, as 30 amostras
   deram cerca de 4 s
 - **Como foi verificado:** 176 testes (unitários e de integração), com as falhas provocadas em bancos
-  descartáveis. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
+  descartáveis. A revisão do Davi achou um teste que dependia do intervalo entre dois commits, depois
+  corrigido. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
   A hipótese de que os arquivos pequenos piorariam o merge não se confirmou nesta escala. Os números
   de `docs/metricas-cdc.md` vêm das saídas dos comandos ali documentados, guardadas em
   `docs/evidencias/metricas-cdc/`

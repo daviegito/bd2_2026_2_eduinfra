@@ -288,6 +288,7 @@ def test_transacao_longa_inverte_o_registro_escapa_da_marca_dagua_e_chega_pelo_s
         time.sleep(0.2)
         inserir_vistoria(curta, MATRICULA, OBSERVACAO, evento)
         curta.commit()
+        time.sleep(0.05)
         longa.commit()
 
     resultado = _passar(configuracao)
