@@ -36,6 +36,8 @@ services:
       ANO_ENEM: ${ANO_ENEM:-2024}
     volumes:
       - dados_censo:/dados
+      - ./src:/app/src
+      - ./tests:/app/tests
     depends_on:
       banco:
         condition: service_healthy
