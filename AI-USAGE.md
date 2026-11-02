@@ -232,6 +232,28 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   Os commits foram feitos à mão, sem a IA
 - **Quem revisou:** Marcos Vinícius
 
+### 2026-10-26 — Modelo dimensional da Gold e dimensão de variação lenta (E3-3 e E3-4)
+
+- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
+- **Onde:** `src/eduinfra/modelo_analitico.py`, `src/eduinfra/cli.py`,
+  `tests/test_modelo_analitico.py`, `docs/modelo-analitico.md`, `mkdocs.yml` e README
+- **O que foi pedido:** Auxílio no desenho e na implementação das dimensões, da dimensão de
+  variação lenta (tipo 2) e dos dois fatos de granularidades diferentes, com testes
+  e o comando de medição, a partir do esquema da origem
+- **O que foi aproveitado:** o código, os testes e a documentação. Decisões de
+  projeto sugeridas e a revisar pela Squad: o histórico da dimensão vem dos eventos
+  insert-only e não de um segundo ano do Censo, `nao_informado` não é estado, a
+  chave substituta é um hash de (escola, início) e o fato largo usa o perfil
+  vigente ao fim do ano
+- **Como foi verificado:** `pytest` com PostgreSQL 16 real e banco descartável por
+  teste (11 testes novos, 32 com os de ingestão, transformação e insert-only); três
+  defeitos reintroduzidos de propósito (tratar `nao_informado` como estado, criar
+  versão a cada vistoria, chave instável) e o teste correspondente falhou em cada
+  caso, o que levou a reforçar o teste da chave. A construção e a comparação rodaram
+  num banco **sintético** com o volume do Censo (181 mil escolas, 3 milhões de
+  itens).
+- **Quem revisou:** Pedro Teixeira Moriel Sanchez
+
 ### 2026-10-31 — Métricas do CDC, telemetria e fila de erros (issue #52, ADR 0007)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
@@ -250,10 +272,14 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   medida por fora marcava o instante antes de atualizar a tabela. Corrigida a medida, as 30 amostras
   deram cerca de 4 s
 - **Como foi verificado:** 176 testes (unitários e de integração), com as falhas provocadas em bancos
-  descartáveis. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
+  descartáveis. A revisão do Davi achou um teste que dependia do intervalo entre dois commits, depois
+  corrigido. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
   A hipótese de que os arquivos pequenos piorariam o merge não se confirmou nesta escala. Os números
   de `docs/metricas-cdc.md` vêm das saídas dos comandos ali documentados, guardadas em
   `docs/evidencias/metricas-cdc/`
+  O conflito com o #55 ao trazer a main (`cli.py` e este arquivo) foi resolvido com a IA, juntando os
+  comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
+  o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
 - **Quem revisou:** Davi, no PR #59, com a revisão em andamento
 
 ### 2026-11-01 — Consulta otimizada com EXPLAIN (issue #51)
