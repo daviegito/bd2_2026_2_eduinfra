@@ -1,11 +1,9 @@
 import sys
-import subprocess
-from pathlib import Path
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
-from eduinfra.configuracao import Configuracao
+from eduinfra.configuracao import carregar_configuracao
 
-def injetar_defeito(configuracao: Configuracao):
+def injetar_defeito(configuracao):
     print("\n--- [1/3] Injetando defeito de propósito na Gold ---")
     caminho_tabela = configuracao.diretorio_dados / "warehouse" / "vistoria_item"
 
@@ -16,40 +14,43 @@ def injetar_defeito(configuracao: Configuracao):
     print("Lendo amostra da tabela para garantir compatibilidade...")
     dt = DeltaTable(str(caminho_tabela))
 
-    if dt.num_rows == 0:
+    sample_table = dt.to_pyarrow_table()
+
+    if sample_table.num_rows == 0:
         print("Erro: A tabela está vazia. Não é possível injetar defeito baseado em dados existentes.")
         sys.exit(1)
 
     # Pegamos a primeira linha para clonar a estrutura e os tipos de dados
-    # Usamos pyarrow para evitar a dependência de pandas
-    sample_table = dt.to_arrow()
     first_row = sample_table.slice(0, 1)
 
-    # Criamos o novo registro com o defeito usando PyArrow
-    # Construímos um dicionário com os dados da primeira linha, mudando apenas a 'situacao'
-    data_dict = {
-        "ano_censo": [first_row.column("ano_censo")[0]],
-        "sg_uf": [first_row.column("sg_uf")[0]],
-        "co_entidade": [first_row.column("co_entidade")[0]],
-        "item_codigo": [first_row.column("item_codigo")[0]],
-        "situacao": ["ERRO_DE_DOMINIO"]  # <--- O DEFEITO (valor proibido)
-    }
+    # Exportamos TODAS as colunas dessa linha para um dicionário Python nativo
+    data_dict = first_row.to_pydict()
 
-    defeito_table = pa.Table.from_pydict(data_dict)
+    # Injetamos o defeito modificando apenas a coluna alvo
+    data_dict["situacao"] = ["ERRO_DE_DOMINIO"]
 
-    print(f"Injetando registro sujo: {data_dict}")
+    # Recriamos a tabela de defeito com todas as colunas intactas
+    defeito_table = pa.Table.from_pydict(data_dict, schema=sample_table.schema)
 
-    # Escreve o defeito na tabela usando modo 'append'
+    print(f"Injetando registro sujo...")
+
     write_deltalake(str(caminho_tabela), defeito_table, mode="append")
     print("✅ Defeito injetado com sucesso!")
 
 def rodar_testes():
     print("\n--- [2/3] Executando testes de auditoria (E3) ---")
-    # Executa o unittest apontando para o arquivo de testes
-    # Usamos -m unittest para garantir que o python path esteja correto
-    resultado = subprocess.run([sys.executable, "-m", "unittest", "tests/test_e3_gold.py"])
+    import unittest
 
-    if resultado.returncode != 0:
+    # Garante o path pro import dentro do container
+    if "/app" not in sys.path:
+        sys.path.insert(0, "/app")
+
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromName("tests.test_e3_gold")
+    runner = unittest.TextTestRunner(verbosity=2)
+    resultado = runner.run(suite)
+
+    if not resultado.wasSuccessful():
         print("\n" + "="*50)
         print("❌ RESULTADO: O teste FALHOU como esperado!")
         print("A auditoria detectou o erro de domínio (situacao='ERRO_DE_DOMINIO').")
@@ -59,9 +60,9 @@ def rodar_testes():
         print("\n" + "="*50)
         print("⚠️ AVISO: O teste PASSOU.")
         print("Isso significa que a auditoria NÃO detectou o defeito.")
-        print("Verifique se o teste de 'casos_sujos' no arquivo test_e3_gold.py está correto.")
+        print("Verifique se o teste de 'casos_sujos' no arquivo test_e3_gold.py está rigoroso o suficiente.")
         print("="*50)
-from eduinfra.configuracao import carregar_configuracao
+
 
 def main():
     print("=== INICIANDO DEMONSTRAÇÃO DE AUDITORIA E3 ===")
