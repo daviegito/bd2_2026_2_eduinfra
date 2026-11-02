@@ -1,0 +1,421 @@
+| Hipótese | Tempo (mediana) | Em cache | Lidos | Temporários escritos | Linhas no join (estimadas / reais) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| linha de base | 999.5 ms | 443220 | 26256 | 2153 | 868 / 110806 |
+| estatística estendida | 742.5 ms | 443219 | 26257 | 2153 | 868 / 110806 |
+| work_mem de 64 MB | 647.1 ms | 443220 | 26256 | 0 | 868 / 110806 |
+| enable_nestloop desligado | 615.5 ms | 90144 | 26811 | 2153 | 868 / 110806 |
+| filtro no agregado | 1277.2 ms | 114995 | 28496 | 4306 | 102096 / 90532 |
+| índice cobrindo | 754.4 ms | 447210 | 0 | 2153 | 868 / 110806 |
+| filtro no agregado e índice cobrindo | 696.4 ms | 98895 | 0 | 4306 | 102096 / 90532 |
+
+## linha de base
+
+GroupAggregate  (cost=73697.61..73704.16 rows=4 width=10) (actual time=1811.967..1844.950 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=443219 read=26257, temp read=2149 written=2153
+  I/O Timings: shared read=124.530, temp read=11.964 write=125.451
+  ->  Sort  (cost=73697.61..73699.78 rows=868 width=2) (actual time=1811.946..1825.589 rows=110806 loops=1)
+        Sort Key: e.tp_dependencia
+        Sort Method: quicksort  Memory: 3073kB
+        Buffers: shared hit=443219 read=26257, temp read=2149 written=2153
+        I/O Timings: shared read=124.530, temp read=11.964 write=125.451
+        ->  Nested Loop  (cost=65458.53..73655.24 rows=868 width=2) (actual time=1283.494..1795.237 rows=110806 loops=1)
+              Buffers: shared hit=443219 read=26257, temp read=2149 written=2153
+              I/O Timings: shared read=124.530, temp read=11.964 write=125.451
+              ->  Subquery Scan on s  (cost=65458.11..68571.49 rows=868 width=4) (actual time=1283.452..1427.755 rows=110806 loops=1)
+                    Filter: (s.situacao = 'inexistente'::situacao_item)
+                    Rows Removed by Filter: 70259
+                    Buffers: shared read=26252, temp read=2149 written=2153
+                    I/O Timings: shared read=124.468, temp read=11.964 write=125.451
+                    ->  Unique  (cost=65458.11..66401.96 rows=173563 width=74) (actual time=1271.494..1384.170 rows=181065 loops=1)
+                          Buffers: shared read=26252, temp read=2149 written=2153
+                          I/O Timings: shared read=124.468, temp read=11.964 write=125.451
+                          ->  Sort  (cost=65458.11..65930.03 rows=188769 width=74) (actual time=1271.492..1334.647 rows=186937 loops=1)
+                                Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                Sort Method: external merge  Disk: 9160kB
+                                Buffers: shared read=26252, temp read=2149 written=2153
+                                I/O Timings: shared read=124.468, temp read=11.964 write=125.451
+                                ->  Hash Join  (cost=10481.47..40526.54 rows=188769 width=74) (actual time=316.032..1052.146 rows=186937 loops=1)
+                                      Hash Cond: (item.vistoria_id = vistoria.id)
+                                      Buffers: shared read=26252, temp read=1004 written=1004
+                                      I/O Timings: shared read=124.468, temp read=5.665 write=86.347
+                                      ->  Bitmap Heap Scan on vistoria_item item  (cost=2119.39..27990.92 rows=188769 width=26) (actual time=35.057..392.819 rows=186937 loops=1)
+                                            Recheck Cond: (item_codigo = 'biblioteca'::text)
+                                            Filter: (situacao <> 'nao_informado'::situacao_item)
+                                            Heap Blocks: exact=23029
+                                            Buffers: shared read=23192
+                                            I/O Timings: shared read=106.817
+                                            ->  Bitmap Index Scan on vistoria_item_por_item  (cost=0.00..2072.20 rows=188769 width=0) (actual time=21.264..21.264 rows=186937 loops=1)
+                                                  Index Cond: (item_codigo = 'biblioteca'::text)
+                                                  Buffers: shared read=163
+                                                  I/O Timings: shared read=0.816
+                                      ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=280.483..280.486 rows=186937 loops=1)
+                                            Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                            Buffers: shared read=3060, temp written=501
+                                            I/O Timings: shared read=17.651, temp write=39.820
+                                            ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.158..106.582 rows=186937 loops=1)
+                                                  Buffers: shared read=3060
+                                                  I/O Timings: shared read=17.651
+              ->  Index Scan using escola_pkey on escola e  (cost=0.42..5.86 rows=1 width=6) (actual time=0.003..0.003 rows=1 loops=110806)
+                    Index Cond: (co_entidade = s.co_entidade)
+                    Buffers: shared hit=443219 read=5
+                    I/O Timings: shared read=0.062
+Planning:
+  Buffers: shared hit=24 read=8
+  I/O Timings: shared read=0.064
+Planning Time: 0.879 ms
+Execution Time: 1848.201 ms
+
+## estatística estendida
+
+GroupAggregate  (cost=73064.84..73071.39 rows=4 width=10) (actual time=854.497..869.372 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=443220 read=26256, temp read=2149 written=2153
+  I/O Timings: shared read=57.569, temp read=6.376 write=43.012
+  ->  Sort  (cost=73064.84..73067.01 rows=868 width=2) (actual time=854.487..859.441 rows=110806 loops=1)
+        Sort Key: e.tp_dependencia
+        Sort Method: quicksort  Memory: 3073kB
+        Buffers: shared hit=443220 read=26256, temp read=2149 written=2153
+        I/O Timings: shared read=57.569, temp read=6.376 write=43.012
+        ->  Nested Loop  (cost=64842.71..73022.47 rows=868 width=2) (actual time=532.190..845.187 rows=110806 loops=1)
+              Buffers: shared hit=443220 read=26256, temp read=2149 written=2153
+              I/O Timings: shared read=57.569, temp read=6.376 write=43.012
+              ->  Subquery Scan on s  (cost=64842.29..67938.72 rows=868 width=4) (actual time=532.147..613.607 rows=110806 loops=1)
+                    Filter: (s.situacao = 'inexistente'::situacao_item)
+                    Rows Removed by Filter: 70259
+                    Buffers: shared read=26252, temp read=2149 written=2153
+                    I/O Timings: shared read=57.532, temp read=6.376 write=43.012
+                    ->  Unique  (cost=64842.29..65769.18 rows=173563 width=74) (actual time=523.459..590.328 rows=181065 loops=1)
+                          Buffers: shared read=26252, temp read=2149 written=2153
+                          I/O Timings: shared read=57.532, temp read=6.376 write=43.012
+                          ->  Sort  (cost=64842.29..65305.74 rows=185379 width=74) (actual time=523.457..558.865 rows=186937 loops=1)
+                                Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                Sort Method: external merge  Disk: 9160kB
+                                Buffers: shared read=26252, temp read=2149 written=2153
+                                I/O Timings: shared read=57.532, temp read=6.376 write=43.012
+                                ->  Hash Join  (cost=10443.20..40382.52 rows=185379 width=74) (actual time=97.427..409.123 rows=186937 loops=1)
+                                      Hash Cond: (item.vistoria_id = vistoria.id)
+                                      Buffers: shared read=26252, temp read=1004 written=1004
+                                      I/O Timings: shared read=57.532, temp read=3.784 write=21.696
+                                      ->  Bitmap Heap Scan on vistoria_item item  (cost=2081.12..27901.80 rows=185379 width=26) (actual time=12.618..157.300 rows=186937 loops=1)
+                                            Recheck Cond: (item_codigo = 'biblioteca'::text)
+                                            Filter: (situacao <> 'nao_informado'::situacao_item)
+                                            Heap Blocks: exact=23029
+                                            Buffers: shared read=23192
+                                            I/O Timings: shared read=50.349
+                                            ->  Bitmap Index Scan on vistoria_item_por_item  (cost=0.00..2034.77 rows=185379 width=0) (actual time=8.385..8.385 rows=186937 loops=1)
+                                                  Index Cond: (item_codigo = 'biblioteca'::text)
+                                                  Buffers: shared read=163
+                                                  I/O Timings: shared read=0.383
+                                      ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=84.673..84.674 rows=186937 loops=1)
+                                            Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                            Buffers: shared read=3060, temp written=501
+                                            I/O Timings: shared read=7.183, temp write=9.607
+                                            ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.015..33.242 rows=186937 loops=1)
+                                                  Buffers: shared read=3060
+                                                  I/O Timings: shared read=7.183
+              ->  Index Scan using escola_pkey on escola e  (cost=0.42..5.86 rows=1 width=6) (actual time=0.002..0.002 rows=1 loops=110806)
+                    Index Cond: (co_entidade = s.co_entidade)
+                    Buffers: shared hit=443220 read=4
+                    I/O Timings: shared read=0.038
+Planning:
+  Buffers: shared hit=24 read=8
+  I/O Timings: shared read=0.022
+Planning Time: 0.384 ms
+Execution Time: 872.465 ms
+
+## work_mem de 64 MB
+
+GroupAggregate  (cost=60534.11..60540.66 rows=4 width=10) (actual time=881.334..913.806 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=443220 read=26256
+  I/O Timings: shared read=76.153
+  ->  Sort  (cost=60534.11..60536.28 rows=868 width=2) (actual time=881.313..889.579 rows=110806 loops=1)
+        Sort Key: e.tp_dependencia
+        Sort Method: quicksort  Memory: 3073kB
+        Buffers: shared hit=443220 read=26256
+        I/O Timings: shared read=76.153
+        ->  Nested Loop  (cost=52295.03..60491.74 rows=868 width=2) (actual time=520.859..861.341 rows=110806 loops=1)
+              Buffers: shared hit=443220 read=26256
+              I/O Timings: shared read=76.153
+              ->  Subquery Scan on s  (cost=52294.61..55407.99 rows=868 width=4) (actual time=520.827..608.804 rows=110806 loops=1)
+                    Filter: (s.situacao = 'inexistente'::situacao_item)
+                    Rows Removed by Filter: 70259
+                    Buffers: shared read=26252
+                    I/O Timings: shared read=76.110
+                    ->  Unique  (cost=52294.61..53238.46 rows=173563 width=74) (actual time=518.876..579.855 rows=181065 loops=1)
+                          Buffers: shared read=26252
+                          I/O Timings: shared read=76.110
+                          ->  Sort  (cost=52294.61..52766.53 rows=188769 width=74) (actual time=518.873..540.598 rows=186937 loops=1)
+                                Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                Sort Method: quicksort  Memory: 17828kB
+                                Buffers: shared read=26252
+                                I/O Timings: shared read=76.110
+                                ->  Hash Join  (cost=9385.47..35752.54 rows=188769 width=74) (actual time=142.552..423.942 rows=186937 loops=1)
+                                      Hash Cond: (item.vistoria_id = vistoria.id)
+                                      Buffers: shared read=26252
+                                      I/O Timings: shared read=76.110
+                                      ->  Bitmap Heap Scan on vistoria_item item  (cost=2119.39..27990.92 rows=188769 width=26) (actual time=17.890..192.109 rows=186937 loops=1)
+                                            Recheck Cond: (item_codigo = 'biblioteca'::text)
+                                            Filter: (situacao <> 'nao_informado'::situacao_item)
+                                            Heap Blocks: exact=23029
+                                            Buffers: shared read=23192
+                                            I/O Timings: shared read=64.409
+                                            ->  Bitmap Index Scan on vistoria_item_por_item  (cost=0.00..2072.20 rows=188769 width=0) (actual time=11.064..11.064 rows=186937 loops=1)
+                                                  Index Cond: (item_codigo = 'biblioteca'::text)
+                                                  Buffers: shared read=163
+                                                  I/O Timings: shared read=0.544
+                                      ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=124.482..124.484 rows=186937 loops=1)
+                                            Buckets: 262144  Batches: 1  Memory Usage: 12272kB
+                                            Buffers: shared read=3060
+                                            I/O Timings: shared read=11.702
+                                            ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.030..52.494 rows=186937 loops=1)
+                                                  Buffers: shared read=3060
+                                                  I/O Timings: shared read=11.702
+              ->  Index Scan using escola_pkey on escola e  (cost=0.42..5.86 rows=1 width=6) (actual time=0.002..0.002 rows=1 loops=110806)
+                    Index Cond: (co_entidade = s.co_entidade)
+                    Buffers: shared hit=443220 read=4
+                    I/O Timings: shared read=0.043
+Planning:
+  Buffers: shared hit=24 read=8
+  I/O Timings: shared read=0.025
+Planning Time: 0.480 ms
+Execution Time: 917.697 ms
+
+## enable_nestloop desligado
+
+GroupAggregate  (cost=75844.38..75850.93 rows=4 width=10) (actual time=520.191..534.145 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=90142 read=26813, temp read=2149 written=2153
+  I/O Timings: shared read=53.781, temp read=4.578 write=13.924
+  ->  Sort  (cost=75844.38..75846.55 rows=868 width=2) (actual time=520.179..524.886 rows=110806 loops=1)
+        Sort Key: e.tp_dependencia
+        Sort Method: quicksort  Memory: 3073kB
+        Buffers: shared hit=90142 read=26813, temp read=2149 written=2153
+        I/O Timings: shared read=53.781, temp read=4.578 write=13.924
+        ->  Merge Join  (cost=65458.53..75802.02 rows=868 width=2) (actual time=363.566..513.657 rows=110806 loops=1)
+              Merge Cond: (s.co_entidade = e.co_entidade)
+              Buffers: shared hit=90142 read=26813, temp read=2149 written=2153
+              I/O Timings: shared read=53.781, temp read=4.578 write=13.924
+              ->  Subquery Scan on s  (cost=65458.11..68571.49 rows=868 width=4) (actual time=361.665..426.716 rows=110806 loops=1)
+                    Filter: (s.situacao = 'inexistente'::situacao_item)
+                    Rows Removed by Filter: 70259
+                    Buffers: shared read=26252, temp read=2149 written=2153
+                    I/O Timings: shared read=51.976, temp read=4.578 write=13.924
+                    ->  Unique  (cost=65458.11..66401.96 rows=173563 width=74) (actual time=359.185..408.440 rows=181065 loops=1)
+                          Buffers: shared read=26252, temp read=2149 written=2153
+                          I/O Timings: shared read=51.976, temp read=4.578 write=13.924
+                          ->  Sort  (cost=65458.11..65930.03 rows=188769 width=74) (actual time=359.184..384.507 rows=186937 loops=1)
+                                Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                Sort Method: external merge  Disk: 9160kB
+                                Buffers: shared read=26252, temp read=2149 written=2153
+                                I/O Timings: shared read=51.976, temp read=4.578 write=13.924
+                                ->  Hash Join  (cost=10481.47..40526.54 rows=188769 width=74) (actual time=75.384..297.726 rows=186937 loops=1)
+                                      Hash Cond: (item.vistoria_id = vistoria.id)
+                                      Buffers: shared read=26252, temp read=1004 written=1004
+                                      I/O Timings: shared read=51.976, temp read=2.009 write=8.196
+                                      ->  Bitmap Heap Scan on vistoria_item item  (cost=2119.39..27990.92 rows=188769 width=26) (actual time=14.424..137.956 rows=186937 loops=1)
+                                            Recheck Cond: (item_codigo = 'biblioteca'::text)
+                                            Filter: (situacao <> 'nao_informado'::situacao_item)
+                                            Heap Blocks: exact=23029
+                                            Buffers: shared read=23192
+                                            I/O Timings: shared read=45.885
+                                            ->  Bitmap Index Scan on vistoria_item_por_item  (cost=0.00..2072.20 rows=188769 width=0) (actual time=8.876..8.876 rows=186937 loops=1)
+                                                  Index Cond: (item_codigo = 'biblioteca'::text)
+                                                  Buffers: shared read=163
+                                                  I/O Timings: shared read=0.437
+                                      ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=60.840..60.841 rows=186937 loops=1)
+                                            Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                            Buffers: shared read=3060, temp written=501
+                                            I/O Timings: shared read=6.091, temp write=2.770
+                                            ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.014..27.389 rows=186937 loops=1)
+                                                  Buffers: shared read=3060
+                                                  I/O Timings: shared read=6.091
+              ->  Index Scan using escola_pkey on escola e  (cost=0.42..6767.01 rows=181065 width=6) (actual time=0.036..53.808 rows=181065 loops=1)
+                    Buffers: shared hit=90142 read=561
+                    I/O Timings: shared read=1.805
+Planning:
+  Buffers: shared hit=24 read=8
+  I/O Timings: shared read=0.030
+Planning Time: 0.617 ms
+Execution Time: 535.951 ms
+
+## filtro no agregado
+
+Finalize GroupAggregate  (cost=78079.89..78080.41 rows=4 width=10) (actual time=1139.399..1161.995 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=116652 read=26826, temp read=4298 written=4306
+  I/O Timings: shared read=102.502, temp read=24.877 write=61.945
+  ->  Gather Merge  (cost=78079.89..78080.35 rows=4 width=10) (actual time=1139.389..1161.982 rows=8 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=116652 read=26826, temp read=4298 written=4306
+        I/O Timings: shared read=102.502, temp read=24.877 write=61.945
+        ->  Sort  (cost=77079.88..77079.89 rows=4 width=10) (actual time=1135.577..1135.583 rows=4 loops=2)
+              Sort Key: e.tp_dependencia
+              Sort Method: quicksort  Memory: 25kB
+              Buffers: shared hit=116652 read=26826, temp read=4298 written=4306
+              I/O Timings: shared read=102.502, temp read=24.877 write=61.945
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              ->  Partial HashAggregate  (cost=77079.80..77079.84 rows=4 width=10) (actual time=1135.550..1135.557 rows=4 loops=2)
+                    Group Key: e.tp_dependencia
+                    Batches: 1  Memory Usage: 24kB
+                    Buffers: shared hit=116645 read=26826, temp read=4298 written=4306
+                    I/O Timings: shared read=102.502, temp read=24.877 write=61.945
+                    Worker 0:  Batches: 1  Memory Usage: 24kB
+                    ->  Merge Join  (cost=65458.53..76314.08 rows=102096 width=6) (actual time=666.629..1090.312 rows=90532 loops=2)
+                          Merge Cond: (e.co_entidade = vistoria.co_entidade)
+                          Buffers: shared hit=116645 read=26826, temp read=4298 written=4306
+                          I/O Timings: shared read=102.502, temp read=24.877 write=61.945
+                          ->  Parallel Index Scan using escola_pkey on escola e  (cost=0.42..6021.45 rows=106509 width=6) (actual time=0.036..117.008 rows=90532 loops=2)
+                                Buffers: shared hit=90337 read=562
+                                I/O Timings: shared read=12.043
+                          ->  Materialize  (cost=65458.11..68571.49 rows=173563 width=8) (actual time=666.256..865.508 rows=180935 loops=2)
+                                Buffers: shared hit=26308 read=26264, temp read=4298 written=4306
+                                I/O Timings: shared read=90.459, temp read=24.877 write=61.945
+                                ->  Unique  (cost=65458.11..66401.96 rows=173563 width=74) (actual time=666.252..818.753 rows=180935 loops=2)
+                                      Buffers: shared hit=26308 read=26264, temp read=4298 written=4306
+                                      I/O Timings: shared read=90.459, temp read=24.877 write=61.945
+                                      ->  Sort  (cost=65458.11..65930.03 rows=188769 width=74) (actual time=666.250..745.038 rows=186807 loops=2)
+                                            Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                            Sort Method: external merge  Disk: 9160kB
+                                            Buffers: shared hit=26308 read=26264, temp read=4298 written=4306
+                                            I/O Timings: shared read=90.459, temp read=24.877 write=61.945
+                                            Worker 0:  Sort Method: external merge  Disk: 9160kB
+                                            ->  Hash Join  (cost=10481.47..40526.54 rows=188769 width=74) (actual time=142.155..539.564 rows=186937 loops=2)
+                                                  Hash Cond: (item.vistoria_id = vistoria.id)
+                                                  Buffers: shared hit=26292 read=26261, temp read=2008 written=2008
+                                                  I/O Timings: shared read=90.438, temp read=6.637 write=40.187
+                                                  ->  Bitmap Heap Scan on vistoria_item item  (cost=2119.39..27990.92 rows=188769 width=26) (actual time=19.164..224.554 rows=186937 loops=2)
+                                                        Recheck Cond: (item_codigo = 'biblioteca'::text)
+                                                        Filter: (situacao <> 'nao_informado'::situacao_item)
+                                                        Heap Blocks: exact=23029
+                                                        Buffers: shared hit=23192 read=23193
+                                                        I/O Timings: shared read=81.345
+                                                        ->  Bitmap Index Scan on vistoria_item_por_item  (cost=0.00..2072.20 rows=188769 width=0) (actual time=12.638..12.638 rows=186937 loops=2)
+                                                              Index Cond: (item_codigo = 'biblioteca'::text)
+                                                              Buffers: shared hit=163 read=164
+                                                              I/O Timings: shared read=0.577
+                                                  ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=122.260..122.261 rows=186937 loops=2)
+                                                        Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                                        Buffers: shared hit=3060 read=3060, temp written=1002
+                                                        I/O Timings: shared read=9.004, temp write=13.515
+                                                        ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.020..51.053 rows=186937 loops=2)
+                                                              Buffers: shared hit=3060 read=3060
+                                                              I/O Timings: shared read=9.004
+Planning:
+  Buffers: shared hit=20 read=12
+  I/O Timings: shared read=0.045
+Planning Time: 0.677 ms
+Execution Time: 1165.543 ms
+
+## índice cobrindo
+
+GroupAggregate  (cost=54022.53..54029.08 rows=4 width=10) (actual time=951.066..969.642 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=447210, temp read=2149 written=2153
+  I/O Timings: temp read=6.282 write=36.411
+  ->  Sort  (cost=54022.53..54024.70 rows=868 width=2) (actual time=951.049..957.329 rows=110806 loops=1)
+        Sort Key: e.tp_dependencia
+        Sort Method: quicksort  Memory: 3073kB
+        Buffers: shared hit=447210, temp read=2149 written=2153
+        I/O Timings: temp read=6.282 write=36.411
+        ->  Nested Loop  (cost=45783.45..53980.16 rows=868 width=2) (actual time=594.791..940.362 rows=110806 loops=1)
+              Buffers: shared hit=447210, temp read=2149 written=2153
+              I/O Timings: temp read=6.282 write=36.411
+              ->  Subquery Scan on s  (cost=45783.03..48896.41 rows=868 width=4) (actual time=594.742..688.611 rows=110806 loops=1)
+                    Filter: (s.situacao = 'inexistente'::situacao_item)
+                    Rows Removed by Filter: 70259
+                    Buffers: shared hit=3986, temp read=2149 written=2153
+                    I/O Timings: temp read=6.282 write=36.411
+                    ->  Unique  (cost=45783.03..46726.87 rows=173563 width=74) (actual time=589.292..660.530 rows=181065 loops=1)
+                          Buffers: shared hit=3986, temp read=2149 written=2153
+                          I/O Timings: temp read=6.282 write=36.411
+                          ->  Sort  (cost=45783.03..46254.95 rows=188769 width=74) (actual time=589.290..625.819 rows=186937 loops=1)
+                                Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                Sort Method: external merge  Disk: 9160kB
+                                Buffers: shared hit=3986, temp read=2149 written=2153
+                                I/O Timings: temp read=6.282 write=36.411
+                                ->  Hash Join  (cost=8362.64..20851.45 rows=188769 width=74) (actual time=110.198..446.758 rows=186937 loops=1)
+                                      Hash Cond: (item.vistoria_id = vistoria.id)
+                                      Buffers: shared hit=3986, temp read=1004 written=1004
+                                      I/O Timings: temp read=3.793 write=20.894
+                                      ->  Index Only Scan using vistoria_item_cobrindo_por_item on vistoria_item item  (cost=0.56..8315.84 rows=188769 width=26) (actual time=0.143..89.451 rows=186937 loops=1)
+                                            Index Cond: (item_codigo = 'biblioteca'::text)
+                                            Filter: (situacao <> 'nao_informado'::situacao_item)
+                                            Heap Fetches: 0
+                                            Buffers: shared hit=926
+                                      ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=109.458..109.459 rows=186937 loops=1)
+                                            Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                            Buffers: shared hit=3060, temp written=501
+                                            I/O Timings: temp write=7.217
+                                            ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.011..39.766 rows=186937 loops=1)
+                                                  Buffers: shared hit=3060
+              ->  Index Scan using escola_pkey on escola e  (cost=0.42..5.86 rows=1 width=6) (actual time=0.002..0.002 rows=1 loops=110806)
+                    Index Cond: (co_entidade = s.co_entidade)
+                    Buffers: shared hit=443224
+Planning:
+  Buffers: shared hit=32
+Planning Time: 0.496 ms
+Execution Time: 972.610 ms
+
+## filtro no agregado e índice cobrindo
+
+Finalize GroupAggregate  (cost=58404.81..58405.33 rows=4 width=10) (actual time=1143.379..1157.939 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=98913, temp read=4298 written=4306
+  I/O Timings: temp read=26.041 write=94.256
+  ->  Gather Merge  (cost=58404.81..58405.27 rows=4 width=10) (actual time=1143.365..1157.921 rows=8 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=98913, temp read=4298 written=4306
+        I/O Timings: temp read=26.041 write=94.256
+        ->  Sort  (cost=57404.80..57404.81 rows=4 width=10) (actual time=1140.128..1140.160 rows=4 loops=2)
+              Sort Key: e.tp_dependencia
+              Sort Method: quicksort  Memory: 25kB
+              Buffers: shared hit=98913, temp read=4298 written=4306
+              I/O Timings: temp read=26.041 write=94.256
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              ->  Partial HashAggregate  (cost=57404.72..57404.76 rows=4 width=10) (actual time=1140.095..1140.103 rows=4 loops=2)
+                    Group Key: e.tp_dependencia
+                    Batches: 1  Memory Usage: 24kB
+                    Buffers: shared hit=98906, temp read=4298 written=4306
+                    I/O Timings: temp read=26.041 write=94.256
+                    Worker 0:  Batches: 1  Memory Usage: 24kB
+                    ->  Merge Join  (cost=45783.45..56639.00 rows=102096 width=6) (actual time=717.475..1097.076 rows=90532 loops=2)
+                          Merge Cond: (e.co_entidade = vistoria.co_entidade)
+                          Buffers: shared hit=98906, temp read=4298 written=4306
+                          I/O Timings: temp read=26.041 write=94.256
+                          ->  Parallel Index Scan using escola_pkey on escola e  (cost=0.42..6021.45 rows=106509 width=6) (actual time=0.028..83.467 rows=90532 loops=2)
+                                Buffers: shared hit=90866
+                          ->  Materialize  (cost=45783.03..48896.41 rows=173563 width=8) (actual time=716.521..906.287 rows=180935 loops=2)
+                                Buffers: shared hit=8040, temp read=4298 written=4306
+                                I/O Timings: temp read=26.041 write=94.256
+                                ->  Unique  (cost=45783.03..46726.87 rows=173563 width=74) (actual time=716.511..852.031 rows=180935 loops=2)
+                                      Buffers: shared hit=8040, temp read=4298 written=4306
+                                      I/O Timings: temp read=26.041 write=94.256
+                                      ->  Sort  (cost=45783.03..46254.95 rows=188769 width=74) (actual time=716.508..786.105 rows=186807 loops=2)
+                                            Sort Key: vistoria.co_entidade, vistoria.ocorrido_em DESC, vistoria.id DESC
+                                            Sort Method: external merge  Disk: 9160kB
+                                            Buffers: shared hit=8040, temp read=4298 written=4306
+                                            I/O Timings: temp read=26.041 write=94.256
+                                            Worker 0:  Sort Method: external merge  Disk: 9160kB
+                                            ->  Hash Join  (cost=8362.64..20851.45 rows=188769 width=74) (actual time=151.563..524.567 rows=186937 loops=2)
+                                                  Hash Cond: (item.vistoria_id = vistoria.id)
+                                                  Buffers: shared hit=8021, temp read=2008 written=2008
+                                                  I/O Timings: temp read=14.917 write=61.904
+                                                  ->  Index Only Scan using vistoria_item_cobrindo_por_item on vistoria_item item  (cost=0.56..8315.84 rows=188769 width=26) (actual time=0.119..76.296 rows=186937 loops=2)
+                                                        Index Cond: (item_codigo = 'biblioteca'::text)
+                                                        Filter: (situacao <> 'nao_informado'::situacao_item)
+                                                        Heap Fetches: 0
+                                                        Buffers: shared hit=1853
+                                                  ->  Hash  (cost=4929.37..4929.37 rows=186937 width=20) (actual time=150.909..150.911 rows=186937 loops=2)
+                                                        Buckets: 131072  Batches: 2  Memory Usage: 6139kB
+                                                        Buffers: shared hit=6120, temp written=1002
+                                                        I/O Timings: temp write=23.604
+                                                        ->  Seq Scan on vistoria  (cost=0.00..4929.37 rows=186937 width=20) (actual time=0.016..54.949 rows=186937 loops=2)
+                                                              Buffers: shared hit=6120
+Planning:
+  Buffers: shared hit=32
+Planning Time: 0.412 ms
+Execution Time: 1160.100 ms

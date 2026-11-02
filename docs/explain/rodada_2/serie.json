@@ -1,0 +1,128 @@
+{
+  "antes": [
+    {
+      "tempo_ms": 747.514,
+      "leitura_em_disco_ms": 72.274,
+      "blocos_em_cache": 440806,
+      "blocos_lidos": 28670,
+      "temporarios_lidos": 2149,
+      "temporarios_escritos": 2153
+    },
+    {
+      "tempo_ms": 588.016,
+      "leitura_em_disco_ms": 46.364,
+      "blocos_em_cache": 443218,
+      "blocos_lidos": 26258,
+      "temporarios_lidos": 2149,
+      "temporarios_escritos": 2153
+    },
+    {
+      "tempo_ms": 840.021,
+      "leitura_em_disco_ms": 51.235,
+      "blocos_em_cache": 443219,
+      "blocos_lidos": 26257,
+      "temporarios_lidos": 2149,
+      "temporarios_escritos": 2153
+    },
+    {
+      "tempo_ms": 987.335,
+      "leitura_em_disco_ms": 86.847,
+      "blocos_em_cache": 440806,
+      "blocos_lidos": 28670,
+      "temporarios_lidos": 2149,
+      "temporarios_escritos": 2153
+    },
+    {
+      "tempo_ms": 1296.112,
+      "leitura_em_disco_ms": 107.589,
+      "blocos_em_cache": 443219,
+      "blocos_lidos": 26257,
+      "temporarios_lidos": 2149,
+      "temporarios_escritos": 2153
+    }
+  ],
+  "depois": [
+    {
+      "tempo_ms": 121.017,
+      "leitura_em_disco_ms": 6.632,
+      "blocos_em_cache": 5011,
+      "blocos_lidos": 2114,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 204.798,
+      "leitura_em_disco_ms": 23.663,
+      "blocos_em_cache": 2515,
+      "blocos_lidos": 4610,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 244.943,
+      "leitura_em_disco_ms": 22.505,
+      "blocos_em_cache": 2515,
+      "blocos_lidos": 4610,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 229.376,
+      "leitura_em_disco_ms": 23.75,
+      "blocos_em_cache": 2515,
+      "blocos_lidos": 4610,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 256.689,
+      "leitura_em_disco_ms": 31.532,
+      "blocos_em_cache": 2515,
+      "blocos_lidos": 4610,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    }
+  ],
+  "painel": [
+    {
+      "tempo_ms": 59.028,
+      "leitura_em_disco_ms": 0.0,
+      "blocos_em_cache": 4629,
+      "blocos_lidos": 0,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 102.149,
+      "leitura_em_disco_ms": 0.0,
+      "blocos_em_cache": 4629,
+      "blocos_lidos": 0,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 122.276,
+      "leitura_em_disco_ms": 0.0,
+      "blocos_em_cache": 4629,
+      "blocos_lidos": 0,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 143.648,
+      "leitura_em_disco_ms": 0.0,
+      "blocos_em_cache": 4629,
+      "blocos_lidos": 0,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    },
+    {
+      "tempo_ms": 95.729,
+      "leitura_em_disco_ms": 0.0,
+      "blocos_em_cache": 4629,
+      "blocos_lidos": 0,
+      "temporarios_lidos": 0,
+      "temporarios_escritos": 0
+    }
+  ]
+}

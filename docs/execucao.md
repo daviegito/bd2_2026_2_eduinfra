@@ -106,6 +106,7 @@ uv run eduinfra tudo
 | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
 | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |
 | Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
+| Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
 
 Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos

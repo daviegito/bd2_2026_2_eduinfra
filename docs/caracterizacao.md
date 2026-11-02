@@ -84,12 +84,13 @@ aplicativo é comparativamente desprezível em volume, mas é o que exige latên
 | Extração completa para a camada analítica | Lote, anual | não medida nesta entrega | minutos |
 
 As duas primeiras usam o índice `vistoria_por_escola_no_tempo` e ficam três
-ordens de grandeza abaixo do tolerado. A agregação nacional varre
-`vistoria_item` inteira, ordena em disco e é o caso que justifica o gatilho de
+ordens de grandeza abaixo do tolerado. A agregação nacional lê quase todos os
+blocos de `vistoria_item`, ordena em disco e é o caso que justifica o gatilho de
 revisão registrado no
 [ADR 0001](adr/0001-modelagem-insert-only-do-sistema-de-origem.md): se essa
 classe de consulta migrar para o caminho interativo do assistente, a view passa
-a materializada.
+a materializada. A [consulta otimizada](consulta-otimizada.md) mostra o plano
+dela, antes e depois de materializar esse estado na Gold.
 
 | Escrita | Latência medida | Latência tolerada |
 | --- | --- | --- |
@@ -139,3 +140,4 @@ cenários projetados; não representam resultados já obtidos por uma CI.
 | --- | --- | --- | --- | --- |
 | 1.0 | Documentação da caracterização da carga de trabalho e perfil de tráfego do banco | [Lucas Mendonça Arruda](https://github.com/lucasarruda9) |  | 28 de setembro de 2026 |
 | 1.1 | Consolida números medidos na base populada (volume, taxa de escrita e leitura, disponibilidade e garantias), separando o que foi medido do que é estimativa | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 28 de setembro de 2026 |
+| 1.2 | Aponta a página da consulta otimizada e corrige o que a agregação nacional lê | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 1 de novembro de 2026 |
