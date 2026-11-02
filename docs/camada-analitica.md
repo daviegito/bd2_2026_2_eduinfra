@@ -38,12 +38,13 @@ Também pesou o fato de a biblioteca do Delta para Python (`deltalake`) já
 conseguir juntar arquivos pequenos e apagar versões antigas sozinha, sem
 precisar do Spark. Foi com ela que as medições abaixo foram feitas.
 
-O Iceberg não chegou a ser testado. A comparação foi feita lendo a documentação
-das duas bibliotecas. Com essa escolha perdemos algumas vantagens do Iceberg. Ele
-é mais adotado por ferramentas de fornecedores diferentes e permite mais tipos
-de mudança no esquema, como renomear uma coluna sem regravar os dados. Se um dia
-for preciso trocar, regravar a tabela leva poucos segundos com o volume atual,
-mas o histórico de versões não vem junto.
+Na E2, essa comparação foi feita lendo a documentação das duas bibliotecas. Depois
+medimos Parquet puro, Delta e Iceberg com o Censo real, e os números estão no
+[ADR 0003](adr/0003-armazenamento.md). Com essa escolha perdemos algumas vantagens
+do Iceberg. Ele é mais adotado por ferramentas de fornecedores diferentes e permite
+mais tipos de mudança no esquema, como renomear uma coluna sem regravar os dados.
+Se um dia for preciso trocar, regravar a tabela leva poucos segundos com o volume
+atual, mas o histórico de versões não vem junto.
 
 ## Como rodar
 

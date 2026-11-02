@@ -392,6 +392,26 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `mkdocs build --strict` sem erro
 - **Quem revisou:** Davi (PR #62)
 
+### 2026-11-02 — ADR 0003 e comparação entre Parquet puro, Delta e Iceberg (issue #4)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório)
+- **Onde:** `docs/adr/0003-armazenamento.md`, `src/eduinfra/formatos_de_tabela.py`,
+  `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py`,
+  `comparacao_leitor_delta.py`, `tests/test_formatos_de_tabela.py` e os índices em `docs/`
+- **O que foi pedido:** verificar se o rascunho do ADR 0003 se sustentava, medir as
+  três alternativas e reescrever o texto com o resultado
+- **O que foi aproveitado:** os quatro módulos, os testes e o texto do ADR. A medição
+  derrubou dois argumentos do rascunho: reaplicar lote em Parquet puro não exige
+  regravar a partição, e o Parquet puro é mais rápido que o Delta com poucos arquivos.
+  A decisão ficou limitada aos destinos analíticos, com a Silver em Parquet puro
+- **Como foi verificado:** comandos rodados com o Censo 2024 real em Linux no WSL2, com
+  respostas conferidas entre as variantes e a falha testada matando o processo gravador.
+  Uma primeira versão da opção nula, sem pasta temporária, a deixava pior do que ela é;
+  foi corrigida antes de medir. A divergência do CSV (132,7 contra 116,4 MB) foi explicada
+  pela coluna `ano_censo`, tabela por tabela. As fontes externas foram lidas diretamente.
+  Não rodou em `docker compose` nem em armazenamento de objetos
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad
+
 ### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
