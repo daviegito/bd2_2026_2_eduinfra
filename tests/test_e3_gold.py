@@ -1,9 +1,9 @@
 import unittest
 import duckdb
-from eduinfra.configuracao import Configuracao
+from eduinfra.configuracao import carregar_configuracao
 
 class GoldAuditor:
-    def __init__(self, configuracao: Configuracao):
+    def __init__(self, configuracao: carregar_configuracao):
         self.config = configuracao
         self.conexao = duckdb.connect()
         self.conexao.execute("INSTALL delta; LOAD delta;")
@@ -21,7 +21,7 @@ class GoldAuditor:
 class TestE3Gold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = Configuracao()
+        cls.config = carregar_configuracao()
         cls.auditor = GoldAuditor(cls.config)
 
     # 1. ESQUEMA
