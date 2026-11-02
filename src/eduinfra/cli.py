@@ -18,6 +18,7 @@ from eduinfra import (
     demonstracao_cdc,
     fluxo_cdc,
     janelas,
+    modelo_analitico,
 )
 from eduinfra.ingestao import ingerir
 from eduinfra.configuracao import Configuracao, carregar_configuracao
@@ -31,7 +32,8 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
-                                           "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc"))
+                                           "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
+                                           "construir-gold", "comparar-granularidades"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
@@ -41,6 +43,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--forcar", action="store_true", help="reexecuta mesmo que o resultado já exista: em ingerir, ignora o manifesto; em publicar-analitico, relê a origem")
     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
+    parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -57,6 +60,22 @@ def main(argumentos: list[str] | None = None) -> int:
 
     if opcoes.comando in COMANDOS_ANALITICOS:
         return _executar_analitico(opcoes, configuracao)
+
+    if opcoes.comando == "construir-gold":
+        resumo = modelo_analitico.construir(configuracao.dsn)
+        for tabela, linhas in resumo.linhas.items():
+            log.info("gold.%s: %d linhas", tabela, linhas)
+        return 0
+
+    if opcoes.comando == "comparar-granularidades":
+        texto = modelo_analitico.formatar_markdown(
+            modelo_analitico.comparar(configuracao.dsn, opcoes.repeticoes)
+        )
+        print(texto)
+        if opcoes.saida:
+            opcoes.saida.parent.mkdir(parents=True, exist_ok=True)
+            opcoes.saida.write_text(texto + "\n", encoding="utf-8")
+        return 0
 
     if opcoes.comando == "comparar-modelagem":
         print(comparacao_modelagem.formatar_markdown(comparacao_modelagem.comparar(configuracao.dsn)))

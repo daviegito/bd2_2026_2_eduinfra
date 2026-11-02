@@ -59,6 +59,7 @@ nav:
   - Projeto:
       - Arquitetura: arquitetura.md
       - Modelo da origem: modelo-origem.md
+      - Modelo analítico: modelo-analitico.md
       - Fontes, equipe e entregas: projeto.md
   - Execução:
       - Como executar e demonstrar: execucao.md
