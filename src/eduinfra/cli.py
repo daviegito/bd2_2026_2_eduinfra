@@ -8,10 +8,12 @@ from alembic import command
 from alembic.config import Config
 
 from eduinfra import (
+    auditoria_cdc,
     camada_analitica,
     caracterizacao,
     comparacao_compressao,
     comparacao_ingestao,
+    comparacao_latencia,
     comparacao_modelagem,
     comparacao_particionamento,
     demonstracao_cdc,
@@ -32,9 +34,10 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
-                                           "publicar-analitica", "comparar-particionamento", "construir-gold", "comparar-granularidades",
-                                           "medir-frescor", "demonstrar-frescor"))
-    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao e comparar-particionamento")
+                                           "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
+                                           "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
+    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
+    parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
@@ -164,7 +167,7 @@ def main(argumentos: list[str] | None = None) -> int:
     return 0
 
 
-COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao")
+COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
 
 ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
 
@@ -178,11 +181,26 @@ def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) 
         print(fluxo_cdc.passar_uma_vez(configuracao))
     elif opcoes.comando == "demonstrar-cdc":
         print(demonstracao_cdc.demonstrar(configuracao))
+    elif opcoes.comando == "medir-cdc":
+        print(comparacao_latencia.formatar_cdc(comparacao_latencia.medir_cdc(configuracao, opcoes.repeticoes)))
+        print(comparacao_latencia.formatar_ordem(comparacao_latencia.medir_ordem(configuracao, opcoes.repeticoes)))
+        return _auditar(configuracao, opcoes.sla_frescor)
+    elif opcoes.comando == "auditar-cdc":
+        return _auditar(configuracao, opcoes.sla_frescor)
+    elif opcoes.comando == "medir-recarga":
+        print(comparacao_latencia.formatar_recarga(comparacao_latencia.medir_recarga(configuracao, opcoes.repeticoes)))
     else:
         capturas, ociosa = comparacao_ingestao.medir(configuracao)
         print(comparacao_ingestao.formatar_markdown(capturas, ociosa))
 
     return 0
+
+
+def _auditar(configuracao: Configuracao, sla_de_frescor_s: float) -> int:
+    auditoria = auditoria_cdc.auditar(configuracao, sla_de_frescor_s=sla_de_frescor_s)
+    print(auditoria_cdc.formatar(auditoria))
+
+    return 1 if auditoria_cdc.violacoes(auditoria) else 0
 
 
 def _publicar_linha_de_base(configuracao: Configuracao, forcar: bool) -> None:

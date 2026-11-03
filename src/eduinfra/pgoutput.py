@@ -1,9 +1,10 @@
 """Decodificação das mensagens do plugin pgoutput (protocolo de replicação lógica, versão 1).
 
-Só as mensagens que as tabelas insert-only da origem produzem são interpretadas:
-Begin, Commit, Relation e Insert. A definição de tipo (Type), que o servidor
-envia antes da Relation quando a tabela usa um enum, é lida e ignorada. Update, Delete e Truncate nunca são publicados
-(ver a migração 0005), então chegar um deles é erro, não dado.
+A origem é insert-only, mas a publicação entrega as quatro operações (migração 0007):
+um Update, Delete ou Truncate só chega se alguém desviou dos gatilhos, e esse desvio
+precisa ser contado. Por isso eles viram Alteracao em vez de erro. A definição de tipo
+(Type), que o servidor envia antes da Relation quando a tabela usa um enum, é lida e
+ignorada.
 Formato: https://www.postgresql.org/docs/16/protocol-logicalrep-message-formats.html
 """
 
@@ -14,6 +15,11 @@ from datetime import datetime, timedelta, timezone
 
 EPOCA_POSTGRES = datetime(2000, 1, 1, tzinfo=timezone.utc)
 
+OPERACAO_INSERT = "insert"
+OPERACAO_UPDATE = "update"
+OPERACAO_DELETE = "delete"
+OPERACAO_TRUNCATE = "truncate"
+
 
 @dataclass(frozen=True)
 class Insercao:
@@ -22,24 +28,35 @@ class Insercao:
 
 
 @dataclass(frozen=True)
+class Alteracao:
+    operacao: str
+    tabela: str
+    valores: dict[str, str | None]
+
+
+@dataclass(frozen=True)
+class Relacao:
+    nome: str
+    colunas: dict[str, int]
+
+
+@dataclass(frozen=True)
 class Transacao:
     xid: int
     lsn_fim: int
     confirmada_em: datetime
     insercoes: tuple[Insercao, ...]
-
-
-@dataclass
-class _Relacao:
-    nome: str
-    colunas: list[str]
+    alteracoes: tuple[Alteracao, ...] = ()
+    relacoes: tuple[Relacao, ...] = ()
 
 
 @dataclass
 class _Decodificador:
-    relacoes: dict[int, _Relacao] = field(default_factory=dict)
+    relacoes: dict[int, Relacao] = field(default_factory=dict)
     xid: int = 0
     insercoes: list[Insercao] = field(default_factory=list)
+    alteracoes: list[Alteracao] = field(default_factory=list)
+    relacoes_anunciadas: list[Relacao] = field(default_factory=list)
 
 
 class _Leitor:
@@ -79,10 +96,16 @@ def decodificar(mensagens: Iterable[bytes]) -> list[Transacao]:
             _registrar_relacao(estado, leitor)
         elif tipo == "I":
             _registrar_insercao(estado, leitor)
+        elif tipo == "U":
+            _registrar_atualizacao(estado, leitor)
+        elif tipo == "D":
+            _registrar_exclusao(estado, leitor)
+        elif tipo == "T":
+            _registrar_truncamento(estado, leitor)
         elif tipo == "C":
             transacoes.append(_encerrar(estado, leitor))
         else:
-            raise ValueError(f"mensagem pgoutput inesperada na origem insert-only: {tipo!r}")
+            raise ValueError(f"mensagem pgoutput inesperada: {tipo!r}")
 
     return transacoes
 
@@ -96,6 +119,8 @@ def _iniciar(estado: _Decodificador, leitor: _Leitor) -> None:
     leitor.inteiro("q")
     estado.xid = leitor.inteiro("I")
     estado.insercoes = []
+    estado.alteracoes = []
+    estado.relacoes_anunciadas = []
 
 
 def _registrar_relacao(estado: _Decodificador, leitor: _Leitor) -> None:
@@ -104,13 +129,15 @@ def _registrar_relacao(estado: _Decodificador, leitor: _Leitor) -> None:
     nome = leitor.texto_terminado()
     leitor.inteiro("B")
     quantidade = leitor.inteiro("H")
-    colunas = []
+    colunas = {}
     for _ in range(quantidade):
         leitor.inteiro("B")
-        colunas.append(leitor.texto_terminado())
-        leitor.inteiro("I")
+        coluna = leitor.texto_terminado()
+        colunas[coluna] = leitor.inteiro("I")
         leitor.inteiro("i")
-    estado.relacoes[identificador] = _Relacao(nome, colunas)
+    relacao = Relacao(nome, colunas)
+    estado.relacoes[identificador] = relacao
+    estado.relacoes_anunciadas.append(relacao)
 
 
 def _registrar_insercao(estado: _Decodificador, leitor: _Leitor) -> None:
@@ -118,15 +145,44 @@ def _registrar_insercao(estado: _Decodificador, leitor: _Leitor) -> None:
     if chr(leitor.inteiro("B")) != "N":
         raise ValueError("insert sem tupla nova")
 
-    valores: dict[str, str | None] = {}
-    for nome in relacao.colunas[: leitor.inteiro("H")]:
-        valores[nome] = _valor_da_coluna(leitor)
-    estado.insercoes.append(Insercao(relacao.nome, valores))
+    estado.insercoes.append(Insercao(relacao.nome, _ler_tupla(relacao, leitor)))
+
+
+def _registrar_atualizacao(estado: _Decodificador, leitor: _Leitor) -> None:
+    relacao = estado.relacoes[leitor.inteiro("I")]
+    marcador = chr(leitor.inteiro("B"))
+    if marcador in ("K", "O"):
+        _ler_tupla(relacao, leitor)
+        marcador = chr(leitor.inteiro("B"))
+    if marcador != "N":
+        raise ValueError("update sem tupla nova")
+
+    estado.alteracoes.append(Alteracao(OPERACAO_UPDATE, relacao.nome, _ler_tupla(relacao, leitor)))
+
+
+def _registrar_exclusao(estado: _Decodificador, leitor: _Leitor) -> None:
+    relacao = estado.relacoes[leitor.inteiro("I")]
+    leitor.inteiro("B")
+
+    estado.alteracoes.append(Alteracao(OPERACAO_DELETE, relacao.nome, _ler_tupla(relacao, leitor)))
+
+
+def _registrar_truncamento(estado: _Decodificador, leitor: _Leitor) -> None:
+    quantidade = leitor.inteiro("I")
+    leitor.inteiro("B")
+    for _ in range(quantidade):
+        relacao = estado.relacoes[leitor.inteiro("I")]
+        estado.alteracoes.append(Alteracao(OPERACAO_TRUNCATE, relacao.nome, {}))
+
+
+def _ler_tupla(relacao: Relacao, leitor: _Leitor) -> dict[str, str | None]:
+    return {nome: _valor_da_coluna(leitor) for nome in list(relacao.colunas)[: leitor.inteiro("H")]}
 
 
 def _valor_da_coluna(leitor: _Leitor) -> str | None:
     tipo = chr(leitor.inteiro("B"))
-    if tipo == "n":
+    # "u" é valor TOAST não alterado: um update não reenvia o conteúdo.
+    if tipo in ("n", "u"):
         return None
     if tipo != "t":
         raise ValueError(f"valor de coluna em formato inesperado: {tipo!r}")
@@ -140,7 +196,14 @@ def _encerrar(estado: _Decodificador, leitor: _Leitor) -> Transacao:
     lsn_fim = leitor.inteiro("Q")
     confirmada_em = _instante(leitor.inteiro("q"))
 
-    return Transacao(estado.xid, lsn_fim, confirmada_em, tuple(estado.insercoes))
+    return Transacao(
+        estado.xid,
+        lsn_fim,
+        confirmada_em,
+        tuple(estado.insercoes),
+        tuple(estado.alteracoes),
+        tuple(estado.relacoes_anunciadas),
+    )
 
 
 def formatar_lsn(lsn: int) -> str:

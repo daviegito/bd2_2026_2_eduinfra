@@ -1,0 +1,9 @@
+Execução de um ciclo com 1 vistoria nova (30 amostras): mediana 0,54 s, p95 2,33 s, mínimo 0,23 s, máximo 23,42 s.
+
+| Período da recarga (s) | Latência média derivada (s) | Pior caso derivado (s) |
+| ---: | ---: | ---: |
+| 2 | 1,54 | 4,33 |
+| 300 | 150,54 | 302,33 |
+| 3600 | 1800,54 | 3602,33 |
+
+WAL retido pelo slot parado: 10692 bytes por vistoria. Com a estimativa de 500 vistorias por dia, o limite de 1073741824 bytes chega em 200,8 dias.

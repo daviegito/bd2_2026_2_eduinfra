@@ -1,0 +1,73 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, Cadastro geográfico e escolar
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, Catálogo de itens de infraestrutura vistoriados
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, Núcleo transacional insert-only de vistorias
+INFO  [alembic.runtime.migration] Running upgrade 0003 -> 0004, View de estado corrente por escola e item
+INFO  [alembic.runtime.migration] Running upgrade 0004 -> 0005, Habilita a publicação de CDC da origem OLTP.
+INFO  [alembic.runtime.migration] Running upgrade 0005 -> 0006, Manifesto das execuções de ingestão
+INFO  [alembic.runtime.migration] Running upgrade 0006 -> 0007, Publica todas as operações de vistoria e vistoria_item no CDC
+vistoria correta: ResultadoDaPassada(transacoes=1, vistorias_vistas=1, itens_lidos=17, itens_inseridos=17, lsn_confirmado=6945887456, itens_rejeitados=0)
+com -infinity e uma vizinha correta: ResultadoDaPassada(transacoes=2, vistorias_vistas=2, itens_lidos=34, itens_inseridos=17, lsn_confirmado=6945898912, itens_rejeitados=17)
+com a coluna renomeada: ResultadoDaPassada(transacoes=2, vistorias_vistas=1, itens_lidos=17, itens_inseridos=0, lsn_confirmado=6945905424, itens_rejeitados=17)
+com coluna nova: ResultadoDaPassada(transacoes=1, vistorias_vistas=1, itens_lidos=17, itens_inseridos=17, lsn_confirmado=6945913064, itens_rejeitados=0)
+com update por fora dos gatilhos: ResultadoDaPassada(transacoes=1, vistorias_vistas=0, itens_lidos=0, itens_inseridos=0, lsn_confirmado=6945917504, itens_rejeitados=0)
+
+# Auditoria do CDC
+
+## Consistência
+
+Checksum da tabela inteira, por linha:
+
+| Caminho | Iguais | Diferentes |
+| --- | ---: | ---: |
+| Linha de base e recarga (sem LSN) | 0 | 0 |
+| CDC (com LSN) | 34 | 17 |
+
+Só na origem: 34 (0 pendentes no slot, 34 na fila de erros, 0 sem explicação). Só no Delta: 0.
+
+| Dia do registro | Situação | Linhas |
+| --- | --- | ---: |
+| 2026-11-01 | diferentes | 17 |
+| 2026-11-01 | so_na_origem | 34 |
+
+Contagem por operação, desde que a telemetria começou:
+
+| Operação | Lidas do WAL | Aplicadas no Delta | Na fila de erros | Já estavam no Delta | Pendentes no slot |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| insert | 85 | 51 | 34 | 0 | 0 |
+| update | 17 | 0 | 17 | 0 | 0 |
+| delete | 0 | 0 | 0 | 0 | 0 |
+| truncate | 0 | 0 | 0 | 0 | 0 |
+
+Ordem, em 7 transações entregues: 0 com LSN invertido, 0 reentregas, 0 com registrado_em invertido (maior diferença de 0,00 s), 0 com ocorrido_em fora de ordem e 0 além da tolerância de 7 dias do ADR 0004.
+
+## Latência e frescor
+
+Desde que a telemetria começou. Um commit feito com o consumidor parado conta o tempo parado até ser entregue.
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 7 | 0,16 | 0,68 | 0,86 |
+| Atraso de captura (commit até ler do WAL) | 7 | 0,05 | 0,09 | 0,09 |
+| - espera pela próxima passada | 7 | 0,04 | 0,07 | 0,08 |
+| - leitura e decodificação do WAL | 7 | 0,01 | 0,03 | 0,04 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 7 | 0,09 | 0,60 | 0,77 |
+| - conversão e cabeçalhos | 7 | 0,01 | 0,02 | 0,03 |
+| - merge no Delta e fila de erros | 7 | 0,08 | 0,58 | 0,74 |
+
+Frescor: tudo o que confirmou até 2026-11-01T00:33:28.301762+00:00 já estava legível, 4,4 s atrás (SLA de 60,0 s).
+
+## Resiliência
+
+Desvios de esquema agora no catálogo: vistoria_item.coluna_nova: coluna_nova.
+Desvios de esquema vistos no WAL: vistoria_item.qtd: coluna_nova (1x), vistoria_item.quantidade: coluna_ausente (1x), vistoria_item.coluna_nova: coluna_nova (2x).
+Fila de erros: 51 linhas (update, violacao_insert_only: 17, insert, KeyError: 17, insert, DataError: 17).
+Slot: reserved, 0 bytes por entregar.
+
+## Resultado
+
+- 17 linhas com conteúdo diferente entre a origem e o Delta
+- 34 itens parados na fila de erros
+- 17 alterações desviaram do insert-only
+- esquema fora do contrato: vistoria_item.coluna_nova: coluna_nova

@@ -3,9 +3,22 @@ from datetime import datetime, timezone
 
 import pytest
 
-from eduinfra.pgoutput import Insercao, decodificar, formatar_lsn, interpretar_lsn
+from eduinfra.pgoutput import (
+    OPERACAO_DELETE,
+    OPERACAO_TRUNCATE,
+    OPERACAO_UPDATE,
+    Alteracao,
+    Insercao,
+    Relacao,
+    decodificar,
+    formatar_lsn,
+    interpretar_lsn,
+)
 
 MICROSSEGUNDOS_2024 = int((datetime(2024, 5, 29, tzinfo=timezone.utc) - datetime(2000, 1, 1, tzinfo=timezone.utc)).total_seconds() * 1_000_000)
+OID_DA_TABELA = 16400
+OID_DE_TEXTO = 25
+OID_DE_INTEIRO = 23
 
 
 def _begin(xid: int, lsn_final: int = 100) -> bytes:
@@ -16,22 +29,28 @@ def _commit(lsn_fim: int) -> bytes:
     return b"C" + struct.pack(">BQQq", 0, lsn_fim - 8, lsn_fim, MICROSSEGUNDOS_2024)
 
 
-def _relation(oid: int, nome: str, colunas: list[str]) -> bytes:
+def _relation(oid: int, nome: str, colunas: list[str], tipos: list[int] | None = None) -> bytes:
     corpo = struct.pack(">I", oid) + b"public\x00" + nome.encode() + b"\x00" + struct.pack(">BH", ord("d"), len(colunas))
-    for coluna in colunas:
-        corpo += struct.pack(">B", 0) + coluna.encode() + b"\x00" + struct.pack(">Ii", 25, -1)
+    for coluna, tipo in zip(colunas, tipos or [OID_DE_TEXTO] * len(colunas)):
+        corpo += struct.pack(">B", 0) + coluna.encode() + b"\x00" + struct.pack(">Ii", tipo, -1)
     return b"R" + corpo
 
 
-def _insert(oid: int, valores: list[str | None]) -> bytes:
-    corpo = struct.pack(">I", oid) + b"N" + struct.pack(">H", len(valores))
+def _tupla(valores: list[str | None]) -> bytes:
+    corpo = struct.pack(">H", len(valores))
     for valor in valores:
         if valor is None:
             corpo += b"n"
-            continue
-        dados = valor.encode()
-        corpo += b"t" + struct.pack(">I", len(dados)) + dados
-    return b"I" + corpo
+        elif valor == "toast":
+            corpo += b"u"
+        else:
+            dados = valor.encode()
+            corpo += b"t" + struct.pack(">I", len(dados)) + dados
+    return corpo
+
+
+def _insert(oid: int, valores: list[str | None]) -> bytes:
+    return b"I" + struct.pack(">I", oid) + b"N" + _tupla(valores)
 
 
 def test_decodifica_transacao_com_duas_insercoes():
@@ -92,10 +111,63 @@ def test_transacao_sem_insercoes_e_valida():
     assert transacao.insercoes == ()
 
 
-@pytest.mark.parametrize("tipo", [b"U", b"D", b"T"])
-def test_mensagem_de_alteracao_e_erro_na_origem_insert_only(tipo):
-    with pytest.raises(ValueError, match="insert-only"):
-        decodificar([_begin(4), tipo + b"\x00" * 8])
+def _decodificar_alteracao(mensagem: bytes) -> tuple[Alteracao, ...]:
+    colunas = ["vistoria_id", "item_codigo", "quantidade"]
+    (transacao,) = decodificar([_begin(4), _relation(OID_DA_TABELA, "vistoria_item", colunas), mensagem, _commit(40)])
+    return transacao.alteracoes
+
+
+@pytest.mark.parametrize(
+    ("mensagem", "esperada"),
+    [
+        (
+            b"U" + struct.pack(">I", OID_DA_TABELA) + b"N" + _tupla(["9", "quadra", "2"]),
+            Alteracao(OPERACAO_UPDATE, "vistoria_item", {"vistoria_id": "9", "item_codigo": "quadra", "quantidade": "2"}),
+        ),
+        (
+            b"U" + struct.pack(">I", OID_DA_TABELA) + b"K" + _tupla(["8", "quadra", None]) + b"N" + _tupla(["9", "quadra", "toast"]),
+            Alteracao(OPERACAO_UPDATE, "vistoria_item", {"vistoria_id": "9", "item_codigo": "quadra", "quantidade": None}),
+        ),
+        (
+            b"D" + struct.pack(">I", OID_DA_TABELA) + b"K" + _tupla(["9", "quadra", None]),
+            Alteracao(OPERACAO_DELETE, "vistoria_item", {"vistoria_id": "9", "item_codigo": "quadra", "quantidade": None}),
+        ),
+        (
+            b"T" + struct.pack(">IB", 1, 0) + struct.pack(">I", OID_DA_TABELA),
+            Alteracao(OPERACAO_TRUNCATE, "vistoria_item", {}),
+        ),
+    ],
+    ids=["update", "update-com-chave-antiga", "delete", "truncate"],
+)
+def test_alteracao_que_desvia_do_insert_only_e_contada_sem_derrubar_a_leitura(mensagem, esperada):
+    assert _decodificar_alteracao(mensagem) == (esperada,)
+
+
+def test_update_sem_tupla_nova_e_erro_de_protocolo():
+    with pytest.raises(ValueError, match="tupla nova"):
+        _decodificar_alteracao(b"U" + struct.pack(">I", OID_DA_TABELA) + b"X")
+
+
+def test_mensagem_desconhecida_continua_sendo_erro():
+    with pytest.raises(ValueError, match="inesperada"):
+        decodificar([_begin(4), b"Z" + b"\x00" * 8])
+
+
+def test_relacao_expoe_colunas_e_tipos_na_transacao_que_a_anunciou():
+    mensagens = [
+        _begin(1),
+        _relation(OID_DA_TABELA, "vistoria_item", ["vistoria_id", "quantidade"], [OID_DE_TEXTO, OID_DE_INTEIRO]),
+        _insert(OID_DA_TABELA, ["1", "2"]),
+        _commit(10),
+        _begin(2),
+        _insert(OID_DA_TABELA, ["3", "4"]),
+        _commit(20),
+    ]
+
+    primeira, segunda = decodificar(mensagens)
+
+    assert primeira.relacoes == (Relacao("vistoria_item", {"vistoria_id": OID_DE_TEXTO, "quantidade": OID_DE_INTEIRO}),)
+    assert segunda.relacoes == ()
 
 
 @pytest.mark.parametrize("lsn", [0, 1, 0x16B3748, 0x1_0000_00FF, 0xFFFF_FFFF_FFFF])
