@@ -3,62 +3,79 @@ import plotly.express as px
 from pathlib import Path
 from eduinfra.configuracao import carregar_configuracao
 
+def formatar_nome_item(coluna: str) -> str:
+    """Transforma o nome técnico da coluna em um título legível."""
+    substituicoes = {
+        "qtd_": "",
+        "in_": "",
+        "st_": "",
+        "_": " "
+    }
+    nome = coluna.lower()
+    for chave, valor in substituicoes.items():
+        nome = nome.replace(chave, valor)
+
+    # Ajustes finos manuais para itens específicos do Censo
+    ajustes = {
+        "internet": "Acesso à Internet",
+        "lab informatica": "Lab. de Informática",
+        "lab ciencias": "Lab. de Ciências",
+        "quadra": "Quadra de Esportes",
+        "refeitorio": "Refeitório"
+    }
+    for chave, valor in ajustes.items():
+        if chave in nome:
+            return valor
+
+    return nome.strip().title()
+
 def gerar_painel():
     config = carregar_configuracao()
     conexao = duckdb.connect()
 
-    # Instala e conecta ao PostgreSQL
+    # Conecta ao PostgreSQL via DuckDB
     conexao.execute("INSTALL postgres; LOAD postgres;")
     conexao.execute(f"ATTACH '{config.dsn}' AS pg (TYPE POSTGRES);")
 
-    # Mapeia as dimensões e fatos da Gold
     conexao.execute("CREATE VIEW infra AS SELECT * FROM pg.gold.fato_infra_escola_ano;")
     conexao.execute("CREATE VIEW escola AS SELECT * FROM pg.gold.dim_escola;")
 
-    # 1. Identifica dinamicamente as colunas disponíveis na visão 'infra'
-    colunas_infra = [
-        row[0] for row in conexao.execute(
-            "SELECT column_name FROM information_schema.columns WHERE table_name = 'infra'"
-        ).fetchall()
-    ]
+    # 1. Definimos manualmente apenas os itens estruturais relevantes
+    colunas_infra = [row[0] for row in conexao.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'infra'").fetchall()]
 
-    # Busca a coluna de biblioteca ou a primeira coluna de item disponível
-    coluna_item = next((c for c in colunas_infra if "biblio" in c.lower()), None)
-    if not coluna_item:
-        coluna_item = next(
-            (c for c in colunas_infra if c.lower() not in ("co_entidade", "ano_censo", "sg_uf", "co_municipio")),
-            colunas_infra[-1] if colunas_infra else "co_entidade"
-        )
+    # Lista de palavras-chave para filtrar apenas as colunas estruturais reais (exclui pacotes de rede/sinal)
+    palavras_chave_relevantes = ['biblioteca', 'refeitorio', 'quadra', 'lab_informatica', 'lab_ciencias', 'acessibilidade', 'rampa', 'internet']
 
-    # 2. Verifica se a tabela fato_enem existe no schema gold
-    tabelas_gold = [
-        row[0] for row in conexao.execute(
-            "SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'"
-        ).fetchall()
-    ]
+    cols_itens = []
+    for c in colunas_infra:
+        for p in palavras_chave_relevantes:
+            if p in c.lower() and c not in cols_itens:
+                cols_itens.append(c)
+
+    # 2. Prepara a Tabela do ENEM (Real ou Simulação)
+    tabelas_gold = [row[0] for row in conexao.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'").fetchall()]
     tem_enem = "fato_enem" in tabelas_gold
 
     if tem_enem:
         conexao.execute("CREATE VIEW enem AS SELECT * FROM pg.gold.fato_enem;")
         alerta_dados = ""
     else:
-        # Projeção de demonstração com base nas 181 mil escolas da Gold
         conexao.execute("""
             CREATE VIEW enem AS
             SELECT
                 co_entidade,
-                500 + ABS(HASH(co_entidade) % 200) + (CASE WHEN tp_dependencia = 4 THEN 60 ELSE 0 END) AS nota_media
+                500 + ABS(HASH(co_entidade) % 180) + (CASE WHEN tp_dependencia = 4 THEN 70 ELSE 0 END) AS nota_media
             FROM pg.gold.dim_escola
             WHERE (HASH(co_entidade) % 10) < 7
         """)
         alerta_dados = """
-        <div class="alerta" style="background:#e2e3e5; color:#383d41; border-left-color:#545b62;">
+        <div class="alerta">
             ℹ️ <strong>Modo de Demonstração:</strong> Tabela <code>gold.fato_enem</code> não detectada.
-            Exibindo projeção com base nas escolas da Gold para validação visual do painel.
+            Exibindo projeção com base nas escolas da Gold para validação de layout do painel.
         </div>
         """
 
-    # 3. Cobertura da Junção ENEM x Censo
+    # 3. Métricas Principais
     cobertura = conexao.execute("""
         SELECT
             COUNT(DISTINCT e.co_entidade) AS total_enem,
@@ -71,8 +88,12 @@ def gerar_painel():
     total_enem, total_censo, juncao_sucesso = cobertura
     pct_cobertura = (juncao_sucesso / total_enem * 100) if total_enem > 0 else 0
 
-    # 4. Consulta Principal com a Coluna Encontrada
-    df_grafico = conexao.execute(f"""
+    graficos_html = []
+
+    # =========================================================
+    # GRÁFICO 1: Espaço Amostral Base (Número de Escolas)
+    # =========================================================
+    df_amostra = conexao.execute("""
         SELECT
             CASE
                 WHEN e.tp_dependencia = 1 THEN 'Federal'
@@ -81,62 +102,136 @@ def gerar_painel():
                 WHEN e.tp_dependencia = 4 THEN 'Privada'
                 ELSE 'Outra'
             END AS rede,
-            CASE
-                WHEN CAST(inf.{coluna_item} AS DOUBLE) > 0 THEN 'Com Item'
-                ELSE 'Sem Item'
-            END AS infra,
-            COUNT(en.co_entidade) AS n_escolas,
-            ROUND(AVG(en.nota_media), 1) AS media_enem,
-            ROUND(STDDEV(en.nota_media), 1) AS desvio_padrao
+            COUNT(en.co_entidade) AS qtd_escolas
         FROM enem en
         JOIN escola e ON en.co_entidade = e.co_entidade
-        JOIN infra inf ON en.co_entidade = inf.co_entidade
-        GROUP BY 1, 2
-        HAVING COUNT(en.co_entidade) >= 10
-        ORDER BY rede, infra
+        GROUP BY 1
+        ORDER BY qtd_escolas DESC
     """).df()
 
-    nome_item_exibicao = coluna_item.replace('_', ' ').title()
-
-    # 5. Gráfico Principal (Plotly Bar Chart com Erro e N)
-    fig = px.bar(
-        df_grafico,
-        x="infra",
-        y="media_enem",
-        color="rede",
-        barmode="group",
-        error_y="desvio_padrao",
-        text="n_escolas",
-        title=f"Média no ENEM por Presença de Infraestrutura ({nome_item_exibicao}) — Controlado por Rede",
-        labels={"media_enem": "Nota Média no ENEM", "infra": "Infraestrutura", "rede": "Rede de Ensino"}
+    fig_amostra = px.bar(
+        df_amostra, x="rede", y="qtd_escolas", color="rede",
+        text="qtd_escolas", title="Espaço Amostral: Volume de Escolas no ENEM por Rede de Ensino",
+        labels={"qtd_escolas": "Número de Escolas", "rede": "Rede"}
     )
-    fig.update_traces(texttemplate='N=%{text}', textposition='outside')
-    fig.update_layout(
-        margin=dict(l=20, r=20, t=50, b=20),
-        height=420,
-        yaxis_range=[300, 850],
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    fig_amostra.update_traces(texttemplate='%{text:,.0f}', textposition='outside')
+    fig_amostra.update_layout(
+        margin=dict(l=15, r=15, t=50, b=15), height=400, showlegend=False,
+        yaxis_title="Total de Escolas"
     )
-    grafico_html = fig.to_html(full_html=False, include_plotlyjs='cdn')
+    graficos_html.append(f'<div class="chart-card chart-full-width">{fig_amostra.to_html(full_html=False, include_plotlyjs=False)}</div>')
 
-    # 6. HTML Final
+    # =========================================================
+    # GRÁFICOS SEGUINTES: Desempenho por cada Item Relevante
+    # =========================================================
+    for item_col in cols_itens:
+        nome_exibicao = formatar_nome_item(item_col)
+
+        df_item = conexao.execute(f"""
+            SELECT
+                CASE
+                    WHEN e.tp_dependencia = 1 THEN 'Federal'
+                    WHEN e.tp_dependencia = 2 THEN 'Estadual'
+                    WHEN e.tp_dependencia = 3 THEN 'Municipal'
+                    WHEN e.tp_dependencia = 4 THEN 'Privada'
+                    ELSE 'Outra'
+                END AS rede,
+                CASE
+                    WHEN CAST(inf.{item_col} AS DOUBLE) > 0 THEN 'Possui o item'
+                    ELSE 'Não possui'
+                END AS infra_status,
+                COUNT(en.co_entidade) AS amostra_n,
+                ROUND(AVG(en.nota_media), 1) AS media_enem,
+                ROUND(STDDEV(en.nota_media), 1) AS desvio_padrao
+            FROM enem en
+            JOIN escola e ON en.co_entidade = e.co_entidade
+            JOIN infra inf ON en.co_entidade = inf.co_entidade
+            GROUP BY 1, 2
+            HAVING COUNT(en.co_entidade) >= 10
+            ORDER BY rede, infra_status
+        """).df()
+
+        if not df_item.empty:
+            # Não exibe mais o N nas barras, exibe apenas a nota média
+            fig = px.bar(
+                df_item,
+                x="rede",
+                y="media_enem",
+                color="infra_status",
+                barmode="group",
+                error_y="desvio_padrao",
+                text="media_enem",
+                title=f"Desempenho x {nome_exibicao}",
+                labels={"media_enem": "Nota Média", "infra_status": "Infraestrutura", "rede": "Rede"}
+            )
+            fig.update_traces(texttemplate='%{text}', textposition='outside')
+
+            # Legenda melhor espaçada na parte de baixo do gráfico
+            fig.update_layout(
+                margin=dict(l=15, r=15, t=50, b=50),
+                height=420,
+                yaxis_range=[300, 850],
+                legend=dict(
+                    orientation="h",
+                    yanchor="top", y=-0.15,
+                    xanchor="center", x=0.5
+                )
+            )
+
+            graficos_html.append(f'<div class="chart-card">{fig.to_html(full_html=False, include_plotlyjs=False)}</div>')
+
+    grid_graficos = "\n".join(graficos_html)
+
+    # =========================================================
+    # HTML FINAL E CSS RESPONSIVO
+    # =========================================================
     html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Painel EduInfra - Infraestrutura vs Desempenho ENEM</title>
+    <title>Painel EduInfra - Desempenho no ENEM por Infraestrutura</title>
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f6f8; color: #333; padding: 15px; }}
-        .container {{ max-width: 1050px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
-        h1 {{ font-size: 1.3rem; color: #1a252f; margin-bottom: 8px; }}
-        .alerta {{ background: #fff3cd; color: #856404; border-left: 4px solid #ffeba2; padding: 8px 12px; font-size: 0.85rem; border-radius: 4px; margin-bottom: 12px; }}
-        .kpis {{ display: flex; gap: 12px; margin-bottom: 12px; }}
-        .card {{ flex: 1; background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 10px; text-align: center; }}
-        .card .valor {{ font-size: 1.2rem; font-weight: bold; color: #2c3e50; }}
-        .card .rotulo {{ font-size: 0.75rem; color: #6c757d; text-transform: uppercase; margin-top: 2px; }}
-        #grafico {{ min-height: 420px; }}
+        body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }}
+        .container {{ max-width: 1300px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }}
+
+        h1 {{ font-size: 1.6rem; color: #1a252f; margin-bottom: 15px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; }}
+        h2 {{ font-size: 1.3rem; color: #2c3e50; margin: 30px 0 15px 0; }}
+
+        .alerta {{ background: #fff3cd; color: #856404; border-left: 5px solid #ffeba2; padding: 12px 15px; font-size: 0.95rem; border-radius: 4px; margin-bottom: 20px; line-height: 1.5; }}
+        .alerta-demo {{ background: #e2e3e5; color: #383d41; border-left: 5px solid #545b62; }}
+
+        .kpis {{ display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap; }}
+        .card {{ flex: 1; min-width: 250px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }}
+        .card .valor {{ font-size: 1.5rem; font-weight: bold; color: #0d6efd; }}
+        .card .rotulo {{ font-size: 0.85rem; color: #6c757d; text-transform: uppercase; margin-top: 5px; font-weight: 600; }}
+
+        .charts-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+            gap: 25px;
+        }}
+        .chart-card {{
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            width: 100%;
+        }}
+        .chart-full-width {{
+            grid-column: 1 / -1;
+        }}
+
+        /* Ajuste para telas menores */
+        @media (max-width: 768px) {{
+            .charts-grid {{ grid-template-columns: 1fr; }}
+            .container {{ padding: 15px; }}
+        }}
+        /* Garante que o plotly preencha 100% da div */
+        .js-plotly-plot, .plot-container {{ width: 100% !important; }}
     </style>
 </head>
 <body>
@@ -146,7 +241,7 @@ def gerar_painel():
         {alerta_dados}
 
         <div class="alerta">
-            ⚠️ <strong>Nota Metodológica:</strong> Esta visualização apresenta <u>associação estatística</u>, não causalidade. Fatores como a rede de ensino e o perfil socioeconômico (INSE) moderam fortemente essa relação.
+            ⚠️ <strong>Nota Metodológica:</strong> As visualizações abaixo apresentam <u>associação estatística</u>, não causalidade. Fatores como a rede de ensino e o perfil socioeconômico (INSE) moderam fortemente essas relações, por isso os gráficos controlam os resultados por Rede. As barras de erro representam 1 Desvio Padrão.
         </div>
 
         <div class="kpis">
@@ -159,13 +254,13 @@ def gerar_painel():
                 <div class="rotulo">Escolas no Censo</div>
             </div>
             <div class="card">
-                <div class="valor">{juncao_sucesso:,} ({pct_cobertura:.1f}%)</div>
+                <div class="valor">{juncao_sucesso:,} ({(pct_cobertura):.1f}%)</div>
                 <div class="rotulo">Cobertura da Junção (ENEM ∩ Censo)</div>
             </div>
         </div>
 
-        <div id="grafico">
-            {grafico_html}
+        <div class="charts-grid">
+            {grid_graficos}
         </div>
     </div>
 </body>
