@@ -38,7 +38,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
@@ -51,7 +51,6 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades e medir-cobertura-enem, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--sla-horas", type=float, default=frescor.SLA_PADRAO.total_seconds() / 3600, help="em medir-frescor, SLA de frescor da Gold em horas (padrão 25)")
     parser.add_argument("--verboso", action="store_true")
-    parser.add_argument("comando", choices=(..., "construir-gold", "gerar-painel"))
     opcoes = parser.parse_args(argumentos)
 
     logging.basicConfig(
