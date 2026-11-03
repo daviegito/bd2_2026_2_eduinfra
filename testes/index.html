@@ -972,6 +972,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dado-atrasado/" class="md-nav__link">
         
   
@@ -1179,6 +1207,34 @@
     
   
     ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
   
 
     
@@ -1454,8 +1510,8 @@ podem exigir internet para baixar a extensão; verifique os motivos de eventuais
 <code>skipped</code> com <code>-rs</code>.</p>
 <h2 id="testes-de-integracao">Testes de integração<a class="headerlink" href="#testes-de-integracao" title="Permanent link">&para;</a></h2>
 <p>Use um banco de desenvolvimento descartável. Os testes de CDC e janelas
-inserem vistorias na origem; os de ingestão criam e removem bancos próprios e
-precisam de permissão para isso.</p>
+inserem vistorias na origem; os de ingestão e de resiliência do CDC criam e
+removem bancos próprios e precisam de permissão para isso.</p>
 <ol>
 <li>Prepare o ambiente conforme o <a href="../execucao/">guia de execução</a>.</li>
 <li>Aguarde o serviço <code>carga</code> terminar com sucesso.</li>
@@ -1487,7 +1543,15 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.</p>
 </tr>
 <tr>
 <td>CDC e reentrega</td>
-<td><code>tests/test_pgoutput.py</code>, <code>tests/test_fluxo_cdc_integracao.py</code></td>
+<td><code>tests/test_pgoutput.py</code>, <code>tests/test_fluxo_cdc.py</code>, <code>tests/test_fluxo_cdc_integracao.py</code></td>
+</tr>
+<tr>
+<td>Métricas do CDC</td>
+<td><code>tests/test_telemetria_cdc.py</code>, <code>tests/test_auditoria_cdc.py</code>, <code>tests/test_comparacao_latencia.py</code>, <code>tests/test_comparacao_latencia_integracao.py</code></td>
+</tr>
+<tr>
+<td>Fila de erros e desvio de esquema</td>
+<td><code>tests/test_contrato_cdc.py</code>, <code>tests/test_resiliencia_cdc_integracao.py</code></td>
 </tr>
 <tr>
 <td>Eventos e deduplicação</td>

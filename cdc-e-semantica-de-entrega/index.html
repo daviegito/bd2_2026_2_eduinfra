@@ -18,7 +18,7 @@
         <link rel="prev" href="../serializacao-compressao/">
       
       
-        <link rel="next" href="../dado-atrasado/">
+        <link rel="next" href="../metricas-cdc/">
       
       
         
@@ -1005,6 +1005,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dado-atrasado/" class="md-nav__link">
         
   
@@ -1212,6 +1240,34 @@
     
   
     ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
   
 
     
@@ -1509,20 +1565,27 @@
 mecanismo, as garantias, a saída real da demonstração e as medições.</p>
 <h2 id="mecanismo">Mecanismo<a class="headerlink" href="#mecanismo" title="Permanent link">&para;</a></h2>
 <p>A origem publica <code>vistoria</code> e <code>vistoria_item</code> na publicação <code>eduinfra_cdc</code>
-(migração 0005), só com <code>INSERT</code>. Um consumidor próprio, em Python, lê o slot
-lógico <code>eduinfra_cdc</code> com o plugin <code>pgoutput</code>:</p>
+(migrações 0005 e 0007), com as quatro operações. Como a origem é insert-only, um
+<code>UPDATE</code>, <code>DELETE</code> ou <code>TRUNCATE</code> só chega ao slot se alguém desviou dos gatilhos, e
+o consumidor conta esse desvio (<a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/">ADR 0007</a>).
+Um consumidor próprio, em Python, lê o slot lógico <code>eduinfra_cdc</code> com o plugin
+<code>pgoutput</code>:</p>
 <ol>
 <li><code>pg_logical_slot_peek_binary_changes</code> devolve as transações pendentes sem
    consumi-las.</li>
 <li><a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/pgoutput.py">pgoutput.py</a> decodifica as mensagens Begin,
-   Relation, Insert e Commit, conforme o
+   Relation, Insert, Update, Delete, Truncate e Commit, conforme o
    <a href="https://www.postgresql.org/docs/16/protocol-logicalrep-message-formats.html">formato do protocolo</a>.</li>
 <li><a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/fluxo_cdc.py">fluxo_cdc.py</a> enriquece cada item com o
    cabeçalho da vistoria (escola, UF, <code>ocorrido_em</code>, <code>registrado_em</code>) e grava na
-   tabela Delta <code>eventos_vistoria</code> por <code>merge</code>, inserindo só chaves novas.</li>
+   tabela Delta <code>eventos_vistoria</code> por <code>merge</code>, inserindo só chaves novas. O item
+   que não converte e o desvio do insert-only vão para a tabela Delta
+   <code>fila_de_erros_cdc</code>, só com a chave e o motivo.</li>
 <li>Só depois da gravação o slot avança, com <code>pg_replication_slot_advance</code> até o
    LSN de fim da transação.</li>
 </ol>
+<p>As medições de consistência, latência, frescor e resiliência deste fluxo estão em
+<a href="../metricas-cdc/">Métricas do CDC</a>.</p>
 <p>Debezium não foi prototipado. O consumidor próprio cobre <code>INSERT</code> de duas
 tabelas com chave primária e dispensa Kafka Connect. Se a origem passar a emitir
 <code>UPDATE</code> ou <code>DELETE</code>, ou se houver mais de um consumidor, o consumidor próprio
@@ -1692,8 +1755,6 @@ só passa a existir ao fim da primeira passada.</p>
 <h2 id="o-que-nao-foi-medido">O que não foi medido<a class="headerlink" href="#o-que-nao-foi-medido" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Debezium com Kafka Connect ou Debezium Server.</li>
-<li>Latência ponta a ponta do commit até a linha visível no Delta, com o
-  consumidor em modo contínuo, além da medição pontual acima.</li>
 <li>Crescimento do WAL com o consumidor parado por horas.</li>
 <li>O healthcheck do serviço <code>cdc</code> com o Censo real e com o consumidor travado
   (não parado).</li>
@@ -1727,6 +1788,13 @@ se surgir um segundo consumidor do mesmo fluxo, ou se o atraso do slot passar de
 <td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
 <td></td>
 <td>19 de outubro de 2026</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Publicação das quatro operações, fila de erros e referência às métricas do CDC</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>31 de outubro de 2026</td>
 </tr>
 </tbody>
 </table>

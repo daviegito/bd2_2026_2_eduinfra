@@ -906,6 +906,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dado-atrasado/" class="md-nav__link">
         
   
@@ -1113,6 +1141,34 @@
     
   
     ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
   
 
     
@@ -1436,8 +1492,8 @@ embeddings, cache e assistente ainda não estão implementados.</p>
 <tr>
 <td>CDC</td>
 <td>Inserções em <code>vistoria</code> e <code>vistoria_item</code></td>
-<td><code>warehouse/eventos_vistoria</code>, em Delta</td>
-<td>Confirma o LSN após gravar; reentrega com efeito idempotente</td>
+<td><code>warehouse/eventos_vistoria</code>, em Delta; <code>warehouse/fila_de_erros_cdc</code> e <code>warehouse/telemetria_cdc</code> para o que não converte e para a <a href="../metricas-cdc/">medição</a></td>
+<td>Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo</td>
 </tr>
 <tr>
 <td>Publicação analítica</td>

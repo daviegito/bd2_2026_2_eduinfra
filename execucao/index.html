@@ -928,6 +928,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dado-atrasado/" class="md-nav__link">
         
   
@@ -1135,6 +1163,34 @@
     
   
     ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
   
 
     
@@ -1434,6 +1490,18 @@ esses dados e reconstruir o ambiente.</p>
 <td>Compara captura incremental com captura pelo slot, sem medir a escrita Delta</td>
 </tr>
 <tr>
+<td><code>docker compose run --rm carga medir-cdc --repeticoes 30</code></td>
+<td>Insere vistorias de teste, mede latência e ordem com o consumidor ligado e termina com a auditoria</td>
+</tr>
+<tr>
+<td><code>docker compose run --rm carga auditar-cdc</code></td>
+<td>Só lê: confere checksum, contagem por operação, fila de erros, esquema e frescor. Sai com código 1 se houver violação</td>
+</tr>
+<tr>
+<td><code>docker compose run --rm carga medir-recarga</code></td>
+<td>Mede a recarga periódica e o WAL retido, com o consumidor parado</td>
+</tr>
+<tr>
 <td><code>docker compose run --rm carga comparar-compressao</code></td>
 <td>Compara formatos e compressão</td>
 </tr>
@@ -1490,6 +1558,11 @@ compose publicado na porta do <code>.env</code>:</p>
 <td>Alternativas de captura</td>
 <td><code>comparar-ingestao</code></td>
 <td><a href="../cdc-e-semantica-de-entrega/#medicao-slot-logico-contra-recarga-incremental">Comparação de ingestão</a></td>
+</tr>
+<tr>
+<td>Consistência, latência e resiliência do CDC</td>
+<td><code>medir-cdc --repeticoes 30</code>, <code>auditar-cdc</code></td>
+<td><a href="../metricas-cdc/">Métricas do CDC</a></td>
 </tr>
 </tbody>
 </table>
