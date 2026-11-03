@@ -63,6 +63,7 @@ nav:
   - Execução:
       - Como executar e demonstrar: execucao.md
       - Testes: testes.md
+      - Orquestração: orquestracao.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
       - Compressão: serializacao-compressao.md

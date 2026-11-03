@@ -74,6 +74,11 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-compressao` | Compara formatos e compressão |
 | `docker compose run --rm carga comparar-particionamento` | Compara estratégias de particionamento |
 
+O serviço `orquestrador` sobe o Dagster em <http://localhost:3000>. Ele roda o
+pipeline em lote na agenda de `AGENDA_ORQUESTRADOR`, e o backfill das janelas
+mensais é lançado pela interface. Detalhes e demonstrações em
+[Orquestração](orquestracao.md).
+
 As demonstrações de CDC e atraso e a comparação de ingestão inserem dados de
 teste. Execute-as em um ambiente de desenvolvimento descartável. Para uma
 demonstração manual do CDC, pause o consumidor contínuo antes e retome depois:

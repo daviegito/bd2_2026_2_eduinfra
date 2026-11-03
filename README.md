@@ -419,6 +419,12 @@ load delta;
 select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by all;
 ```
 
+## Orquestração (E3)
+
+O serviço `orquestrador` sobe o [Dagster](https://docs.dagster.io/) em
+<http://localhost:3000>, com o pipeline em lote agendado, retry e backfill.
+Detalhes e demonstrações em [docs/orquestracao.md](docs/orquestracao.md).
+
 ## Estrutura do repositório
 
 ```
@@ -438,11 +444,12 @@ src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   caracterizacao.py contagens e tamanhos da base populada
   comparacao_*.py   medições citadas nos ADRs e em docs/
   demonstracao_*.py demonstrações do CDC e do dado atrasado
+  orquestrador.py   pipeline em lote no Dagster (E3)
 tests/              testes unitários e de integração (ver docs/testes.md)
 docs/               medições e decisões de cada tema da E2
 docs/adr/           registros de decisão de arquitetura
 docs/diario/        diário de bordo semanal
-docker-compose.yml  banco PostgreSQL, serviço de carga e consumidor do CDC
+docker-compose.yml  banco PostgreSQL, serviço de carga, consumidor do CDC e Dagster
 Dockerfile          imagem da carga, com uv
 .env.example        variáveis de ambiente; copie para .env
 AI-USAGE.md         registro de uso de IA
