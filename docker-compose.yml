@@ -61,6 +61,26 @@ services:
       # Desktop (medido); só então o consumidor cria /tmp/cdc_vivo.
       start_period: 120s
 
+  orquestrador:
+    build: .
+    entrypoint: ["uv", "run", "--no-sync", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "eduinfra.orquestrador"]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+      ANO_CENSO: ${ANO_CENSO:-2024}
+      DAGSTER_HOME: /dagster
+      AGENDA_ORQUESTRADOR: ${AGENDA_ORQUESTRADOR:-0 3 * * *}
+    ports:
+      - "${PORTA_DAGSTER:-3000}:3000"
+    volumes:
+      - dados_censo:/dados
+      - dados_dagster:/dagster
+    depends_on:
+      carga:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 volumes:
   dados_postgres:
   dados_censo:
+  dados_dagster:
