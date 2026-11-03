@@ -281,3 +281,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
   o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
 - **Quem revisou:** Davi, no PR #59, com a revisão em andamento
+
+### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `docs/adr/0005-ferramenta-de-transformacao.md`, `docs/evidencias/adr-0005/`
+  (protótipos dbt e SQLMesh, scripts de medição e saídas), `docs/adr/README.md`,
+  `mkdocs.yml` e `.gitignore`
+- **O que foi pedido:** apoio para comparar dbt, SQLMesh e a opção nula, no critério
+  definido pela Squad (a ferramenta mais simples e fácil de usar), e redigir o ADR
+- **O que foi aproveitado:** a montagem da mesma Gold nas três alternativas a partir do
+  SQL do PR #55, os scripts de medição e comparação e a redação inicial do ADR,
+  revisados e ajustados por Gabriel. A decisão pelo dbt segue o critério da Squad
+- **Como foi verificado:** as três Golds foram comparadas tabela a tabela (contagem e
+  soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
+  ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
+  com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
+- **Quem revisou:** pendente (PR)
