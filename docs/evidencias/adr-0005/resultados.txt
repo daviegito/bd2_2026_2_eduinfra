@@ -1,0 +1,35 @@
+# Saídas brutas de medir.sh, 03/11/2026, recorte SP + Centro-Oeste (41.380 escolas, 703.936 itens)
+# PostgreSQL 16 em Docker, Linux, 8 CPUs; dbt-core 1.12.6 + dbt-postgres 1.11.0; SQLMesh 0.236.4
+
+## Rodada 1 (load average ~4; SQLMesh ainda com CREATE INDEX sem nome nas pós-instruções)
+A. opção nula (construir-gold, sem testes), execução 1: 20.2 s
+A. opção nula (construir-gold, sem testes), execução 2: 18.8 s
+A. opção nula (construir-gold, sem testes), execução 3: 13.3 s
+B. dbt run (sem testes), execução 1: 17.0 s
+B. dbt run (sem testes), execução 2: 16.6 s
+B. dbt run (sem testes), execução 3: 17.5 s
+B. dbt build (modelos e 12 testes), execução 1: 20.1 s
+B. dbt build (modelos e 12 testes), execução 2: 18.1 s
+B. dbt build (modelos e 12 testes), execução 3: 18.8 s
+C. SQLMesh, reconstrução com 12 audits, execução 1: 25.7 s
+C. SQLMesh, reconstrução com 12 audits, execução 2: 39.1 s
+C. SQLMesh, reconstrução com 12 audits, execução 3: 47.0 s
+
+## Rodada 2, SQLMesh com o macro criar_indice (load average ~4)
+C. SQLMesh, reconstrução com 12 audits, execução 1: 48.1 s
+C. SQLMesh, reconstrução com 12 audits, execução 2: 59.4 s
+C. SQLMesh, reconstrução com 12 audits, execução 3: 59.5 s
+
+## Rodada 3, as três em sequência (load average entre 2 e 5)
+A. opção nula (construir-gold, sem testes), execução 1: 9.3 s
+A. opção nula (construir-gold, sem testes), execução 2: 9.3 s
+A. opção nula (construir-gold, sem testes), execução 3: 9.2 s
+B. dbt run (sem testes), execução 1: 11.4 s
+B. dbt run (sem testes), execução 2: 11.3 s
+B. dbt run (sem testes), execução 3: 11.4 s
+B. dbt build (modelos e 12 testes), execução 1: 13.5 s
+B. dbt build (modelos e 12 testes), execução 2: 12.4 s
+B. dbt build (modelos e 12 testes), execução 3: 12.2 s
+C. SQLMesh, reconstrução com 12 audits, execução 1: 62.8 s
+C. SQLMesh, reconstrução com 12 audits, execução 2: 65.3 s
+C. SQLMesh, reconstrução com 12 audits, execução 3: 59.2 s
