@@ -1,0 +1,102 @@
+# Medição ativa do CDC
+
+## Evento recente, partição do mês corrente
+
+Por fora, do commit até ficar legível no Delta (30 amostras): mediana 1,41 s, p95 4,87 s, mínimo 0,37 s, máximo 10,22 s. Arquivos na partição ao fim: 109.
+
+Por dentro, pela telemetria do consumidor:
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 30 | 1,62 | 4,94 | 10,30 |
+| Atraso de captura (commit até ler do WAL) | 30 | 1,27 | 3,53 | 5,30 |
+| - espera pela próxima passada | 30 | 1,26 | 1,97 | 2,62 |
+| - leitura e decodificação do WAL | 30 | 0,01 | 1,28 | 3,39 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 30 | 0,29 | 1,35 | 6,07 |
+| - conversão e cabeçalhos | 30 | 0,01 | 0,09 | 3,70 |
+| - merge no Delta e fila de erros | 30 | 0,29 | 1,32 | 2,37 |
+
+## Evento atrasado, partição da linha de base
+
+Por fora, do commit até ficar legível no Delta (30 amostras): mediana 4,01 s, p95 10,13 s, mínimo 1,95 s, máximo 16,20 s. Arquivos na partição ao fim: 88.
+
+Por dentro, pela telemetria do consumidor:
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 30 | 4,10 | 10,08 | 16,33 |
+| Atraso de captura (commit até ler do WAL) | 30 | 1,32 | 6,16 | 7,25 |
+| - espera pela próxima passada | 30 | 1,12 | 2,94 | 7,23 |
+| - leitura e decodificação do WAL | 30 | 0,02 | 4,13 | 5,73 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 30 | 2,52 | 5,32 | 14,37 |
+| - conversão e cabeçalhos | 30 | 0,01 | 0,06 | 0,14 |
+| - merge no Delta e fila de erros | 30 | 2,50 | 5,31 | 14,37 |
+
+## Ordem sob escrita concorrente
+
+Carga sintética: 4 escritores segurando cada transação por até 1,0 s, 120 transações. A taxa depende dessa carga e não prevê a de produção.
+
+LSN invertido na entrega: 0. Reentregas: 0.
+registrado_em invertido em relação à ordem de commit: 55 (45,8%), maior diferença de 0,74 s.
+Recarga por marca d'água a cada 2 s, simulada sobre estes commits: perderia 6 transações sem margem e 0 com a margem de 10 minutos do ADR 0004.
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 120 | 1,91 | 3,39 | 4,67 |
+| Atraso de captura (commit até ler do WAL) | 120 | 1,48 | 2,92 | 4,20 |
+| - espera pela próxima passada | 120 | 1,46 | 2,86 | 4,14 |
+| - leitura e decodificação do WAL | 120 | 0,02 | 0,06 | 0,41 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 120 | 0,40 | 0,47 | 1,32 |
+| - conversão e cabeçalhos | 120 | 0,01 | 0,02 | 0,04 |
+| - merge no Delta e fila de erros | 120 | 0,39 | 0,46 | 1,29 |
+
+# Auditoria do CDC
+
+## Consistência
+
+Checksum da tabela inteira, por linha:
+
+| Caminho | Iguais | Diferentes |
+| --- | ---: | ---: |
+| Linha de base e recarga (sem LSN) | 3165451 | 0 |
+| CDC (com LSN) | 8840 | 0 |
+
+Só na origem: 0 (0 pendentes no slot, 0 na fila de erros, 0 sem explicação). Só no Delta: 0.
+
+Contagem por operação, desde que a telemetria começou:
+
+| Operação | Lidas do WAL | Aplicadas no Delta | Na fila de erros | Já estavam no Delta | Pendentes no slot |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| insert | 6579 | 6579 | 0 | 0 | 0 |
+| update | 0 | 0 | 0 | 0 | 0 |
+| delete | 0 | 0 | 0 | 0 | 0 |
+| truncate | 0 | 0 | 0 | 0 | 0 |
+
+Ordem, em 384 transações entregues: 0 com LSN invertido, 0 reentregas, 116 com registrado_em invertido (maior diferença de 0,79 s), 184 com ocorrido_em fora de ordem e 64 além da tolerância de 7 dias do ADR 0004.
+
+## Latência e frescor
+
+Desde que a telemetria começou. Um commit feito com o consumidor parado conta o tempo parado até ser entregue.
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 384 | 2,21 | 334,88 | 53491,29 |
+| Atraso de captura (commit até ler do WAL) | 384 | 1,55 | 283,76 | 53440,17 |
+| - espera pela próxima passada | 384 | 1,41 | 273,97 | 53430,39 |
+| - leitura e decodificação do WAL | 384 | 0,03 | 9,78 | 9,78 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 384 | 0,47 | 51,12 | 51,12 |
+| - conversão e cabeçalhos | 384 | 0,01 | 0,75 | 3,70 |
+| - merge no Delta e fila de erros | 384 | 0,45 | 50,38 | 50,38 |
+
+Frescor: tudo o que confirmou até 2026-10-31T20:36:32.772042+00:00 já estava legível, 2,0 s atrás (SLA de 60,0 s).
+
+## Resiliência
+
+Desvios de esquema agora no catálogo: nenhum.
+Desvios de esquema vistos no WAL: nenhum.
+Fila de erros: 0 linhas (vazia).
+Slot: reserved, 0 bytes por entregar.
+
+## Resultado
+
+Nenhuma violação.

@@ -253,3 +253,31 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   num banco **sintético** com o volume do Censo (181 mil escolas, 3 milhões de
   itens).
 - **Quem revisou:** Pedro Teixeira Moriel Sanchez
+
+### 2026-10-31 — Métricas do CDC, telemetria e fila de erros (issue #52, ADR 0007)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `src/eduinfra/telemetria_cdc.py`, `auditoria_cdc.py`, `fila_de_erros.py`,
+  `contrato_cdc.py`, `comparacao_latencia.py`, `fluxo_cdc.py`, `pgoutput.py`, migração 0007,
+  testes correspondentes, `docs/metricas-cdc.md` e ADR 0007
+- **O que foi pedido:** implementar a lista de oito métricas que Artur escreveu antes da
+  implementação (checksum de linhas, contagem por operação, fora de ordem, latência ponta a ponta,
+  atraso de captura, atraso de carga, desvio de esquema e fila de erros), avaliando cada uma contra a
+  arquitetura. Diante dos testes, Artur decidiu criar a fila de erros em vez de parar e alertar,
+  publicar as quatro operações em vez de só `INSERT` e comparar a tabela inteira em vez da amostra que
+  a lista previa
+- **O que foi aproveitado:** o código, os testes e o rascunho da documentação; o frescor como nona
+  métrica, por causa da issue #52, aceito por Artur; e a leitura do fora de ordem em três eixos. Foi
+  descartada uma medição de 3 amostras que sugeria cerca de 12 s para o evento atrasado, porque a
+  medida por fora marcava o instante antes de atualizar a tabela. Corrigida a medida, as 30 amostras
+  deram cerca de 4 s
+- **Como foi verificado:** 176 testes (unitários e de integração), com as falhas provocadas em bancos
+  descartáveis. A revisão do Davi achou um teste que dependia do intervalo entre dois commits, depois
+  corrigido. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
+  A hipótese de que os arquivos pequenos piorariam o merge não se confirmou nesta escala. Os números
+  de `docs/metricas-cdc.md` vêm das saídas dos comandos ali documentados, guardadas em
+  `docs/evidencias/metricas-cdc/`
+  O conflito com o #55 ao trazer a main (`cli.py` e este arquivo) foi resolvido com a IA, juntando os
+  comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
+  o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
+- **Quem revisou:** Davi, no PR #59, com a revisão em andamento
