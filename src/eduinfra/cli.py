@@ -30,7 +30,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
-                                           "publicar-analitica", "comparar-particionamento", "construir-gold", "comparar-granularidades"))
+                                           "publicar-analitica", "comparar-particionamento", "construir-gold", "comparar-granularidades", "gerar-painel"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao e comparar-particionamento")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
@@ -41,7 +41,6 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--verboso", action="store_true")
-    parser.add_argument("comando", choices=(..., "construir-gold", "gerar-painel"))
     opcoes = parser.parse_args(argumentos)
 
     logging.basicConfig(
