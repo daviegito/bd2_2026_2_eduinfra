@@ -1,0 +1,15 @@
+versão do Delta: 233
+arquivos no total: 239
+impressão por partição, Delta: 4.1 s, pico de memória do processo 282 MiB
+   ('2024-05', False, 1768, '6649630251798022662')
+   ('2024-05', True, 3078105, '3233445340215716953')
+   ('2026-08', False, 34, '5706707378776033618')
+   ('2026-10', False, 7480, '10632807292833130249')
+   ('2026-10', True, 87856, '919527784657156404')
+impressão por partição, origem: 71.3 s, pico de memória do processo 282 MiB
+   ('2024-05', 3079907, '4818278297951698604')
+   ('2026-08', 51, '1139194938112835241')
+   ('2026-10', 95472, '7239185708356908408')
+   ('2026-11', 119, '8401949245447569754')
+comparação linha a linha, tabela inteira: 15.8 s, pico de memória do processo 460 MiB
+  iguais, diferentes, só na origem, só no Delta: [(3175243, 0, 306, 0)]

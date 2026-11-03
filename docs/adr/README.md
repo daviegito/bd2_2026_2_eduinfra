@@ -25,9 +25,11 @@ arquitetura da camada de dados e ficam fora do portfólio avaliado.
 | ADR | Decisão | Status |
 | --- | --- | --- |
 | [0002](0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação | Aceito |
+| [0007](0007-telemetria-e-fila-de-erros-do-cdc.md) | Registrar telemetria por transação no consumidor do CDC e isolar linhas ruins numa fila de erros | Proposto |
 
 ## Histórico de Versões
 
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Índice dos ADRs e template da disciplina | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 26 de setembro de 2026 |
+| 1.1 | Inclui o ADR 0007 nos registros complementares | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
