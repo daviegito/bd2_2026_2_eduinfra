@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 from alembic import command
@@ -17,6 +18,7 @@ from eduinfra import (
     comparacao_particionamento,
     demonstracao_cdc,
     fluxo_cdc,
+    frescor,
     janelas,
     modelo_analitico,
 )
@@ -33,7 +35,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
-                                           "construir-gold", "comparar-granularidades"))
+                                           "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
@@ -44,6 +46,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
+    parser.add_argument("--sla-horas", type=float, default=frescor.SLA_PADRAO.total_seconds() / 3600, help="em medir-frescor, SLA de frescor da Gold em horas (padrão 25)")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -65,6 +68,17 @@ def main(argumentos: list[str] | None = None) -> int:
         resumo = modelo_analitico.construir(configuracao.dsn)
         for tabela, linhas in resumo.linhas.items():
             log.info("gold.%s: %d linhas", tabela, linhas)
+        # Cada construção registra o frescor; a violação só reprova em medir-frescor.
+        frescor.medir(configuracao.dsn, comando="construir-gold")
+        return 0
+
+    if opcoes.comando == "medir-frescor":
+        medicao = frescor.medir(configuracao.dsn, timedelta(hours=opcoes.sla_horas))
+        print(frescor.resumo(medicao))
+        return 0 if medicao.dentro_do_sla else 1
+
+    if opcoes.comando == "demonstrar-frescor":
+        print(frescor.demonstrar(configuracao.dsn))
         return 0
 
     if opcoes.comando == "comparar-granularidades":
