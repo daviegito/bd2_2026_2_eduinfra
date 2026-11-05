@@ -63,7 +63,6 @@ def rodar_testes():
         print("Verifique se o teste de 'casos_sujos' no arquivo test_e3_gold.py está rigoroso o suficiente.")
         print("="*50)
 
-
 def main():
     print("=== INICIANDO DEMONSTRAÇÃO DE AUDITORIA E3 ===")
     config = carregar_configuracao()
@@ -75,6 +74,10 @@ def main():
         print(f"Erro durante a demonstração: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        caminho_tabela = config.diretorio_dados / "warehouse" / "vistoria_item"
+        if caminho_tabela.exists():
+            DeltaTable(str(caminho_tabela)).delete("situacao = 'ERRO_DE_DOMINIO'")
 
 if __name__ == "__main__":
     main()
