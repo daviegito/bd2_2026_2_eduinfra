@@ -15,7 +15,7 @@ recebe depois desse retrato só aparece na Gold na construção seguinte.
 
 | Medida | Definição |
 | --- | --- |
-| Vistorias pendentes | vistorias da origem, com ao menos um item, que não estão em `gold.fato_vistoria_item` |
+| Vistorias pendentes | vistorias da origem cujos itens faltam em `gold.fato_vistoria_item`, ou cuja escola e ano faltam em `gold.fato_infra_escola_ano` |
 | Frescor | agora menos o `registrado_em` da pendente mais antiga; **zero** quando não há pendente |
 | Dentro do SLA | frescor menor ou igual ao SLA, com a Gold construída |
 
@@ -24,9 +24,13 @@ Três escolhas:
 - **Não é "agora menos a última construção".** Num dia sem vistorias, a Gold
   continua completa, e essa conta acusaria atraso sem haver dado faltando. O
   frescor só cresce quando existe dado na origem que o painel ainda não mostra.
-- **O fato fino responde pelo fato anual.** Os dois saem do mesmo retrato, na
-  mesma transação: a vistoria que falta em `fato_vistoria_item` também falta no
-  perfil anual. O fato fino é consultado porque guarda o `vistoria_id`.
+- **Os dois fatos entram na conta.** Eles saem do mesmo retrato, na mesma
+  transação, mas formam as linhas de jeitos diferentes. O fato fino só tem
+  vistorias com item. O fato anual forma os anos a partir de todas as vistorias,
+  com item ou sem: uma vistoria sem item, de uma escola num ano que ainda não
+  está lá, cria uma linha nova na próxima construção. Por isso ela conta como
+  pendente. Uma vistoria sem item num ano que o fato anual já tem não muda nada
+  e não conta.
 - **O relógio é o do banco**, o mesmo que carimba `registrado_em`. Como
   `registrado_em` é o início da transação que gravou a vistoria, o frescor medido
   nunca é menor que o real.
@@ -149,9 +153,10 @@ diante:
 | `construir-gold` | 0 | 0,0 | 90.000 | sim |
 | `medir-frescor` | 0 | 0,0 | 90.000 | sim |
 
-A consulta das pendentes levou 533 ms sobre as 201.128 vistorias (`EXPLAIN ANALYZE`,
-com a Gold recém-construída). O comando inteiro leva cerca de 4 s, quase tudo na
-partida do Python.
+A consulta das pendentes levou de 0,73 a 0,79 s sobre 201.251 vistorias (`EXPLAIN
+ANALYZE`, três execuções, com a Gold recém-construída). Escrita com `or` num `where`
+só, ela levava 1,8 s; por isso as duas condições ficam separadas num `union`. O
+comando inteiro leva cerca de 4 s, quase tudo na partida do Python.
 
 ## O que se perde
 
@@ -161,8 +166,9 @@ partida do Python.
 - **Uma tabela monitorada.** O SLA fala de `fato_infra_escola_ano`. As outras
   tabelas da Gold saem do mesmo retrato e herdam o mesmo frescor, mas não há
   medição separada para elas.
-- **Vistoria sem item não conta.** Ela não entra na Gold, então não é pendente. Se
-  um dia a Gold passar a mostrar vistorias sem item, a consulta precisa mudar.
+- **A consulta segue a forma dos fatos.** Ela sabe que o fato fino só tem
+  vistorias com item e que o fato anual forma uma linha por escola e ano. Se a
+  Gold mudar a regra de formação das linhas, a consulta das pendentes muda junto.
 - **O frescor depende de `registrado_em`.** Se a fonte de eventos da Gold mudar
   (issue #45), a consulta das pendentes muda junto.
 
@@ -180,3 +186,4 @@ partida do Python.
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Frescor da Gold, SLA de 25 h, registro e demonstração da violação | [Gabriel Lopes de Amorim](https://github.com/BrzGab) |  | 2 de novembro de 2026 |
+| 1.1 | Conta como pendente a vistoria sem item de escola e ano que faltam no fato anual | [Gabriel Lopes de Amorim](https://github.com/BrzGab) | [Pedro Sanchez](https://github.com/PedroDev-sketch) | 4 de novembro de 2026 |

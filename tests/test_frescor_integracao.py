@@ -7,7 +7,7 @@ desenvolvimento.
 
 import os
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import psycopg
 import pytest
@@ -49,6 +49,18 @@ def inserir_vistoria(dsn: str) -> None:
     time.sleep(0.05)  # o frescor da vistoria recém-inserida fica acima de um SLA zero
 
 
+def inserir_vistoria_sem_item(dsn: str, ocorrido_em: datetime) -> None:
+    with psycopg.connect(dsn) as conexao:
+        tecnico = vistorias_de_teste.garantir_tecnico(conexao, MATRICULA)
+        conexao.execute(
+            """
+            insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, observacao)
+            select min(co_entidade), %s, 'vistoria_presencial', %s, %s from escola
+            """,
+            (tecnico, ocorrido_em, OBSERVACAO),
+        )
+
+
 def ultima_medicao(dsn: str) -> tuple:
     with psycopg.connect(dsn) as conexao:
         return conexao.execute(
@@ -82,6 +94,24 @@ def test_vistoria_nova_fica_pendente_ate_a_proxima_construcao(dsn):
     assert depois.frescor > timedelta(0)
     assert not depois.dentro_do_sla
     assert ultima_medicao(dsn)[-1] is False
+
+
+def test_vistoria_sem_item_de_ano_que_falta_no_fato_anual_fica_pendente(dsn):
+    antes = frescor.medir(dsn, SLA_LONGO, comando="teste")
+
+    # Nenhuma vistoria da origem é de 2019: a escola ganha uma linha nova no fato anual.
+    inserir_vistoria_sem_item(dsn, datetime(2019, 6, 1, tzinfo=timezone.utc))
+
+    assert frescor.medir(dsn, SLA_LONGO, comando="teste").vistorias_pendentes == antes.vistorias_pendentes + 1
+
+
+def test_vistoria_sem_item_de_ano_que_o_fato_anual_ja_tem_nao_conta(dsn):
+    antes = frescor.medir(dsn, SLA_LONGO, comando="teste")
+
+    # A escola já tem a linha de 2024 no fato anual, da carga do Censo: nada muda na Gold.
+    inserir_vistoria_sem_item(dsn, datetime(2024, 6, 1, tzinfo=timezone.utc))
+
+    assert frescor.medir(dsn, SLA_LONGO, comando="teste").vistorias_pendentes == antes.vistorias_pendentes
 
 
 def test_medir_frescor_falha_quando_o_sla_e_violado(dsn):

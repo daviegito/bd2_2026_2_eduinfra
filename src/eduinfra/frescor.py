@@ -44,14 +44,26 @@ CRIAR_REGISTRO = [
     """,
 ]
 
-# Os dois fatos saem do mesmo retrato da origem, na mesma transação: a vistoria que falta
-# no fato fino também falta no perfil anual que o painel lê. Vistoria sem item não entra
-# na Gold e por isso não conta como pendente.
+# Os dois fatos saem do mesmo retrato da origem, na mesma transação. Uma vistoria está
+# pendente se ainda pode mudar a Gold: os itens dela faltam no fato fino, ou a escola e o
+# ano dela faltam no fato anual, que forma os anos a partir de todas as vistorias, com
+# item ou sem. Vistoria sem item num ano que o fato anual já tem não muda nada.
 CONSULTA_PENDENTES = """
-    select count(*), min(v.registrado_em)
-    from public.vistoria v
-    where exists (select 1 from public.vistoria_item vi where vi.vistoria_id = v.id)
-      and not exists (select 1 from gold.fato_vistoria_item f where f.vistoria_id = v.id)
+    select count(*), min(registrado_em)
+    from (
+        select v.id, v.registrado_em
+        from public.vistoria v
+        where exists (select 1 from public.vistoria_item vi where vi.vistoria_id = v.id)
+          and not exists (select 1 from gold.fato_vistoria_item f where f.vistoria_id = v.id)
+        union  -- com "or" num where só, a consulta levou 1,8 s; com union, 0,75 s
+        select v.id, v.registrado_em
+        from public.vistoria v
+        where not exists (
+            select 1 from gold.fato_infra_escola_ano a
+            where a.co_entidade = v.co_entidade
+              and a.ano = extract(year from v.ocorrido_em at time zone 'UTC')::int
+        )
+    ) pendentes
 """
 
 
