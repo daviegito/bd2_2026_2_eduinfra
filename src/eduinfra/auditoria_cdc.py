@@ -14,7 +14,7 @@ import duckdb
 import psycopg
 import pyarrow as pa
 
-from eduinfra import cdc, contrato_cdc, eventos, fila_de_erros, fluxo_cdc, telemetria_cdc
+from eduinfra import cdc, contrato_cdc, eventos, fila_de_erros, fluxo_cdc, recuperacao_cdc, telemetria_cdc
 from eduinfra.configuracao import Configuracao
 from eduinfra.contrato_cdc import TABELA_DE_ITENS, Desvio
 from eduinfra.pgoutput import OPERACAO_DELETE, OPERACAO_INSERT, OPERACAO_TRUNCATE, OPERACAO_UPDATE, Transacao
@@ -69,10 +69,11 @@ class SaldoDaOperacao:
     aplicadas: int
     na_fila: int
     pendentes: int
+    tratadas: int = 0
 
     @property
     def ja_estavam_no_delta(self) -> int:
-        return self.lidas_do_wal - self.aplicadas - self.na_fila
+        return self.lidas_do_wal - self.aplicadas - self.na_fila - (self.tratadas if self.operacao != OPERACAO_INSERT else 0)
 
 
 @dataclass(frozen=True)
@@ -88,10 +89,18 @@ class Auditoria:
     frescor_s: float | None
     sla_de_frescor_s: float
     slot: cdc.EstadoDoSlot
+    desvios_tratados: int = 0
+    ocorrencias_tratadas: int = 0
+    chaves_com_estado_aceito: int = 0
 
 
 def auditar(configuracao: Configuracao, slot: str = cdc.SLOT_PADRAO, sla_de_frescor_s: float = SLA_DE_FRESCOR_S) -> Auditoria:
-    fila = fila_de_erros.ler(configuracao)
+    historico = fila_de_erros.ler(configuracao)
+    ativos, chaves_aceitas = recuperacao_cdc.tratamentos_ativos(configuracao, historico)
+    fila = pa.Table.from_pylist(
+        [e for e in historico.to_pylist() if recuperacao_cdc.identidade(e) not in ativos], schema=fila_de_erros.ESQUEMA)
+    tratadas = pa.Table.from_pylist(
+        [e for e in historico.to_pylist() if recuperacao_cdc.identidade(e) in ativos], schema=fila_de_erros.ESQUEMA)
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
         estado_do_slot = cdc.estado_do_slot(conexao, slot)
         analitico = duckdb.connect()
@@ -101,7 +110,7 @@ def auditar(configuracao: Configuracao, slot: str = cdc.SLOT_PADRAO, sla_de_fres
             # consumidor entrega no meio da auditoria não aparece como perdida.
             _fotografar_origem(analitico)
             pendencias = _ler_pendencias(conexao, slot, estado_do_slot)
-            linhas = _comparar(analitico, conexao, configuracao, pendencias, fila)
+            linhas = _comparar(analitico, conexao, configuracao, pendencias, fila, chaves_aceitas)
             telemetria = telemetria_cdc.ler_telemetria(configuracao)
             aplicadas = _contar_aplicadas(analitico, configuracao, telemetria)
         finally:
@@ -111,9 +120,10 @@ def auditar(configuracao: Configuracao, slot: str = cdc.SLOT_PADRAO, sla_de_fres
         agora = telemetria_cdc.agora(conexao)
         desvios = contrato_cdc.desvios_no_catalogo(conexao)
 
+    saldo = calcular_saldo(telemetria, aplicadas, fila, pendencias, tratadas)
     return Auditoria(
         linhas=linhas,
-        saldo=calcular_saldo(telemetria, aplicadas, fila, pendencias),
+        saldo=saldo,
         ordem=telemetria_cdc.resumir_ordem(telemetria),
         latencias=resumir_latencias(telemetria),
         desvios_no_catalogo=desvios,
@@ -123,6 +133,9 @@ def auditar(configuracao: Configuracao, slot: str = cdc.SLOT_PADRAO, sla_de_fres
         frescor_s=None if drenado_em is None else (agora - drenado_em).total_seconds(),
         sla_de_frescor_s=sla_de_frescor_s,
         slot=estado_do_slot,
+        desvios_tratados=sum(s.tratadas for s in saldo if s.operacao != OPERACAO_INSERT),
+        ocorrencias_tratadas=len(ativos),
+        chaves_com_estado_aceito=len(chaves_aceitas),
     )
 
 
@@ -173,6 +186,7 @@ def _comparar(
     configuracao: Configuracao,
     pendencias: list[Transacao],
     fila: pa.Table,
+    chaves_aceitas: set[tuple] | None = None,
 ) -> ComparacaoDeLinhas:
     destino = _delta_scan(configuracao)
     analitico.execute(
@@ -191,6 +205,15 @@ def _comparar(
             using (vistoria_id, item_codigo)
         """
     )
+    aceitas = pa.Table.from_pylist(
+        [{"vistoria_id": id, "item_codigo": item} for id, item in sorted(chaves_aceitas or set())],
+        schema=ESQUEMA_DAS_PENDENCIAS)
+    analitico.register("chaves_tratadas", aceitas)
+    # Só o estado exato revisado pode deixar de disparar; o histórico segue nos recibos.
+    analitico.execute("""
+        delete from comparacao where (vistoria_id, item_codigo) in
+        (select vistoria_id, item_codigo from chaves_tratadas)
+    """)
     pendentes = _chaves_pendentes(pendencias)
     na_fila = fila.select(["vistoria_id", "item_codigo", "operacao"])
     analitico.register("chaves_pendentes", pendentes)
@@ -263,9 +286,22 @@ def _contar_aplicadas(analitico: duckdb.DuckDBPyConnection, configuracao: Config
     return analitico.execute(f"select count(*) from {_delta_scan(configuracao)} where lsn_origem >= {lsn_inicial}").fetchone()[0]
 
 
-def calcular_saldo(telemetria: list[dict], aplicadas: int, fila: pa.Table, pendencias: list[Transacao]) -> list[SaldoDaOperacao]:
+def calcular_saldo(telemetria: list[dict], aplicadas: int, fila: pa.Table, pendencias: list[Transacao], tratadas: pa.Table | None = None) -> list[SaldoDaOperacao]:
     por_lsn = {linha["lsn_fim"]: linha for linha in telemetria}
     na_fila = Counter(fila.column("operacao").to_pylist())
+    recibos = [] if tratadas is None else tratadas.to_pylist()
+    tratadas_por_operacao = Counter(e["operacao"] for e in recibos)
+    pendentes_por_lsn = Counter((e["lsn_origem"], e["operacao"]) for e in fila.to_pylist())
+    recibos_por_lsn = Counter((e["lsn_origem"], e["operacao"]) for e in recibos)
+    # Duas alterações da mesma chave na mesma transação ocupam uma única entrada
+    # na DLQ. Só quita toda a contagem se todas as entradas daquele LSN/operação foram tratadas.
+    for operacao, coluna in OPERACOES_DO_SALDO:
+        if operacao != OPERACAO_INSERT:
+            tratadas_por_operacao[operacao] = sum(
+                por_lsn.get(lsn, {}).get(coluna, 0) if not pendentes_por_lsn[(lsn, op)]
+                else min(quantidade, por_lsn.get(lsn, {}).get(coluna, 0))
+                for (lsn, op), quantidade in recibos_por_lsn.items() if op == operacao
+            )
     pendentes = _contar_pendencias(pendencias)
 
     return [
@@ -275,6 +311,7 @@ def calcular_saldo(telemetria: list[dict], aplicadas: int, fila: pa.Table, pende
             aplicadas=aplicadas if operacao == OPERACAO_INSERT else 0,
             na_fila=na_fila[operacao],
             pendentes=pendentes[operacao],
+            tratadas=tratadas_por_operacao[operacao],
         )
         for operacao, coluna in OPERACOES_DO_SALDO
     ]
@@ -313,11 +350,13 @@ def violacoes(auditoria: Auditoria) -> list[str]:
     linhas = auditoria.linhas
     diferentes = linhas.diferentes_sem_lsn + linhas.diferentes_com_lsn
     desvios_do_insert_only = sum(saldo.lidas_do_wal + saldo.pendentes for saldo in auditoria.saldo if saldo.operacao != OPERACAO_INSERT)
+    desvios_do_insert_only = max(0, desvios_do_insert_only - auditoria.desvios_tratados)
+    pendencias_na_fila = max(linhas.na_fila, sum(auditoria.fila_por_motivo.values()))
     candidatas = (
         (diferentes, f"{diferentes} linhas com conteúdo diferente entre a origem e o Delta"),
         (linhas.sem_explicacao, f"{linhas.sem_explicacao} linhas da origem fora do Delta, do slot e da fila de erros"),
         (linhas.so_no_delta, f"{linhas.so_no_delta} linhas no Delta que não existem mais na origem"),
-        (linhas.na_fila, f"{linhas.na_fila} itens parados na fila de erros"),
+        (pendencias_na_fila, f"{pendencias_na_fila} ocorrências pendentes na fila de erros"),
         (desvios_do_insert_only, f"{desvios_do_insert_only} alterações desviaram do insert-only"),
         (auditoria.ordem.inversoes_de_lsn, f"{auditoria.ordem.inversoes_de_lsn} transações chegaram com LSN invertido"),
         (len(auditoria.desvios_no_catalogo), f"esquema fora do contrato: {', '.join(map(str, auditoria.desvios_no_catalogo))}"),
@@ -344,6 +383,7 @@ def formatar(auditoria: Auditoria) -> str:
         "## Consistência",
         "",
         *_formatar_checksum(auditoria.linhas),
+        f"Chaves com estado divergente explicitamente aceito, fora das contagens acima: {auditoria.chaves_com_estado_aceito}.",
         "",
         *_formatar_saldo(auditoria.saldo),
         "",
@@ -394,11 +434,11 @@ def _formatar_saldo(saldo: list[SaldoDaOperacao]) -> list[str]:
     saida = [
         "Contagem por operação, desde que a telemetria começou:",
         "",
-        "| Operação | Lidas do WAL | Aplicadas no Delta | Na fila de erros | Já estavam no Delta | Pendentes no slot |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Operação | Lidas do WAL | Aplicadas no Delta | Na fila de erros | Já estavam no Delta | Pendentes no slot | Tratadas |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     saida += [
-        f"| {s.operacao} | {s.lidas_do_wal} | {s.aplicadas} | {s.na_fila} | {s.ja_estavam_no_delta} | {s.pendentes} |" for s in saldo
+        f"| {s.operacao} | {s.lidas_do_wal} | {s.aplicadas} | {s.na_fila} | {s.ja_estavam_no_delta} | {s.pendentes} | {s.tratadas} |" for s in saldo
     ]
 
     return saida
@@ -443,6 +483,7 @@ def _formatar_resiliencia(auditoria: Auditoria) -> list[str]:
     return [
         f"Desvios de esquema agora no catálogo: {catalogo}.",
         f"Desvios de esquema vistos no WAL: {vistos}.",
-        f"Fila de erros: {sum(auditoria.fila_por_motivo.values())} linhas ({fila}).",
+        f"Fila de erros pendente: {sum(auditoria.fila_por_motivo.values())} linhas ({fila}).",
+        f"Ocorrências com tratamento válido: {auditoria.ocorrencias_tratadas} (histórico preservado).",
         f"Slot: {auditoria.slot.situacao_do_wal or 'inexistente'}, {auditoria.slot.atraso_em_bytes} bytes por entregar.",
     ]

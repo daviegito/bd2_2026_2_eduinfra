@@ -320,3 +320,19 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
+
+
+### 2026-11-08 — Recuperação da fila de erros do CDC (issue #58)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** `recuperacao_cdc.py`, CLI, auditoria, testes de recuperação e evidências
+  da issue #58, métricas do CDC e ADR 0007.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite da #58,
+  preservando os PRs abertos e o trabalho da #48, com aprovação prévia dos dez arquivos.
+- **O que foi aproveitado:** reprocessamento pela chave, recibos separados da DLQ,
+  aceite explícito por LSN/chave e estado revisado, teste de reentrega e medição
+  comparativa com a leitura completa sobre cópia nacional descartável.
+- **Como foi verificado:** PostgreSQL e Delta descartáveis; resultados e limites
+  em `docs/evidencias/issue-58/reprocessamento.md`.
+- **Quem revisou:** Pedro aprovou o escopo; revisão de código pendente. O PR deve
+  permanecer Draft até a integração dos PRs #61, #65, #66 e #67 e nova autorização.

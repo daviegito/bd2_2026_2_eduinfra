@@ -87,13 +87,42 @@ Escolhemos B, com estas regras:
 **O que perdemos:**
 
 - Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar `auditar-cdc`, porque além dela só o log avisa.
-- Não há reprocessamento automático. `publicar-analitico --forcar` relê a origem inteira, aceita `-infinity` e cria uma partição com esse nome.
+- A recuperação não é automática. A #58 adiciona reprocessamento pela chave para itens rejeitados, com recibos; dados ainda inválidos permanecem pendentes. A validação preventiva de datas está na #57 (PR #67).
 - `contrato_cdc.py` precisa mudar junto com toda migração de `vistoria` ou `vistoria_item`. Se o autor esquecer, a auditoria acusa desvio.
-- Um desvio do insert-only fica como violação para sempre, porque a auditoria não o marca como tratado.
+- O operador pode aceitar um desvio pela ocorrência exata, registrando o estado revisado; a auditoria mantém o histórico e volta a alertar para novas ocorrências ou mudanças não aceitas.
 
 **Riscos assumidos:** a validação da origem continua aberta. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
 
 **O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
+
+## Revisão da recuperação — issue #58
+
+`reprocessar-fila-cdc` consulta somente os itens rejeitados pela chave na origem.
+O merge continua insert-only no destino: não sobrescreve uma linha divergente e
+só registra sucesso após conferir o conteúdo gravado. Uma falha antes do recibo
+permite nova tentativa sem duplicação.
+
+Os recibos ficam em `tratamentos_cdc`, separados da fila e da telemetria. A
+identidade é `(lsn_origem, chave)`; o primeiro autor, motivo e instante são
+preservados. O responsável usa um identificador operacional numérico, sem
+nome/e-mail; o motivo vem de uma lista fixa. As impressões e chaves revisadas
+incluem apenas os campos analíticos, sem técnico ou observação.
+
+`tratar-desvio-cdc` exige seleção exata de UPDATE, DELETE ou TRUNCATE e aceite
+explícito do estado divergente. O checksum só dispensa as chaves cujo estado
+continua igual ao revisado. A contagem de operações conserva o histórico e
+separa tratamentos de pendências. Nova ocorrência, mesmo com a mesma chave,
+continua sendo uma violação até seu próprio tratamento. Recibos não suprimem
+frescor, problemas de slot ou desvios atuais do catálogo.
+
+Não há exclusão da DLQ, alteração da origem, propagação automática de UPDATE/
+DELETE ao Delta nem encerramento manual de um INSERT que ainda não foi
+recuperado. TRUNCATE pode exigir comparação ampla; os recibos e seu conjunto
+de chaves também crescem com o escopo revisado. A identidade operacional é
+declarada pelo executor e não substitui controle de acesso.
+
+[Procedimento](../metricas-cdc.md#recuperacao-e-tratamento-da-fila-issue-58) e
+[evidências da #58](../evidencias/issue-58/reprocessamento.md).
 
 ## Gatilho de revisão
 
@@ -114,3 +143,5 @@ Escolhemos B, com estas regras:
 | --- | --- | --- | --- | --- |
 | 1.0 | Telemetria, fila de erros, publicação e checksum do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.1 | Inclui padrões de acesso, riscos assumidos e evidências brutas; reduz o texto | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
+
+| 1.2 | Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 8 de novembro de 2026 |

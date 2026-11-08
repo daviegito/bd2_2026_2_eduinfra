@@ -21,6 +21,7 @@ from eduinfra import (
     frescor,
     janelas,
     modelo_analitico,
+    recuperacao_cdc,
 )
 from eduinfra.ingestao import ingerir
 from eduinfra.configuracao import Configuracao, carregar_configuracao
@@ -35,7 +36,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
-                                           "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
+                                           "reprocessar-fila-cdc", "tratar-desvio-cdc", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
@@ -47,6 +48,10 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--sla-horas", type=float, default=frescor.SLA_PADRAO.total_seconds() / 3600, help="em medir-frescor, SLA de frescor da Gold em horas (padrão 25)")
+    parser.add_argument("--responsavel", help="identificador operacional sem nome/e-mail: operador-01")
+    parser.add_argument("--motivo", choices=recuperacao_cdc.MOTIVOS, help="motivo padronizado do tratamento")
+    parser.add_argument("--lsn", type=int, help="LSN decimal da ocorrência na fila; exige --chave")
+    parser.add_argument("--chave", help="chave exata da ocorrência na fila; exige --lsn")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -56,6 +61,19 @@ def main(argumentos: list[str] | None = None) -> int:
     )
 
     configuracao = carregar_configuracao()
+
+    if opcoes.comando in ("reprocessar-fila-cdc", "tratar-desvio-cdc"):
+        try:
+            if opcoes.comando == "reprocessar-fila-cdc":
+                resultado = recuperacao_cdc.reprocessar(configuracao, opcoes.responsavel, opcoes.motivo, opcoes.lsn, opcoes.chave)
+                print(resultado)
+                return 1 if resultado.pendentes else 0
+            novo = recuperacao_cdc.tratar_desvio(configuracao, opcoes.responsavel, opcoes.motivo, opcoes.lsn, opcoes.chave)
+            print("Tratamento registrado." if novo else "A ocorrência já possui um recibo de tratamento.")
+            return 0
+        except ValueError as erro:
+            log.error("%s", erro)
+            return 1
 
     if opcoes.comando == "reverter":
         command.downgrade(_alembic(configuracao), opcoes.revisao)
