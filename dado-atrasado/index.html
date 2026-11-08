@@ -1794,7 +1794,9 @@ commit. Uma transação longa pode confirmar depois da execução, com
 <code>registrado_em</code> anterior à marca, e escaparia. Por isso cada execução também
 relê os 10 minutos anteriores à marca (<code>MARGEM_DA_MARCA</code>). Para a margem não
 regravar janelas à toa, só conta como novo o evento cujo <code>vistoria_id</code> ainda não
-está na partição do seu mês.</p>
+está na partição do seu mês. Vistoria sem item não gera evento: ela fica de fora
+das candidatas, senão voltaria como nova a cada execução enquanto estivesse na
+margem.</p>
 <h2 id="onde-ficam-os-dados">Onde ficam os dados<a class="headerlink" href="#onde-ficam-os-dados" title="Permanent link">&para;</a></h2>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dados/analitico/eventos_vistoria/
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  _controle.json                    marca d'água, impressão de cada janela, reaberturas
