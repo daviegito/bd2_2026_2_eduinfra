@@ -1,20 +1,24 @@
 import argparse
 import logging
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
 
 from eduinfra import (
+    auditoria_cdc,
     camada_analitica,
     caracterizacao,
     comparacao_compressao,
     comparacao_ingestao,
+    comparacao_latencia,
     comparacao_modelagem,
     comparacao_particionamento,
     demonstracao_cdc,
     fluxo_cdc,
+    frescor,
     janelas,
     modelo_analitico,
 )
@@ -30,8 +34,10 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
-                                           "publicar-analitica", "comparar-particionamento", "construir-gold", "comparar-granularidades"))
-    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao e comparar-particionamento")
+                                           "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
+                                           "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
+    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
+    parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
@@ -40,6 +46,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
     parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
+    parser.add_argument("--sla-horas", type=float, default=frescor.SLA_PADRAO.total_seconds() / 3600, help="em medir-frescor, SLA de frescor da Gold em horas (padrão 25)")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -58,31 +65,42 @@ def main(argumentos: list[str] | None = None) -> int:
         return _executar_analitico(opcoes, configuracao)
 
     if opcoes.comando == "construir-gold":
-            resumo = modelo_analitico.construir(configuracao.dsn)
-            for tabela, linhas in resumo.linhas.items():
-                log.info("gold.%s: %d linhas", tabela, linhas)
+        resumo = modelo_analitico.construir(configuracao.dsn)
+        for tabela, linhas in resumo.linhas.items():
+            log.info("gold.%s: %d linhas", tabela, linhas)
+        # Cada construção registra o frescor; a violação só reprova em medir-frescor.
+        frescor.medir(configuracao.dsn, comando="construir-gold")
 
-            log.info("Iniciando auditoria E3 automática...")
-            import unittest
-            import sys
+        log.info("Iniciando auditoria E3 automática...")
+        import unittest
+        import sys
 
-            # Garante que a raiz do container e o diretório atual estejam no sys.path
-            caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
-            for caminho in caminhos_busca:
-                if caminho not in sys.path:
-                    sys.path.insert(0, caminho)
+        # Garante que a raiz do container e o diretório atual estejam no sys.path
+        caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
+        for caminho in caminhos_busca:
+            if caminho not in sys.path:
+                sys.path.insert(0, caminho)
 
-            loader = unittest.TestLoader()
-            suite = loader.loadTestsFromName("tests.test_e3_gold")
-            runner = unittest.TextTestRunner(verbosity=2)
-            resultado = runner.run(suite)
+        loader = unittest.TestLoader()
+        suite = loader.loadTestsFromName("tests.test_e3_gold")
+        runner = unittest.TextTestRunner(verbosity=2)
+        resultado = runner.run(suite)
 
-            if not resultado.wasSuccessful():
-                log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
-                return 1
+        if not resultado.wasSuccessful():
+            log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
+            return 1
 
-            log.info("Auditoria E3 concluída com sucesso!")
-            return 0
+        log.info("Auditoria E3 concluída com sucesso!")
+        return 0
+
+    if opcoes.comando == "medir-frescor":
+        medicao = frescor.medir(configuracao.dsn, timedelta(hours=opcoes.sla_horas))
+        print(frescor.resumo(medicao))
+        return 0 if medicao.dentro_do_sla else 1
+
+    if opcoes.comando == "demonstrar-frescor":
+        print(frescor.demonstrar(configuracao.dsn))
+        return 0
 
     if opcoes.comando == "comparar-granularidades":
         texto = modelo_analitico.formatar_markdown(
@@ -170,7 +188,7 @@ def main(argumentos: list[str] | None = None) -> int:
     return 0
 
 
-COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao")
+COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
 
 ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
 
@@ -184,11 +202,26 @@ def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) 
         print(fluxo_cdc.passar_uma_vez(configuracao))
     elif opcoes.comando == "demonstrar-cdc":
         print(demonstracao_cdc.demonstrar(configuracao))
+    elif opcoes.comando == "medir-cdc":
+        print(comparacao_latencia.formatar_cdc(comparacao_latencia.medir_cdc(configuracao, opcoes.repeticoes)))
+        print(comparacao_latencia.formatar_ordem(comparacao_latencia.medir_ordem(configuracao, opcoes.repeticoes)))
+        return _auditar(configuracao, opcoes.sla_frescor)
+    elif opcoes.comando == "auditar-cdc":
+        return _auditar(configuracao, opcoes.sla_frescor)
+    elif opcoes.comando == "medir-recarga":
+        print(comparacao_latencia.formatar_recarga(comparacao_latencia.medir_recarga(configuracao, opcoes.repeticoes)))
     else:
         capturas, ociosa = comparacao_ingestao.medir(configuracao)
         print(comparacao_ingestao.formatar_markdown(capturas, ociosa))
 
     return 0
+
+
+def _auditar(configuracao: Configuracao, sla_de_frescor_s: float) -> int:
+    auditoria = auditoria_cdc.auditar(configuracao, sla_de_frescor_s=sla_de_frescor_s)
+    print(auditoria_cdc.formatar(auditoria))
+
+    return 1 if auditoria_cdc.violacoes(auditoria) else 0
 
 
 def _publicar_linha_de_base(configuracao: Configuracao, forcar: bool) -> None:

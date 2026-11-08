@@ -82,7 +82,7 @@ embeddings, cache e assistente ainda não estão implementados.
 | Caminho | Entrada | Destino | Garantia e limite |
 | --- | --- | --- | --- |
 | Lote do Censo | Arquivo anual identificado por SHA-256 | Origem PostgreSQL e Silver em Parquet | Reexecução idempotente; publicação dos arquivos ocorre após o commit no banco |
-| CDC | Inserções em `vistoria` e `vistoria_item` | `warehouse/eventos_vistoria`, em Delta | Confirma o LSN após gravar; reentrega com efeito idempotente |
+| CDC | Inserções em `vistoria` e `vistoria_item` | `warehouse/eventos_vistoria`, em Delta; `warehouse/fila_de_erros_cdc` e `warehouse/telemetria_cdc` para o que não converte e para a [medição](metricas-cdc.md) | Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo |
 | Publicação analítica | Tabelas Parquet da Silver | `warehouse/vistoria_item`, em Delta | Substitui os dados do ano; não recebe automaticamente os eventos do CDC |
 | Janelas mensais | Vistorias da origem | `analitico/eventos_vistoria`, em Parquet | Organiza por mês de ocorrência e permite reprocessamento |
 
