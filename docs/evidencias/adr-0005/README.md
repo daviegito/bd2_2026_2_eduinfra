@@ -5,7 +5,7 @@ A mesma Gold do PR #55 em três alternativas, sobre um recorte real do Censo 202
 
 | Arquivo | O que é |
 | --- | --- |
-| `preparar_amostra.sh` | cria o banco `eduinfra_adr0005` com as escolas de SP e do Centro-Oeste (41.380 escolas, 703.936 itens) |
+| `preparar_amostra.sh` | cria o banco `eduinfra_adr0005` com as escolas de SP e do Centro-Oeste (41.380 escolas, 703.460 itens do Censo, mais as vistorias de teste que o banco tiver) |
 | `dbt/` | projeto dbt: os 7 modelos, as fontes e os 12 testes |
 | `sqlmesh/` | projeto SQLMesh: os 7 modelos com audits, o audit de relacionamento e o macro de índice |
 | `medir.sh` | reconstrói a Gold com cada alternativa, 3 vezes, e imprime o tempo de cada execução |

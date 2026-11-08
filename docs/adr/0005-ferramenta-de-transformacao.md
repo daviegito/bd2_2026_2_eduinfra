@@ -43,10 +43,11 @@ mudanças e backfill por intervalo nativos. Reescreve o SQL pelo sqlglot antes d
 
 A Gold do PR #55 foi montada nas três alternativas, com o **mesmo SQL** (os modelos do
 dbt e do SQLMesh foram gerados das constantes de `modelo_analitico.py`), e com os mesmos
-12 testes nas duas ferramentas. O dado é um recorte real do Censo 2024: as escolas de SP
-e do Centro-Oeste, com 41.380 escolas e 703.936 itens (23% do total). O recorte foi
-necessário porque a máquina tinha 1,6 GB livres, e três cópias da Gold completa não
-cabiam.
+12 testes nas duas ferramentas. O dado é um recorte real do Censo 2024: as 41.380
+escolas de SP e do Centro-Oeste (23% do total), com 703.460 itens do Censo. O banco da
+medição tinha também 29 vistorias de teste nessas escolas, de demonstrações anteriores
+(28 com itens, 476 no total): o fato fino medido tem 703.936 linhas. O recorte foi necessário porque a
+máquina tinha 1,6 GB livres, e três cópias da Gold completa não cabiam.
 
 Como reproduzir, da raiz do repositório, com o banco no ar e a origem carregada:
 
@@ -60,6 +61,9 @@ bash docs/evidencias/adr-0005/comparar_resultados.sh gold gold_sqlmesh
 Resultados em 03/11/2026, PostgreSQL 16 em Docker, Linux com 8 CPUs, dbt-core 1.12.6 com
 dbt-postgres 1.11.0 e SQLMesh 0.236.4. Os tempos são da rodada 3 de
 [resultados.txt](../evidencias/adr-0005/resultados.txt), com as três em sequência.
+
+A comparação foi reproduzida por outro integrante (Davi, no PR #64), num banco só com o
+Censo: o fato fino teve 703.460 linhas, e as Golds do dbt e da opção nula saíram iguais.
 
 | Critério | A — opção nula | B — dbt | C — SQLMesh |
 | --- | --- | --- | --- |

@@ -1,4 +1,4 @@
-# Saídas brutas de medir.sh, 03/11/2026, recorte SP + Centro-Oeste (41.380 escolas, 703.936 itens)
+# Saídas brutas de medir.sh, 03/11/2026, recorte SP + Centro-Oeste (41.380 escolas, 703.460 itens do Censo + 476 de 28 vistorias de teste)
 # PostgreSQL 16 em Docker, Linux, 8 CPUs; dbt-core 1.12.6 + dbt-postgres 1.11.0; SQLMesh 0.236.4
 
 ## Rodada 1 (load average ~4; SQLMesh ainda com CREATE INDEX sem nome nas pós-instruções)
