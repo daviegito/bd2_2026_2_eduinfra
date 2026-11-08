@@ -320,3 +320,19 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
+
+
+### 2026-11-08 — Validação de datas de vistoria (issue #57)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** migração 0008, leitura da origem em `eventos.py`, testes de datas e
+  de resiliência, métricas do CDC, ADR 0007 e evidências da issue #57.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite, com aprovação
+  prévia dos oito arquivos e das regras de datas.
+- **O que foi aproveitado:** validação técnica de datas finitas nos anos 1 a 9999
+  em UTC, sem corte arbitrário por ano do Censo; diagnóstico do legado sem alterar
+  o histórico e rejeição da publicação completa antes de escrever no Delta.
+- **Como foi verificado:** testes de integração em PostgreSQL descartável, migração
+  sobre cópia populada e comparação integral do histórico; resultados registrados
+  em `docs/evidencias/issue-57/validacao-datas.md`.
+- **Quem revisou:** Pedro aprovou o escopo e as regras; revisão do código pendente.

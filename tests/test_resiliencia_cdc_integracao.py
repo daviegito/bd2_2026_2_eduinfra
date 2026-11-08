@@ -90,6 +90,8 @@ def _inserir(conexao) -> int:
 
 
 def _inserir_com_ocorrido(conexao, expressao: str) -> int:
+    # Simula uma origem legada apenas neste banco descartável: a 0008 impede esses INSERTs.
+    conexao.execute("alter table vistoria drop constraint if exists vistoria_ocorrido_em_representavel")
     tecnico = conexao.execute(
         "insert into tecnico (matricula, nome, lotacao_uf) values (%s, 'Técnico', 'DF') "
         "on conflict (matricula) do update set lotacao_uf = 'DF' returning id",
@@ -130,6 +132,7 @@ def test_publicacao_entrega_as_quatro_operacoes_mesmo_vinda_da_versao_so_com_ins
     conexao.execute("alter publication eduinfra_cdc set (publish = 'insert')")
     monkeypatch.setenv("DATABASE_URL", configuracao.dsn)
     alembic = Config(str(configuracao.arquivo_alembic))
+    command.downgrade(alembic, "0007")
     command.stamp(alembic, "0006")
 
     command.upgrade(alembic, "head")

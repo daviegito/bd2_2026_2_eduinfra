@@ -109,9 +109,32 @@ def ler_da_origem(configuracao: Configuracao) -> pa.Table:
     conexao = duckdb.connect()
     try:
         conexao.execute("install postgres; load postgres;")
+        conexao.execute("set TimeZone = 'UTC'")
         dsn = configuracao.dsn.replace("'", "''")
         conexao.execute(f"attach '{dsn}' as origem (type postgres, read_only)")
-        return conexao.execute(LINHA_DE_BASE).arrow().read_all()
+        # Mantém validação e exportação no mesmo snapshot da origem.
+        conexao.execute("begin transaction")
+        invalidas = conexao.execute("""
+            select * from postgres_query('origem', '
+                select id, (ocorrido_em at time zone ''UTC'')::text as ocorrido_em,
+                       count(*) over () as total
+                from public.vistoria
+                where not (isfinite(ocorrido_em)
+                    and ocorrido_em >= timestamptz ''0001-01-01 00:00:00+00''
+                    and ocorrido_em < timestamptz ''10000-01-01 00:00:00+00'')
+                order by id limit 10
+            ')
+        """).fetchall()
+        if invalidas:
+            exemplos = "; ".join(f"id={id}, ocorrido_em={data} UTC" for id, data, _ in invalidas)
+            raise RuntimeError(
+                f"Publicação analítica interrompida: {invalidas[0][2]} vistoria(s) com "
+                f"ocorrido_em fora dos anos 0001 a 9999 UTC ou não finito. Exemplos: {exemplos}. "
+                "A tabela Delta não foi alterada."
+            )
+        tabela = conexao.execute(LINHA_DE_BASE).arrow().read_all()
+        conexao.execute("commit")
+        return tabela
     finally:
         conexao.close()
 
