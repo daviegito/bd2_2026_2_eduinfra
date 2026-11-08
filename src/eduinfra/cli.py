@@ -65,7 +65,12 @@ def main(argumentos: list[str] | None = None) -> int:
         return _executar_analitico(opcoes, configuracao)
 
     if opcoes.comando == "construir-gold":
-        resumo = modelo_analitico.construir(configuracao.dsn)
+        resumo = modelo_analitico.construir(configuracao)
+        fonte = resumo.fonte
+        log.info(
+            "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",
+            fonte.versao_delta, fonte.na_fonte, fonte.na_origem, fonte.so_na_origem, fonte.so_na_fonte,
+        )
         for tabela, linhas in resumo.linhas.items():
             log.info("gold.%s: %d linhas", tabela, linhas)
         # Cada construção registra o frescor; a violação só reprova em medir-frescor.

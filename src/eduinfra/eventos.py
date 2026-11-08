@@ -1,19 +1,22 @@
-"""Tabela analítica de eventos de vistoria, em Delta Lake (ADR 0003).
+"""Fonte canônica dos eventos de vistoria, em Delta Lake (ADR 0008).
 
 A chave natural do evento é (vistoria_id, item_codigo), a chave primária de
 vistoria_item na origem. Toda escrita passa por um merge que só insere o que a
-tabela ainda não tem, então o lote e o CDC podem se sobrepor e reentregar sem
-duplicar linha. A partição é o mês de ocorrido_em, a mesma janela do
-reprocessamento de dado atrasado.
+tabela ainda não tem: a linha de base, o CDC e as janelas de dado atrasado
+gravam aqui, podem se sobrepor e reentregar sem duplicar linha. A partição é o
+mês de ocorrido_em, a janela do dado atrasado. A transformação (Gold) lê só esta
+tabela.
 """
 
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
 import duckdb
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
+from deltalake.exceptions import CommitFailedError
 
 from eduinfra.configuracao import Configuracao
 
@@ -39,6 +42,20 @@ ESQUEMA = pa.schema(
 
 COLUNAS_DA_CHAVE = ("vistoria_id", "item_codigo")
 COLUNA_DE_PARTICAO = "mes_ocorrencia"
+
+# O CDC e as janelas fazem merge na mesma tabela. Dois merges no mesmo mês entram em
+# conflito no commit; repetir é seguro, porque o merge só insere o que falta.
+TENTATIVAS_DE_GRAVACAO = 5
+ESPERA_ENTRE_GRAVACOES_S = 0.5
+
+# Impressão de um evento, igual seja qual for o caminho que o trouxe: lsn_origem fica
+# de fora, porque a origem não o conhece e ele distingue os caminhos em vez de
+# descrever o evento.
+CONTEUDO = """
+concat_ws('|', vistoria_id, item_codigo, co_entidade, sg_uf, origem, ocorrido_em::varchar,
+          registrado_em::varchar, situacao, coalesce(quantidade::varchar, 'nulo'), mes_ocorrencia)
+"""
+IMPRESSAO = f"md5_number({CONTEUDO})"
 
 LINHA_DE_BASE = """
 select v.id::bigint as vistoria_id, i.item_codigo, v.co_entidade::int as co_entidade, m.sg_uf,
@@ -82,18 +99,27 @@ def gravar_sem_duplicar(configuracao: Configuracao, eventos: pa.Table) -> Result
     if eventos.num_rows == 0:
         return ResultadoDaGravacao(0, 0)
 
-    tabela = DeltaTable(str(garantir_tabela(configuracao)))
+    caminho = garantir_tabela(configuracao)
     meses = sorted(set(eventos.column(COLUNA_DE_PARTICAO).to_pylist()))
-    metricas = (
-        tabela.merge(
-            eventos.cast(ESQUEMA),
-            predicate=_predicado(meses),
-            source_alias="novo",
-            target_alias="atual",
-        )
-        .when_not_matched_insert_all()
-        .execute()
-    )
+    for tentativa in range(1, TENTATIVAS_DE_GRAVACAO + 1):
+        try:
+            metricas = (
+                DeltaTable(str(caminho))
+                .merge(
+                    eventos.cast(ESQUEMA),
+                    predicate=_predicado(meses),
+                    source_alias="novo",
+                    target_alias="atual",
+                )
+                .when_not_matched_insert_all()
+                .execute()
+            )
+            break
+        except CommitFailedError:
+            if tentativa == TENTATIVAS_DE_GRAVACAO:
+                raise
+            log.info("merge em %s concorreu com outro escritor; nova tentativa", ", ".join(meses))
+            time.sleep(ESPERA_ENTRE_GRAVACOES_S * tentativa)
 
     return ResultadoDaGravacao(eventos.num_rows, int(metricas["num_target_rows_inserted"]))
 
@@ -105,15 +131,42 @@ def _predicado(meses: list[str]) -> str:
     return f"{chave} and atual.{COLUNA_DE_PARTICAO} in ({lista})"
 
 
-def ler_da_origem(configuracao: Configuracao) -> pa.Table:
+def ler_da_origem(configuracao: Configuracao, filtro: str | None = None) -> pa.Table:
+    """Eventos da origem no formato da tabela; filtro é SQL sobre v (vistoria) e i (item)."""
     conexao = duckdb.connect()
     try:
         conexao.execute("install postgres; load postgres;")
         dsn = configuracao.dsn.replace("'", "''")
         conexao.execute(f"attach '{dsn}' as origem (type postgres, read_only)")
-        return conexao.execute(LINHA_DE_BASE).arrow().read_all()
+        consulta = LINHA_DE_BASE + (f"where {filtro}" if filtro else "")
+        return conexao.execute(consulta).arrow().read_all().cast(ESQUEMA)
     finally:
         conexao.close()
+
+
+def ler(configuracao: Configuracao, mes: str | None = None) -> tuple[pa.Table, int]:
+    """Uma versão da tabela, e qual: quem lê duas vezes sabe se leu o mesmo retrato."""
+    tabela = DeltaTable(str(garantir_tabela(configuracao)))
+    filtro = [(COLUNA_DE_PARTICAO, "=", mes)] if mes else None
+
+    # A leitura devolve a coluna de partição no fim; a ordem do esquema vale para todos os caminhos.
+    return tabela.to_pyarrow_table(filters=filtro).select(ESQUEMA.names).cast(ESQUEMA), tabela.version()
+
+
+def impressao(eventos: pa.Table) -> str:
+    """Soma das impressões das linhas: não depende da ordem e muda se qualquer valor mudar.
+
+    Soma 64 bits do md5 por linha, e não os 128 de IMPRESSAO: a soma de md5_number vira
+    DOUBLE, que arredonda e depende da ordem; a de UBIGINT é HUGEINT, exata.
+    """
+    conexao = duckdb.connect()
+    try:
+        conexao.register("eventos", eventos)
+        total = conexao.execute(f"select coalesce(sum(md5_number_lower({CONTEUDO})), 0) from eventos").fetchone()[0]
+    finally:
+        conexao.close()
+
+    return format(int(total), "x")
 
 
 def carregar_da_origem(configuracao: Configuracao) -> ResultadoDaGravacao:

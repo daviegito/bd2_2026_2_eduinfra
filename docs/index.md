@@ -18,10 +18,12 @@ por painéis e por um assistente em linguagem natural.
 | Carga do Censo com manifesto e reexecução idempotente | Modelagem e indicadores na Gold |
 | Captura de novas vistorias pelo CDC | Painéis e assistente RAG |
 | Parquet, tabelas Delta e consultas DuckDB | Busca vetorial e cache |
-| Tratamento de eventos atrasados e medições | Integração dos caminhos analíticos |
+| Tratamento de eventos atrasados e medições | Integração dos caminhos analíticos (feita na E3, [ADR 0008](adr/0008-fonte-canonica-de-eventos.md)) |
 
-A ingestão usa lote anual para o Censo e CDC para as novas vistorias.
-Os destinos analíticos ainda coexistem; não formam uma tabela única integrada.
+A ingestão usa lote anual para o Censo e CDC para as novas vistorias. Os eventos
+de vistoria têm uma fonte única, a tabela Delta `eventos_vistoria`, completada pelo
+CDC e pelas janelas de dado atrasado e lida pela Gold
+([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)).
 O [ADR 0004](adr/0004-ingestao.md) registra as garantias e limitações e tem
 status **aceito**. O diário de bordo está atualizado até a semana 10.
 

@@ -1,23 +1,32 @@
 """Modelo dimensional da camada Gold (E3): dimensões, SCD tipo 2 e fatos de duas granularidades.
 
-Tudo é SQL sobre a origem OLTP, executado numa única transação em REPEATABLE READ
-e com o fuso da sessão fixado em UTC: todas as tabelas veem o mesmo retrato da
-origem, mesmo que uma vistoria entre no meio da construção, e o resultado não
-depende da configuração do servidor. O SQL fica em constantes de propósito, para
-poder ser movido sem mudanças para dbt ou SQLMesh quando o ADR 0005 escolher a
-ferramenta. Leem a origem: as dimensões de atributo, `stg_mudanca_item` (de onde sai
-a dimensão de variação lenta), o fato fino e os anos do fato largo. Trocar a fonte
-de eventos (issue de unificação) é mexer nesses pontos.
+Os eventos vêm de uma fonte só, a tabela Delta warehouse/eventos_vistoria (ADR 0008).
+No início da construção, uma versão dela é copiada para fonte.eventos_vistoria e
+conferida com a origem. `stg_mudanca_item` (de onde sai a dimensão de variação
+lenta), o fato fino e os anos do fato largo leem só essa cópia. As dimensões de
+atributo (item, município, escola) são cadastro, não evento, e continuam lendo o OLTP.
+
+Tudo roda numa única transação em REPEATABLE READ e com o fuso da sessão fixado em
+UTC: todas as tabelas veem o mesmo retrato, mesmo que uma vistoria entre no meio da
+construção, e o resultado não depende da configuração do servidor. O SQL fica em
+constantes de propósito, para poder ser movido sem mudanças para dbt ou SQLMesh
+quando o ADR 0005 escolher a ferramenta.
 """
 
 import logging
 import re
 import statistics
+import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 
+import duckdb
 import psycopg
+
+from eduinfra import eventos
+from eduinfra.configuracao import Configuracao
 
 log = logging.getLogger(__name__)
 
@@ -62,18 +71,58 @@ CONSULTAS_DA_DIMENSAO = [
     "create index dim_escola_por_municipio on gold.dim_escola (co_municipio)",
 ]
 
-# Staging: a única leitura da origem. Cada linha é uma MUDANÇA no estado de um item de
+# A fonte de eventos da transformação: uma versão da tabela Delta, com a mesma chave dela.
+# A chave primária é a garantia, conferida pelo banco, de que cada evento aparece uma vez.
+TABELA_DA_FONTE = "fonte.eventos_vistoria"
+
+CONSULTAS_DA_FONTE = [
+    "create schema if not exists fonte",
+    f"drop table if exists {TABELA_DA_FONTE}",
+    f"""
+    create table {TABELA_DA_FONTE} (
+        vistoria_id bigint not null,
+        item_codigo text not null,
+        co_entidade integer not null,
+        sg_uf text not null,
+        origem text not null,
+        ocorrido_em timestamptz not null,
+        registrado_em timestamptz not null,
+        situacao text not null,
+        quantidade integer,
+        mes_ocorrencia text not null,
+        lsn_origem bigint
+    )
+    """,
+]
+
+INDICES_DA_FONTE = [
+    f"alter table {TABELA_DA_FONTE} add primary key (vistoria_id, item_codigo)",
+    f"analyze {TABELA_DA_FONTE}",
+]
+
+# Eventos da origem que faltam na fonte (o CDC ainda não entregou, ou estão na fila de
+# erros) e eventos da fonte que a origem não tem, que não deveriam existir.
+CONFERENCIA_DA_FONTE = f"""
+    select (select count(*) from {TABELA_DA_FONTE}),
+           (select count(*) from public.vistoria_item),
+           (select count(*) from public.vistoria_item i
+             where not exists (select 1 from {TABELA_DA_FONTE} e
+                               where e.vistoria_id = i.vistoria_id and e.item_codigo = i.item_codigo)),
+           (select count(*) from {TABELA_DA_FONTE} e
+             where not exists (select 1 from public.vistoria_item i
+                               where i.vistoria_id = e.vistoria_id and i.item_codigo = e.item_codigo))
+"""
+
+# Staging: a única leitura de eventos. Cada linha é uma MUDANÇA no estado de um item de
 # uma escola, com o intervalo [desde, ate) em que aquele estado valeu. 'nao_informado'
 # não é estado: não cria versão nem apaga o que se sabia (mesma regra de escola_estado_atual).
 CONSULTAS_DE_STAGING = [
     """
     create temp table stg_mudanca_item on commit drop as
     with eventos as (
-        select v.co_entidade, vi.item_codigo, vi.situacao::text as situacao, vi.quantidade,
-               v.ocorrido_em as desde, v.id as vistoria_id
-        from public.vistoria v
-        join public.vistoria_item vi on vi.vistoria_id = v.id
-        where vi.situacao <> 'nao_informado'
+        select co_entidade, item_codigo, situacao, quantidade, ocorrido_em as desde, vistoria_id
+        from fonte.eventos_vistoria
+        where situacao <> 'nao_informado'
     ),
     com_inicio_de_trecho as (
         select *,
@@ -185,21 +234,20 @@ CONSULTAS_DA_SCD = [
 CONSULTAS_DO_FATO_FINO = [
     """
     create table gold.fato_vistoria_item as
-    select v.id as vistoria_id,
-           vi.item_codigo,
-           v.co_entidade,
-           v.ocorrido_em,
-           (v.ocorrido_em at time zone 'UTC')::date as data_ocorrencia,
-           v.origem,
+    select e.vistoria_id,
+           e.item_codigo,
+           e.co_entidade,
+           e.ocorrido_em,
+           (e.ocorrido_em at time zone 'UTC')::date as data_ocorrencia,
+           e.origem,
            d.escola_infra_sk,
-           vi.situacao::text as situacao,
-           vi.quantidade
-    from public.vistoria v
-    join public.vistoria_item vi on vi.vistoria_id = v.id
+           e.situacao,
+           e.quantidade
+    from fonte.eventos_vistoria e
     left join gold.dim_escola_infraestrutura d
-      on d.co_entidade = v.co_entidade
-     and d.valid_from <= v.ocorrido_em
-     and v.ocorrido_em < d.valid_to
+      on d.co_entidade = e.co_entidade
+     and d.valid_from <= e.ocorrido_em
+     and e.ocorrido_em < d.valid_to
     """,
     "alter table gold.fato_vistoria_item add primary key (vistoria_id, item_codigo)",
     "create index fato_vistoria_item_por_item on gold.fato_vistoria_item (item_codigo, situacao) include (co_entidade, data_ocorrencia, ocorrido_em)",
@@ -208,8 +256,9 @@ CONSULTAS_DO_FATO_FINO = [
 
 
 def _consultas_do_fato_largo(itens: list[str]) -> list[str]:
-    """Fato grosso. Grão: uma linha por escola, por ano civil em que houve vistoria, com o
-    perfil vigente ao fim desse ano (ou agora, no ano corrente). Um item por coluna."""
+    """Fato grosso. Grão: uma linha por escola, por ano civil em que houve evento de vistoria,
+    com o perfil vigente ao fim desse ano (ou agora, no ano corrente). Um item por coluna.
+    Vistoria sem item não é evento e não cria ano."""
     for codigo in itens:
         if not PADRAO_DE_CODIGO_DE_ITEM.fullmatch(codigo):
             raise ValueError(f"código de item inesperado no catálogo: {codigo!r}")
@@ -224,7 +273,7 @@ def _consultas_do_fato_largo(itens: list[str]) -> list[str]:
         with anos as (
             select distinct co_entidade,
                    extract(year from ocorrido_em at time zone 'UTC')::int as ano
-            from public.vistoria
+            from fonte.eventos_vistoria
         ),
         referencia as (
             select co_entidade, ano,
@@ -253,9 +302,23 @@ def _consultas_do_fato_largo(itens: list[str]) -> list[str]:
 
 
 @dataclass(frozen=True)
+class ConferenciaDaFonte:
+    versao_delta: int
+    na_fonte: int
+    na_origem: int
+    so_na_origem: int
+    so_na_fonte: int
+
+    @property
+    def confere(self) -> bool:
+        return self.so_na_origem == 0 and self.so_na_fonte == 0
+
+
+@dataclass(frozen=True)
 class ResumoGold:
     linhas: dict[str, int]
     segundos: float
+    fonte: ConferenciaDaFonte
 
 
 TABELAS_DA_GOLD = (
@@ -268,15 +331,16 @@ TABELAS_DA_GOLD = (
 )
 
 
-def construir(dsn: str) -> ResumoGold:
+def construir(configuracao: Configuracao) -> ResumoGold:
     inicio = time.perf_counter()
 
-    with psycopg.connect(dsn) as conexao:
+    with psycopg.connect(configuracao.dsn) as conexao:
         # Um retrato só da origem para todas as tabelas: em READ COMMITTED cada create table
         # enxergaria o que tivesse sido confirmado até aquele instante.
         conexao.isolation_level = psycopg.IsolationLevel.REPEATABLE_READ
         with conexao.transaction():
             conexao.execute("set local timezone to 'UTC'")
+            conferencia = _carregar_fonte(conexao, configuracao)
             itens = [
                 linha[0]
                 for linha in conexao.execute("select codigo from public.item_infraestrutura order by codigo")
@@ -289,10 +353,60 @@ def construir(dsn: str) -> ResumoGold:
             for tabela in TABELAS_DA_GOLD
         }
 
-    resumo = ResumoGold(linhas=linhas, segundos=time.perf_counter() - inicio)
+    resumo = ResumoGold(linhas=linhas, segundos=time.perf_counter() - inicio, fonte=conferencia)
     log.info("gold construída em %.1f s: %s", resumo.segundos, linhas)
 
     return resumo
+
+
+def _carregar_fonte(conexao: psycopg.Connection, configuracao: Configuracao) -> ConferenciaDaFonte:
+    """Copia uma versão da fonte canônica para o banco e a confere com a origem, na transação da Gold."""
+    inicio = time.perf_counter()
+    tabela, versao = eventos.ler(configuracao)
+    _rodar(conexao, CONSULTAS_DA_FONTE)
+
+    with tempfile.TemporaryDirectory(prefix="eduinfra_fonte_") as temporaria:
+        csv = Path(temporaria) / "eventos.csv"
+        leitor = duckdb.connect()
+        try:
+            leitor.execute("set timezone = 'UTC'")
+            leitor.register("eventos", tabela)
+            colunas = ", ".join(eventos.ESQUEMA.names)
+            leitor.execute(f"copy (select {colunas} from eventos) to '{csv.as_posix()}' (format csv, header false)")
+        finally:
+            leitor.close()
+
+        destino = f"{TABELA_DA_FONTE} ({', '.join(eventos.ESQUEMA.names)})"
+        with csv.open("rb") as entrada, conexao.cursor().copy(f"copy {destino} from stdin (format csv)") as copia:
+            while bloco := entrada.read(1 << 20):
+                copia.write(bloco)
+
+    _rodar(conexao, INDICES_DA_FONTE)
+    conexao.execute(
+        f"comment on table {TABELA_DA_FONTE} is "
+        f"'Versão {versao} de warehouse/eventos_vistoria, a fonte de eventos da Gold (ADR 0008).'"
+    )
+
+    conferencia = ConferenciaDaFonte(versao, *conexao.execute(CONFERENCIA_DA_FONTE).fetchone())
+    if conferencia.so_na_fonte:
+        raise RuntimeError(
+            f"a fonte canônica tem {conferencia.so_na_fonte} eventos que a origem não tem: "
+            "ela foi escrita a partir de outro banco? A Gold não foi alterada."
+        )
+    if conferencia.na_origem and not conferencia.na_fonte:
+        raise RuntimeError("a fonte canônica está vazia: rode publicar-analitico antes. A Gold não foi alterada.")
+    if conferencia.so_na_origem:
+        log.warning(
+            "fonte de eventos (versão %d) sem %d evento(s) da origem: ainda não entregues pelo CDC ou na fila de "
+            "erros; ficam pendentes no frescor até a próxima construção",
+            versao, conferencia.so_na_origem,
+        )
+    log.info(
+        "fonte de eventos: versão %d, %d eventos, origem com %d; carregada e conferida em %.1f s",
+        versao, conferencia.na_fonte, conferencia.na_origem, time.perf_counter() - inicio,
+    )
+
+    return conferencia
 
 
 def _etapas(itens: list[str]) -> list[Callable[[psycopg.Connection], None]]:

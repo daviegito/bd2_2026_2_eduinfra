@@ -55,7 +55,7 @@ def demonstrar(configuracao: Configuracao) -> str:
         f"2ª: {segunda.linhas} linhas, impressão {segunda.impressao}",
         f"idênticas: {'sim' if primeira == segunda else 'NÃO'}",
         "",
-        "## 5. Janelas na camada analítica",
+        "## 5. Janelas na fonte canônica de eventos",
         "",
     ]
     saida += [f"- {j.mes}: {j.linhas} linhas" for j in janelas.ler_janelas(configuracao).values()]

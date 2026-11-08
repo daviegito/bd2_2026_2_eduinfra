@@ -78,6 +78,7 @@ nav:
       - ADR 0002 — TLS: adr/0002-cadeia-tls-incompleta-do-inep.md
       - ADR 0004 — Ingestão: adr/0004-ingestao.md
       - ADR 0007 — Telemetria e fila de erros: adr/0007-telemetria-e-fila-de-erros-do-cdc.md
+      - ADR 0008 — Fonte única de eventos: adr/0008-fonte-canonica-de-eventos.md
   - Processo:
       - Diário de bordo: diario/diario-de-bordo.md
       - Uso de IA: https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md

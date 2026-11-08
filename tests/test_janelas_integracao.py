@@ -1,4 +1,4 @@
-"""Dado atrasado atravessando a origem até a janela certa (issue #27). Exige banco carregado.
+"""Dado atrasado atravessando a origem até a janela certa da fonte canônica (issue #27). Exige banco carregado.
 
 Insere vistorias de teste na origem, que é insert-only: elas ficam no banco,
 marcadas na observação. Rode contra um banco de desenvolvimento.
@@ -12,7 +12,7 @@ from pathlib import Path
 import psycopg
 import pytest
 
-from eduinfra import janelas
+from eduinfra import eventos, janelas
 from eduinfra.configuracao import carregar_configuracao
 from eduinfra.demonstracao_atraso import _escola_de_exemplo, _inserir_vistoria, _tecnico_da_demonstracao
 
@@ -73,6 +73,9 @@ def test_vistoria_atrasada_cai_no_mes_em_que_ocorreu(configuracao, escola_e_tecn
     evento = next(e for e in relatorio.eventos if e.vistoria_id == vistoria)
     assert evento.mes == janelas.mes_de(ocorrido)
     assert janelas.mes_de(ocorrido) in {j.mes for j in relatorio.janelas}
+    no_mes, _ = eventos.ler(configuracao, janelas.mes_de(ocorrido))
+    assert vistoria in set(no_mes.column("vistoria_id").to_pylist())
+    assert all(j.confere_com_a_origem for j in relatorio.janelas)
 
 
 def test_segunda_execucao_nao_reprocessa_o_que_ja_entrou(configuracao):
@@ -89,7 +92,7 @@ def test_janela_fechada_e_reaberta_e_registrada(configuracao, escola_e_tecnico):
     relatorio = janelas.processar(configuracao)
 
     assert any(not e.dentro_da_tolerancia for e in relatorio.eventos)
-    controle = janelas._ler_controle(janelas.pasta_eventos(configuracao))
+    controle = janelas._ler_controle(configuracao)
     assert controle["reaberturas"][-1]["mes"] == "2026-08"
 
 
@@ -99,9 +102,12 @@ def test_reprocessar_a_janela_duas_vezes_da_o_mesmo_resultado(configuracao):
     assert janelas.reprocessar_janela(configuracao, mes) == janelas.reprocessar_janela(configuracao, mes)
 
 
-def test_janelas_somam_o_mesmo_que_a_origem(configuracao):
+def test_fonte_canonica_tem_o_mesmo_que_a_origem(configuracao):
     janelas.processar(configuracao)
     with psycopg.connect(configuracao.dsn) as conexao:
         na_origem = conexao.execute("select count(*) from vistoria_item").fetchone()[0]
 
+    na_fonte, _ = eventos.ler(configuracao)
+    chaves = set(zip(na_fonte.column("vistoria_id").to_pylist(), na_fonte.column("item_codigo").to_pylist()))
+    assert na_fonte.num_rows == len(chaves) == na_origem
     assert sum(j.linhas for j in janelas.ler_janelas(configuracao).values()) == na_origem

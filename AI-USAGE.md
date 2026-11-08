@@ -303,3 +303,30 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   passando, além da suíte de unidade inteira e dos testes do modelo analítico;
   `mkdocs build --strict` sem erro
 - **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Fonte única de eventos de vistoria (ADR 0008)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/eventos.py`, `janelas.py`, `modelo_analitico.py`,
+  `frescor.py` e a CLI; `tests/test_fonte_de_eventos.py`,
+  `tests/test_fonte_de_eventos_integracao.py` e ajustes nos testes de janelas, Gold
+  e frescor; `docs/adr/0008-fonte-canonica-de-eventos.md`, `docs/dado-atrasado.md`,
+  `docs/arquitetura.md`, `docs/frescor-e-sla.md` e README
+- **O que foi pedido:** resolver a issue de unificação dos caminhos de eventos:
+  decidir a fonte canônica, a chave de deduplicação, garantir o evento atrasado na
+  janela de `ocorrido_em`, expor uma fonte única para a transformação e testar a
+  duplicata entre os caminhos
+- **O que foi aproveitado:** a decisão proposta (Delta `eventos_vistoria` como fonte,
+  janelas reconciliando por merge na mesma chave, Gold lendo uma cópia versionada em
+  `fonte.eventos_vistoria`), código, testes e a redação do ADR 0008, a revisar. A
+  mudança reverte a regra do PR #62 no frescor (vistoria sem item deixa de contar
+  como pendente), o que precisa da revisão de quem a propôs
+- **Como foi verificado:** suíte sem banco (150 testes) e suíte de integração
+  inteira (73 testes) passando contra o PostgreSQL do Compose; `publicar-analitico`,
+  `processar-janelas`, `demonstrar-atraso`, `cdc`, `construir-gold`, `medir-frescor`
+  e `auditar-cdc` rodados no Docker sobre o Censo 2024, com 3.078.139 eventos
+  conferidos entre fonte, origem e fato fino. A execução real revelou um erro da
+  primeira versão (soma da impressão em ponto flutuante), corrigido e coberto por
+  teste; `mkdocs build --strict` sem erro
+- **Quem revisou:** pendente (PR)

@@ -1,7 +1,8 @@
 """Frescor da Gold e SLA da tabela que alimenta o painel (issue #52).
 
-A Gold é reconstruída inteira por `construir-gold`, num retrato único da origem. O que
-a origem recebe depois desse retrato só aparece na Gold na próxima construção. O frescor
+A Gold é reconstruída inteira por `construir-gold`, a partir de uma versão da fonte
+canônica de eventos (ADR 0008). O que a origem recebe depois só aparece na Gold quando
+chega à fonte (pelo CDC ou pelas janelas) e a Gold é construída de novo. O frescor
 mede há quanto tempo a vistoria pendente mais antiga espera: zero quando a Gold tem tudo
 o que a origem tem, e não "agora menos a última construção", que confundiria um dia sem
 vistorias com uma Gold parada.
@@ -44,26 +45,15 @@ CRIAR_REGISTRO = [
     """,
 ]
 
-# Os dois fatos saem do mesmo retrato da origem, na mesma transação. Uma vistoria está
-# pendente se ainda pode mudar a Gold: os itens dela faltam no fato fino, ou a escola e o
-# ano dela faltam no fato anual, que forma os anos a partir de todas as vistorias, com
-# item ou sem. Vistoria sem item num ano que o fato anual já tem não muda nada.
+# Uma vistoria está pendente se os itens dela faltam no fato fino. Os dois fatos saem da
+# mesma fonte de eventos, na mesma transação: o fato anual forma os anos a partir desses
+# eventos, então vistoria com itens no fato fino tem o ano dela no fato anual. Vistoria sem
+# item não é evento, nunca chega à Gold e não conta: contá-la deixaria o SLA violado para sempre.
 CONSULTA_PENDENTES = """
-    select count(*), min(registrado_em)
-    from (
-        select v.id, v.registrado_em
-        from public.vistoria v
-        where exists (select 1 from public.vistoria_item vi where vi.vistoria_id = v.id)
-          and not exists (select 1 from gold.fato_vistoria_item f where f.vistoria_id = v.id)
-        union  -- com "or" num where só, a consulta levou 1,8 s; com union, 0,75 s
-        select v.id, v.registrado_em
-        from public.vistoria v
-        where not exists (
-            select 1 from gold.fato_infra_escola_ano a
-            where a.co_entidade = v.co_entidade
-              and a.ano = extract(year from v.ocorrido_em at time zone 'UTC')::int
-        )
-    ) pendentes
+    select count(*), min(v.registrado_em)
+    from public.vistoria v
+    where exists (select 1 from public.vistoria_item vi where vi.vistoria_id = v.id)
+      and not exists (select 1 from gold.fato_vistoria_item f where f.vistoria_id = v.id)
 """
 
 
@@ -206,7 +196,8 @@ def demonstrar(dsn: str) -> str:
         "",
         *_ultimas_medicoes(dsn, 3),
         "",
-        "Para voltar ao normal: `construir-gold` e depois `medir-frescor`.",
+        "Para voltar ao normal: com o serviço `cdc` no ar (ou depois de `processar-janelas`), "
+        "`construir-gold` e depois `medir-frescor`.",
     ]
 
     return "\n".join(saida)
