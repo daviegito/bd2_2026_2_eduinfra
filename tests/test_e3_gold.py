@@ -33,10 +33,18 @@ class TestE3Gold(unittest.TestCase):
         for col in esperadas:
             self.assertIn(col, colunas, f"Coluna {col} ausente na Gold!")
 
-    # 2. VOLUME (Próximo aos 3.08M itens)
+    # 2. VOLUME (Comparado à origem)
     def test_02_volume(self):
-        total = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
-        self.assertTrue(3_000_000 <= total <= 3_200_000, f"Volume inesperado na fato: {total} registros")
+        total_gold = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
+
+        # Consulta diretamente o schema 'public' do PostgreSQL anexado via DuckDB
+        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM pg.public.vistoria_item")
+
+        self.assertEqual(
+            total_gold,
+            total_origem,
+            f"Falha de volume: A Gold tem {total_gold} linhas, mas a origem possui {total_origem}."
+        )
 
     # 3. UNICIDADE (Grão da fato)
     def test_03_unicidade(self):
