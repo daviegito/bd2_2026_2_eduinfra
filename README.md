@@ -229,6 +229,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
 | `docker compose run --rm carga construir-gold` | recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
 | `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
+| `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
+| `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
 | `docker compose run --rm carga tudo` | migrar, ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
