@@ -337,3 +337,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação
+- **Onde:** `src/eduinfra/janelas.py`, `tests/test_janelas_integracao.py` e
+  `docs/dado-atrasado.md`
+- **O que foi pedido:** apoio para corrigir a falha relatada no PR #66, em que uma
+  vistoria sem item voltava como nova a cada execução das janelas
+- **O que foi aproveitado:** o diagnóstico da causa, a condição na consulta das
+  candidatas e o teste, revisados por Gabriel
+- **Como foi verificado:** o teste novo falhou sem a correção e passou com ela; os 17
+  testes das janelas e os 142 de unidade passaram, e a suíte de integração das janelas
+  passou duas vezes seguidas com a vistoria sem item dentro da margem
+- **Quem revisou:** pendente (PR)

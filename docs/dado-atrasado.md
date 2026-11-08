@@ -63,7 +63,9 @@ commit. Uma transação longa pode confirmar depois da execução, com
 `registrado_em` anterior à marca, e escaparia. Por isso cada execução também
 relê os 10 minutos anteriores à marca (`MARGEM_DA_MARCA`). Para a margem não
 regravar janelas à toa, só conta como novo o evento cujo `vistoria_id` ainda não
-está na partição do seu mês.
+está na partição do seu mês. Vistoria sem item não gera evento: ela fica de fora
+das candidatas, senão voltaria como nova a cada execução enquanto estivesse na
+margem.
 
 ## Onde ficam os dados
 
