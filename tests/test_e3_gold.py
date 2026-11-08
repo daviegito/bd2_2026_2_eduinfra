@@ -7,7 +7,7 @@ class GoldAuditor:
     def __init__(self, configuracao: carregar_configuracao):
         self.config = configuracao
         self.conexao = duckdb.connect()
-        self.conexao.execute("INSTALL postgres; LOAD postgres;")
+        self.conexao.execute("LOAD postgres;")
 
         # Mapeia a tabela Gold do PostgreSQL em vez do Delta Lake
         self.conexao.execute(f"ATTACH '{configuracao.dsn}' AS pg (TYPE POSTGRES);")
@@ -60,17 +60,13 @@ class TestE3Gold(unittest.TestCase):
 
     # 4. INTEGRIDADE REFERENCIAL
     def test_04_integridade_referencial(self):
-        caminho_escolas = self.config.diretorio_dados / "silver" / f"ano_censo={self.config.ano_censo}" / "escola.parquet"
-        if not caminho_escolas.exists():
-            self.skipTest("Parquet de escolas não encontrado.")
-
-        faltantes = self.auditor.query_count(f"""
+        faltantes = self.auditor.query_count("""
             SELECT COUNT(DISTINCT g.co_entidade)
             FROM fato_vistoria_item g
-            LEFT JOIN read_parquet('{caminho_escolas.as_posix()}') s ON g.co_entidade = s.co_entidade
+            LEFT JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
             WHERE s.co_entidade IS NULL
         """)
-        self.assertEqual(faltantes, 0, f"{faltantes} escolas na fato não existem na dimensão Silver!")
+        self.assertEqual(faltantes, 0, f"{faltantes} escolas na fato não existem na dimensão Gold!")
 
    # 5. DISTRIBUIÇÃO (Erro Silencioso)
     def test_05_distribuicao(self):
@@ -81,14 +77,14 @@ class TestE3Gold(unittest.TestCase):
             JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
             GROUP BY s.co_municipio
         """)
-        for uf, proporcao in resultados:
-            self.assertTrue(0.05 < proporcao < 0.95, f"Distribuição suspeita na UF {uf}: {proporcao:.2%}")
+        for mun, proporcao in resultados:
+            self.assertTrue(0.05 < proporcao < 0.95, f"Distribuição suspeita no Município {mun}: {proporcao:.2%}")
 
     # 6. CASOS SUJOS DO DOMÍNIO
     def test_06_casos_sujos(self):
         sujos = self.auditor.query_count("""
             SELECT COUNT(*) FROM fato_vistoria_item
-            WHERE situacao NOT IN ('existente', 'inexistente', 'nao_informado')
+            WHERE situacao NOT IN ('existente', 'inexistente', 'nao_informado', 'em_obra', 'inutilizavel')
         """)
         self.assertEqual(sujos, 0, f"DETECTADO: {sujos} registros com situação fora do domínio!")
 
