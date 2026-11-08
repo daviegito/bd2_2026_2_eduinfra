@@ -84,10 +84,16 @@ def passar_uma_vez(
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
         cdc.garantir_slot(conexao, slot)
         inicio_da_leitura = telemetria_cdc.agora(conexao)
-        transacoes = cdc.ler_transacoes(conexao, slot, limite_de_mudancas=limite_de_mudancas)
+        limite_da_leitura = cdc.posicao_persistida(conexao)
+        transacoes = cdc.ler_transacoes(
+            conexao, slot, limite_de_mudancas=limite_de_mudancas, ate_lsn=limite_da_leitura
+        )
         if not transacoes:
+            # WAL de tabelas não publicadas também precisa ser percorrido. A posição
+            # é a anterior ao peek: um commit concorrente fica para a próxima passada.
+            cdc.confirmar(conexao, limite_da_leitura, slot)
             telemetria_cdc.registrar_frescor(configuracao, inicio_da_leitura)
-            return ResultadoDaPassada(0, 0, 0, 0, None)
+            return ResultadoDaPassada(0, 0, 0, 0, limite_da_leitura)
 
         fim_da_leitura = telemetria_cdc.agora(conexao)
         itens = [i for t in transacoes for i in t.insercoes if i.tabela == TABELA_DE_ITENS]
