@@ -18,6 +18,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 
 ## Entradas
 
+### 2026-11-08 — Avanço seguro do slot e retenção durante a Gold (issue #60)
+
+- **Ferramenta:** Codex.
+- **Onde:** `cdc.py`, `fluxo_cdc.py`, testes de slot ocioso, medição reproduzível,
+  configuração de retenção e documentação operacional.
+- **O que foi pedido:** assumir a issue #60 sem responsável e resolver o bloqueio
+  direto da #48, preservando os contratos das PRs abertas.
+- **O que foi aproveitado:** limite de leitura pelo WAL já persistido, confirmação
+  da passada vazia, cenários de transação concorrente e medição com consumidor ativo.
+- **Como foi verificado:** seis testes específicos e a suíte existente passaram
+  em banco descartável; a construção SQL nacional foi medida com checkpoint
+  durante a execução e uma vistoria concorrente entregue sem duplicação.
+  Procedimento e resultados em `docs/evidencias/issue-60/retencao-wal.md`.
+  Após sincronizar com a main contendo a #62, passaram 215 testes e houve uma
+  falha de janelas, reproduzida também sem o patch da #60 e registrada nas evidências.
+- **Quem revisou:** revisão humana pendente; Pedro Vargas aprovou o escopo.
+
 ### 2026-08-25 — Geração da proposta de domínio (ENEM × Infraestrutura Escolar)
 
 - **Ferramenta:** Claude (assistente conversacional)

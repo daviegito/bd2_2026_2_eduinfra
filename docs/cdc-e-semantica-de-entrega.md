@@ -101,9 +101,9 @@ Um slot que ninguém consome retém WAL sem limite. Duas defesas:
 O [Debezium](https://debezium.io/documentation/reference/stable/connectors/postgresql.html)
 documenta um segundo caso: se o banco recebe escrita em tabelas que o slot não
 captura, o WAL cresce porque a posição do consumidor não avança. Aqui o
-consumidor passa a cada 2 segundos mesmo sem eventos, mas não escreve nada que
-mova o slot nesse caso. Não foi medido o crescimento do WAL com tráfego só em
-outras tabelas.
+consumidor passa a cada 2 segundos mesmo sem eventos e confirma a posição de
+WAL persistida capturada antes da leitura. A correção e a medição de retenção
+durante a construção da Gold estão na seção seguinte.
 
 ## Parar e retomar
 
@@ -193,3 +193,59 @@ se surgir um segundo consumidor do mesmo fluxo, ou se o atraso do slot passar de
 | 1.0 | Mecanismo, semântica de entrega, demonstração e medições do CDC da E2 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 12 de outubro de 2026 |
 | 1.1 | Medição do healthcheck do serviço `cdc` e do stop/start | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 19 de outubro de 2026 |
 | 1.2 | Publicação das quatro operações, fila de erros e referência às métricas do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
+
+
+## Avanço seguro em passadas vazias (issue #60)
+
+A passagem vazia também precisa avançar o slot: tabelas fora da publicação,
+como as da Gold, geram WAL e podem prender o ponto de retomada do CDC.
+
+O consumidor captura `pg_current_wal_flush_lsn()` **antes** do peek e passa essa
+posição como `upto_lsn` de `pg_logical_slot_peek_binary_changes`. Quando a
+leitura não retorna transações publicadas, confirma no máximo essa posição.
+Uma transação aberta, ou confirmada depois do limite, fica para outra passada;
+o PostgreSQL mantém o WAL ainda necessário a ela.
+
+Quando há transações, a confirmação continua sendo o LSN da última transação
+realmente entregue, depois de gravar eventos, fila de erros e telemetria. Uma
+leitura com limite de mudanças não confirma as transações ainda não retornadas.
+A falha entre gravar o Delta e confirmar continua provocando reentrega, tratada
+pela chave de deduplicação existente.
+
+As chamadas anteriores de `cdc.ler_transacoes` continuam válidas: o parâmetro
+`ate_lsn` é opcional. A auditoria, o decodificador, os formatos Delta, os comandos
+da CLI e as tabelas `gold.*` não foram substituídos.
+
+### Retenção e construção da Gold
+
+O Compose usa `max_slot_wal_keep_size=2GB`, configurável por
+`MAX_SLOT_WAL_KEEP_SIZE`. A construção SQL nacional reteve cerca de 940 MiB
+numa única transação mesmo com consumidor ativo: o limite anterior de 1 GB
+passou no teste SQL, mas sem margem operacional adequada. O job dbt com
+preparo das fontes reteve cerca de 1.142 MiB, acima de 1 GB, e passou com 2 GB.
+Aumentar o limite não
+substitui corrigir o consumidor, nem reserva imediatamente 2 GB em disco;
+permite reter mais WAL e exige planejar espaço livre.
+
+Mantenha o consumidor ligado durante a construção. Pausas longas, mais dados,
+transações mais longas e outros slots podem exigir novo dimensionamento. O
+limite continua finito. O job deve recusar slot perdido ou sem margem, e não
+remover ou recriar um slot silenciosamente.
+
+As amostras, o procedimento de medição e os limites da conclusão estão em
+[Retenção de WAL durante a Gold](evidencias/issue-60/retencao-wal.md).
+
+### Reproduzir os testes
+
+Com `DATABASE_URL` apontando para um PostgreSQL de testes com `wal_level=logical`
+e permissão de criação de bancos:
+
+```bash
+uv run pytest tests/test_slot_ocioso_integracao.py -q
+```
+
+Os testes criam bancos e slots descartáveis. Cobrem avanço após escrita fora da
+publicação, avanço de `restart_lsn` após checkpoint, commit entre captura e
+peek, transação aberta, limite de leitura e reentrega sem duplicação.
+A medição nacional usa outro banco dedicado, sem a suíte concorrendo no mesmo
+cluster; o script grava uma vistoria marcada e não deve apontar para produção.
