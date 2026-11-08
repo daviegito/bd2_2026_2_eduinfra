@@ -1,0 +1,2368 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/metricas-cdc/">
+      
+      
+        <link rel="prev" href="../cdc-e-semantica-de-entrega/">
+      
+      
+        <link rel="next" href="../dado-atrasado/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Métricas do CDC - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#metricas-do-cdc" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href=".." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Métricas do CDC
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-analitico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#resultado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-reproduzir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como reproduzir
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#condicoes-da-medicao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condições da medição
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consistencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consistência
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consistência">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checksum-de-linhas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checksum de linhas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contagem-por-operacao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contagem por operação
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fora-de-ordem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fora de ordem
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latência
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Latência">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recarga-periodica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recarga periódica
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frescor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frescor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resiliencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resiliência
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidências
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historico-de-versoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Histórico de Versões
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../frescor-e-sla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frescor e SLA da Gold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#resultado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-reproduzir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como reproduzir
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#condicoes-da-medicao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condições da medição
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#consistencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Consistência
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Consistência">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#checksum-de-linhas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checksum de linhas
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#contagem-por-operacao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contagem por operação
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fora-de-ordem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fora de ordem
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#latencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Latência
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Latência">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recarga-periodica" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recarga periódica
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#frescor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frescor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resiliencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resiliência
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidências
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historico-de-versoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Histórico de Versões
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="metricas-do-cdc">Métricas do CDC<a class="headerlink" href="#metricas-do-cdc" title="Permanent link">&para;</a></h1>
+<p>Esta página mede se o que sai da origem chega igual ao Delta, quanto tempo leva e o
+que acontece quando algo quebra. O fluxo medido é <code>vistoria_item</code> até
+<code>eventos_vistoria</code>, descrito em <a href="../cdc-e-semantica-de-entrega/">CDC e semântica de entrega</a>.</p>
+<p>As oito métricas de consistência, latência e resiliência foram escolhidas por Artur
+Mendonça Arruda antes da implementação: checksum de linhas, contagem por operação, fora de
+ordem, latência ponta a ponta, atraso de captura, atraso de carga, desvio de esquema e
+volume da fila de erros. O frescor, a nona, foi sugerido durante o trabalho porque a
+<a href="https://github.com/daviegito/bd2_2026_2_eduinfra/issues/52">issue #52</a> o exige, e Artur
+aceitou. As decisões de arquitetura estão no
+<a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/">ADR 0007</a>.</p>
+<h2 id="resultado">Resultado<a class="headerlink" href="#resultado" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Grupo</th>
+<th>Métrica</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consistência</td>
+<td>Checksum de linhas</td>
+<td>3.174.801 linhas iguais, 0 diferentes, 0 só na origem, 0 só no Delta</td>
+</tr>
+<tr>
+<td>Consistência</td>
+<td>Contagem por operação</td>
+<td>7.089 inserções lidas do WAL: 6.579 aplicadas, 510 já estavam no Delta, 0 na fila. Nenhum <code>UPDATE</code>, <code>DELETE</code> ou <code>TRUNCATE</code></td>
+</tr>
+<tr>
+<td>Consistência</td>
+<td>Fora de ordem</td>
+<td>0 LSN invertido em 414 transações. Sob carga concorrente sintética, <code>registrado_em</code> inverteu em 46% a 48% das transações</td>
+</tr>
+<tr>
+<td>Latência</td>
+<td>Ponta a ponta</td>
+<td>Mediana de 1,4 a 1,8 s no evento recente e de 4,0 a 4,1 s no atrasado</td>
+</tr>
+<tr>
+<td>Latência</td>
+<td>Atraso de captura</td>
+<td>Mediana de 1,1 a 1,8 s, quase toda espera pelo laço de 2 s. A mediana de decodificar o WAL foi de 0,01 a 0,06 s</td>
+</tr>
+<tr>
+<td>Latência</td>
+<td>Atraso de carga</td>
+<td>Mediana de 0,3 a 0,7 s no evento recente e de 2,5 a 2,8 s no atrasado</td>
+</tr>
+<tr>
+<td>Frescor</td>
+<td>Tempo desde o último dreno</td>
+<td>1,4 a 2,0 s com o consumidor ligado. Com ele parado, 259 s e a auditoria saiu com código 1</td>
+</tr>
+<tr>
+<td>Resiliência</td>
+<td>Desvio de esquema</td>
+<td>Nenhuma coluna das tabelas publicadas mudou desde a migração 0003. Nas falhas provocadas, coluna nova e coluna renomeada foram acusadas. Tipo alterado só tem teste unitário</td>
+</tr>
+<tr>
+<td>Resiliência</td>
+<td>Fila de erros</td>
+<td>0 linhas nos dados reais. Nas falhas provocadas, 51 linhas e nenhuma sem explicação</td>
+</tr>
+</tbody>
+</table>
+<h2 id="como-reproduzir">Como reproduzir<a class="headerlink" href="#como-reproduzir" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>build<span class="w"> </span>carga<span class="w"> </span>cdc
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>migrar
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--no-deps<span class="w"> </span>cdc
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># Insere vistorias de teste, mede latência e ordem e termina com a auditoria.</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-cdc<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">30</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Só lê. Sai com código 1 se houver violação.</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>auditar-cdc
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Exige o consumidor parado.</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>cdc
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-recarga<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">30</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--no-deps<span class="w"> </span>cdc
+</span></code></pre></div>
+<p><code>medir-cdc</code> e <code>medir-recarga</code> gravam vistorias que a origem insert-only nunca mais
+apaga. Rode em banco de desenvolvimento. Os cenários de falha estão em
+<a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/eaefafe/tests/test_resiliencia_cdc_integracao.py">test_resiliencia_cdc_integracao.py</a>,
+que cria um banco descartável a cada teste.</p>
+<p>Para repetir as falhas no consumidor anterior à mudança, com o banco ligado e
+<code>DATABASE_URL</code> exportada:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>worktree<span class="w"> </span>add<span class="w"> </span>../eduinfra-antes<span class="w"> </span>fb8c926
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>../eduinfra-antes
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$OLDPWD</span><span class="s2">/docs/evidencias/metricas-cdc/falhas_antes_da_mudanca.py&quot;</span>
+</span></code></pre></div>
+<h2 id="condicoes-da-medicao">Condições da medição<a class="headerlink" href="#condicoes-da-medicao" title="Permanent link">&para;</a></h2>
+<p>Duas rodadas em 31 de outubro de 2026, com 30 amostras por cenário, no Docker Desktop
+(Windows), máquina virtual com 8 CPUs e 3,7 GiB. Os dados são o Censo 2024 mais as
+vistorias de teste, cerca de 3,2 milhões de itens.</p>
+<p>A máquina não estava dedicada. Os projetos <code>gov-bricks</code> (Airflow, MinIO e PostgreSQL) e
+<code>infra</code> rodavam juntos, com o Airflow oscilando entre 10% e 190% de CPU, e o Windows
+tinha 0,6 GB de memória livre quando conferido. As medianas se repetiram entre as
+rodadas, mas os p95 e os máximos variaram muito, então trate esses dois como
+indicativos. Não houve rodada com a máquina limpa.</p>
+<h2 id="consistencia">Consistência<a class="headerlink" href="#consistencia" title="Permanent link">&para;</a></h2>
+<h3 id="checksum-de-linhas">Checksum de linhas<a class="headerlink" href="#checksum-de-linhas" title="Permanent link">&para;</a></h3>
+<p>A auditoria calcula um MD5 das colunas de cada linha, dos dois lados e no mesmo processo
+DuckDB, para o formato ser idêntico. Depois compara linha a linha pela chave
+<code>(vistoria_id, item_codigo)</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Caminho</th>
+<th style="text-align: right;">Iguais</th>
+<th style="text-align: right;">Diferentes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linha de base e recarga (sem LSN)</td>
+<td style="text-align: right;">3.165.961</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>CDC (com LSN)</td>
+<td style="text-align: right;">8.840</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<p>A lista original pedia amostragem, e Artur trocou por tabela inteira depois da medição.
+Comparar 3.167.729 linhas levou 17,4 s com pico de 469 MiB, duas repetições com cerca de
+3,18 milhões de linhas levaram 15,8 s (460 MiB) e 41,8 s (498 MiB, saída não guardada), e o comando inteiro levou 77 s em 3.174.801 linhas, contando
+a subida do contêiner. Na hora da decisão, só 0,07%
+das linhas do Delta tinham vindo do CDC (2.261 de 3.167.712), então uma amostra uniforme
+quase não testaria esse caminho. Uma amostra de 1% também acha uma linha errada isolada
+em só 1% das vezes.</p>
+<p>A lista falava em checksum em tempo real. Ele roda sob demanda, porque a origem é
+insert-only e uma linha entregue não muda.</p>
+<p>Uma linha só na origem é classificada como pendente no slot, parada na fila de erros ou
+sem explicação. Só a última indica perda. A ordem de leitura evita alarme falso com o
+consumidor ligado: a origem é lida primeiro, depois o slot e por último o Delta.</p>
+<h3 id="contagem-por-operacao">Contagem por operação<a class="headerlink" href="#contagem-por-operacao" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Operação</th>
+<th style="text-align: right;">Lidas do WAL</th>
+<th style="text-align: right;">Aplicadas no Delta</th>
+<th style="text-align: right;">Na fila de erros</th>
+<th style="text-align: right;">Já estavam no Delta</th>
+<th style="text-align: right;">Pendentes no slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INSERT</code></td>
+<td style="text-align: right;">7.089</td>
+<td style="text-align: right;">6.579</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">510</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>UPDATE</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td><code>TRUNCATE</code></td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<p>Os 510 itens são os que a medição da recarga gravou direto no Delta com o consumidor
+parado. Ao religar, ele leu os mesmos itens do WAL e o merge descartou todos pela chave.</p>
+<p>A lista pedia cruzar operações "dentro de um mesmo intervalo de tempo". A contagem usa o
+LSN, porque os dois lados têm relógios e atrasos diferentes e um intervalo de tempo não
+casaria as mesmas linhas. As divergências do checksum saem agrupadas por dia de
+<code>registrado_em</code>, para localizar onde estão.</p>
+<p>Dois achados condicionaram esta métrica:</p>
+<ul>
+<li><strong>A publicação divergia entre bancos.</strong> A documentação e o banco local tinham só
+  <code>INSERT</code>, mas um banco criado do zero publicava as quatro operações. Duas versões da
+  migração 0005 circularam com a mesma revisão, e o Alembic não percebe a diferença. Só
+  com <code>INSERT</code>, um <code>UPDATE</code> por fora dos gatilhos nem chega ao slot e a contagem daria
+  zero sempre. A migração 0007 alinha todos os bancos nas quatro operações.</li>
+<li><strong><code>pg_stat_user_tables</code> não serve de prova.</strong> Depois de uma queda do banco,
+  <code>n_tup_ins</code> marcou 0 numa tabela de 3,1 milhões de linhas.</li>
+</ul>
+<h3 id="fora-de-ordem">Fora de ordem<a class="headerlink" href="#fora-de-ordem" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Eixo</th>
+<th>O que mede</th>
+<th>Resultado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LSN</td>
+<td>Inversão na entrega, que só deveria aparecer em reentrega</td>
+<td>0 em 414 transações</td>
+</tr>
+<tr>
+<td><code>registrado_em</code></td>
+<td>Transação que começou antes e confirmou depois</td>
+<td>57 de 120 (47,5%) e 55 de 120 (45,8%), com diferença máxima de 0,79 s</td>
+</tr>
+<tr>
+<td><code>ocorrido_em</code></td>
+<td>Evento mais antigo que um já entregue</td>
+<td>Reflete o gerador, ver abaixo</td>
+</tr>
+</tbody>
+</table>
+<p>O segundo eixo é o que traz informação nova. Com 4 escritores segurando cada transação
+por até 1 s, simulamos sobre os commits medidos uma recarga por marca d'água a cada 2 s:</p>
+<table>
+<thead>
+<tr>
+<th>Recarga por marca d'água</th>
+<th style="text-align: right;">Rodada 1</th>
+<th style="text-align: right;">Rodada 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sem margem</td>
+<td style="text-align: right;">perde 7 de 120</td>
+<td style="text-align: right;">perde 6 de 120</td>
+</tr>
+<tr>
+<td>Com a margem de 10 minutos do ADR 0004</td>
+<td style="text-align: right;">perde 0</td>
+<td style="text-align: right;">perde 0</td>
+</tr>
+<tr>
+<td>Slot lógico</td>
+<td style="text-align: right;">entregou 120</td>
+<td style="text-align: right;">entregou 120</td>
+</tr>
+</tbody>
+</table>
+<p>O <a href="../adr/0004-ingestao/">ADR 0004</a> escolheu o CDC por não depender da marca d'água, sem
+medir esse efeito. Agora há um número, com a ressalva de que a taxa depende da carga
+sintética e não prevê a de produção. A margem de 10 minutos também cobriu essa carga, ao
+custo de reler 10 minutos a cada ciclo.</p>
+<p>O atraso de <code>ocorrido_em</code> não permite conclusão: 64 transações passaram da tolerância de
+7 dias, mas foi o cenário de evento atrasado que as criou, mais o resíduo dos testes. O
+gatilho de 5% do ADR 0004 só pode ser avaliado com vistorias reais.</p>
+<h2 id="latencia">Latência<a class="headerlink" href="#latencia" title="Permanent link">&para;</a></h2>
+<p>Cada cenário é medido de dois lados: por fora, do commit até um leitor ver a vistoria no
+Delta, e por dentro, pela telemetria do consumidor, com os instantes vindos do relógio do
+PostgreSQL. A telemetria tem uma linha por transação e fica na tabela Delta
+<code>telemetria_cdc</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Cenário</th>
+<th style="text-align: right;">Rodada</th>
+<th style="text-align: right;">Por fora: mediana (s)</th>
+<th style="text-align: right;">p95 (s)</th>
+<th style="text-align: right;">Máximo (s)</th>
+<th style="text-align: right;">Por dentro: mediana (s)</th>
+<th style="text-align: right;">p95 (s)</th>
+<th style="text-align: right;">Máximo (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Evento recente</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1,80</td>
+<td style="text-align: right;">9,08</td>
+<td style="text-align: right;">17,18</td>
+<td style="text-align: right;">1,90</td>
+<td style="text-align: right;">9,06</td>
+<td style="text-align: right;">18,77</td>
+</tr>
+<tr>
+<td>Evento recente</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1,41</td>
+<td style="text-align: right;">4,87</td>
+<td style="text-align: right;">10,22</td>
+<td style="text-align: right;">1,62</td>
+<td style="text-align: right;">4,94</td>
+<td style="text-align: right;">10,30</td>
+</tr>
+<tr>
+<td>Evento atrasado, partição com 3 milhões de linhas</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">4,09</td>
+<td style="text-align: right;">9,44</td>
+<td style="text-align: right;">17,22</td>
+<td style="text-align: right;">4,10</td>
+<td style="text-align: right;">9,68</td>
+<td style="text-align: right;">17,24</td>
+</tr>
+<tr>
+<td>Evento atrasado, partição com 3 milhões de linhas</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">4,01</td>
+<td style="text-align: right;">10,13</td>
+<td style="text-align: right;">16,20</td>
+<td style="text-align: right;">4,10</td>
+<td style="text-align: right;">10,08</td>
+<td style="text-align: right;">16,33</td>
+</tr>
+</tbody>
+</table>
+<p>Os dois lados coincidem em até 0,24 s nas medianas e nos p95. A medida por fora pode ficar
+alguns décimos abaixo porque o consumidor só lê o relógio depois que o merge retorna. Na
+rodada 1, a medida por fora ainda marcava o instante antes de atualizar a tabela, o que
+também podia reduzi-la. Corrigimos isso antes da rodada 2.</p>
+<p>Medianas de cada etapa, em segundos:</p>
+<table>
+<thead>
+<tr>
+<th>Etapa</th>
+<th style="text-align: right;">Recente, rodada 1</th>
+<th style="text-align: right;">Recente, rodada 2</th>
+<th style="text-align: right;">Atrasado, rodada 1</th>
+<th style="text-align: right;">Atrasado, rodada 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Espera pela próxima passada</td>
+<td style="text-align: right;">0,79</td>
+<td style="text-align: right;">1,26</td>
+<td style="text-align: right;">1,47</td>
+<td style="text-align: right;">1,12</td>
+</tr>
+<tr>
+<td>Leitura e decodificação do WAL</td>
+<td style="text-align: right;">0,02</td>
+<td style="text-align: right;">0,01</td>
+<td style="text-align: right;">0,06</td>
+<td style="text-align: right;">0,02</td>
+</tr>
+<tr>
+<td>Conversão e cabeçalhos</td>
+<td style="text-align: right;">0,01</td>
+<td style="text-align: right;">0,01</td>
+<td style="text-align: right;">0,03</td>
+<td style="text-align: right;">0,01</td>
+</tr>
+<tr>
+<td>Merge no Delta</td>
+<td style="text-align: right;">0,71</td>
+<td style="text-align: right;">0,29</td>
+<td style="text-align: right;">2,77</td>
+<td style="text-align: right;">2,50</td>
+</tr>
+</tbody>
+</table>
+<p>O que os números mostram:</p>
+<ul>
+<li><strong>A origem não é o gargalo.</strong> A lista previa que atraso de captura alto indicaria gargalo
+  na origem. Aqui ele é quase todo a espera pelo nosso laço de 2 s. Decodificar o WAL leva
+  centésimos de segundo na mediana, com picos de até 5,73 s. Para reduzir a mediana do evento
+  recente, o que importa é o intervalo do laço.</li>
+<li><strong>O dado atrasado custa no merge.</strong> O merge na partição da linha de base leva de 2,5 a
+  2,8 s, contra 0,3 a 0,7 s na partição do mês. O piloto de 3 amostras sugeria cerca de
+  12 s, e essa estimativa estava alta.</li>
+<li><strong>Os picos não têm padrão por partição.</strong> Houve merge de 16,83 s na partição do mês e de
+  15,38 s na da linha de base. A conversão, que é só uma consulta curta, chegou a 3,70 s.
+  Isso aponta para disputa de recursos na máquina, sem prova, porque não houve rodada
+  limpa.</li>
+<li><strong>A primeira passada depois de religar é a mais cara.</strong> Com 222 MB de WAL acumulado e 459
+  itens, levou 61 s: 50,38 s de merge, 9,78 s de leitura e 0,75 s de conversão. Os 50 a 86 s
+  já registrados no <a href="../cdc-e-semantica-de-entrega/#healthcheck-do-servico">healthcheck</a>
+  parecem vir mais do merge que do WAL. A causa do merge lento não foi investigada.</li>
+<li><strong>Arquivos pequenos não pesaram nesta escala.</strong> Cada passada acrescenta um arquivo. A
+  partição do mês foi de 72 para 109 arquivos e a da linha de base de 58 para 88, e o merge
+  não piorou. Isso não prevê o que acontece com 500 arquivos por dia, a estimativa de
+  vistorias diárias. Hoje não há compactação.</li>
+</ul>
+<h3 id="recarga-periodica">Recarga periódica<a class="headerlink" href="#recarga-periodica" title="Permanent link">&para;</a></h3>
+<p>A E2 pede a latência e o custo do CDC contra a recarga. Um ciclo com 1 vistoria nova levou
+mediana de 0,54 s, p95 de 2,33 s e máximo de 23,42 s em 30 amostras. A latência abaixo é
+derivada desse tempo, porque um commit cai em ponto uniforme do período.</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: right;">Período da recarga (s)</th>
+<th style="text-align: right;">Latência média derivada (s)</th>
+<th style="text-align: right;">Pior caso derivado (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">1,54</td>
+<td style="text-align: right;">4,33</td>
+</tr>
+<tr>
+<td style="text-align: right;">300</td>
+<td style="text-align: right;">150,54</td>
+<td style="text-align: right;">302,33</td>
+</tr>
+<tr>
+<td style="text-align: right;">3600</td>
+<td style="text-align: right;">1800,54</td>
+<td style="text-align: right;">3602,33</td>
+</tr>
+</tbody>
+</table>
+<p>O slot parado retém 10.692 bytes de WAL por vistoria. Com a estimativa de 500 vistorias por
+dia, o limite de 1 GB chega em 200,8 dias. Esse prazo vale só para o tráfego de vistorias:
+outras escritas no banco também contam, e os testes e medições acumularam 222 MB em cerca
+de 40 minutos.</p>
+<h2 id="frescor">Frescor<a class="headerlink" href="#frescor" title="Permanent link">&para;</a></h2>
+<p>Frescor é o tempo desde o início da última passada concluída sem deixar nada para trás,
+porque tudo o que confirmou antes desse instante já está legível. Medir "agora menos a
+última linha" não serviria: com cerca de 500 vistorias por dia (estimativa), a madrugada
+sem vistorias ficaria igual a um consumidor morto.</p>
+<table>
+<thead>
+<tr>
+<th>Situação</th>
+<th style="text-align: right;">Frescor (s)</th>
+<th style="text-align: center;">Código de saída de <code>auditar-cdc</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Consumidor ligado, três auditorias</td>
+<td style="text-align: right;">1,4 a 2,0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td>Consumidor parado</td>
+<td style="text-align: right;">259,0</td>
+<td style="text-align: center;">1</td>
+</tr>
+</tbody>
+</table>
+<p>O SLA proposto é de 60 s para <code>eventos_vistoria</code>, ajustável com <code>--sla-frescor</code>. É o mesmo
+limite do healthcheck e cerca de três vezes a pior latência ponta a ponta em regime
+(18,77 s). Uma reinicialização do consumidor pode violar esse SLA, como a primeira passada
+de 61 s, e isso é de propósito, porque nesse tempo o dado de fato não chega.</p>
+<p>Isto cobre só o caminho do CDC. A issue #52 pede o frescor da tabela que alimenta o painel,
+que depende do <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/pull/55">modelo dimensional</a>
+e ainda não existe na <code>main</code>, então esta medição não fecha a issue.</p>
+<h2 id="resiliencia">Resiliência<a class="headerlink" href="#resiliencia" title="Permanent link">&para;</a></h2>
+<p>A origem aceita linhas que o consumidor não converte, e nem todas dependem de mudança de
+esquema. Estes casos foram provocados num banco descartável, antes e depois da mudança:</p>
+<table>
+<thead>
+<tr>
+<th>Falha provocada</th>
+<th>Antes</th>
+<th>Agora</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ADD COLUMN</code> com valor preenchido</td>
+<td>Valor perdido, sem aviso</td>
+<td>Linha entregue sem a coluna nova, com alerta na telemetria e violação na auditoria</td>
+</tr>
+<tr>
+<td><code>RENAME COLUMN</code></td>
+<td><code>KeyError</code> em toda passada. Desfazer a migração não destrava, porque o WAL é decodificado com o catálogo da época</td>
+<td>Linhas na fila, o slot avança e as seguintes chegam</td>
+</tr>
+<tr>
+<td><code>ocorrido_em = '-infinity'</code> ou ano 4000 a.C.</td>
+<td><code>DataError</code> em toda passada, e nada depois dessa linha chega ao Delta</td>
+<td>Linha na fila, e a vizinha na mesma passada é entregue</td>
+</tr>
+<tr>
+<td><code>UPDATE</code> com <code>session_replication_role = replica</code></td>
+<td><code>ValueError</code> em toda passada, ou invisível se a publicação fosse só <code>INSERT</code></td>
+<td>Contado, registrado na fila, e o checksum acusa a linha diferente</td>
+</tr>
+</tbody>
+</table>
+<p>Com todas essas falhas juntas, a auditoria saiu com código 1:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Só na origem: 34 (0 pendentes no slot, 34 na fila de erros, 0 sem explicação). Só no Delta: 0.
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Fila de erros: 51 linhas (update, violacao_insert_only: 17, insert, KeyError: 17, insert, DataError: 17).
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Desvios de esquema vistos no WAL: vistoria_item.qtd: coluna_nova (1x), vistoria_item.quantidade: coluna_ausente (1x), vistoria_item.coluna_nova: coluna_nova (2x).
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>- 17 linhas com conteúdo diferente entre a origem e o Delta
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>- 34 itens parados na fila de erros
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>- 17 alterações desviaram do insert-only
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>- esquema fora do contrato: vistoria_item.coluna_nova: coluna_nova
+</span></code></pre></div>
+<p>A fila guarda só a chave e o motivo. A origem é insert-only e continua com o dado, e
+<code>vistoria.observacao</code> é texto livre que pode conter dado pessoal.</p>
+<p>Durante a medição, o Windows entrou em modo de espera por cerca de 5 minutos e o PostgreSQL
+passou por recuperação de falha. A auditoria seguinte fechou com 0 linhas diferentes e 0
+sem explicação. Foi um único evento acidental, com o consumidor parado.</p>
+<p>O desvio de tipo e o estouro de inteiro têm só teste unitário: a view <code>escola_estado_atual</code>
+depende de <code>vistoria_item.quantidade</code>, então <code>ALTER COLUMN ... TYPE</code> exigiria remover a view
+antes.</p>
+<h2 id="limites">Limites<a class="headerlink" href="#limites" title="Permanent link">&para;</a></h2>
+<ul>
+<li>A origem aceita <code>-infinity</code> e datas antes de Cristo, porque o check só exige
+  <code>ocorrido_em &lt;= registrado_em</code>. A fila contém o dano, mas a validação na origem continua
+  aberta.</li>
+<li>Não há reprocessamento automático da fila. <code>publicar-analitico --forcar</code> relê a origem,
+  mas aceita essas datas e cria partições como <code>-infinity</code>.</li>
+<li>Um desvio do insert-only segue como violação para sempre, porque a auditoria não tem como
+  marcá-lo como tratado.</li>
+<li>A taxa de entrega sob carga sustentada e o crescimento de arquivos ao longo de meses não
+  foram medidos.</li>
+<li>Os testes de integração não rodam em CI: o único fluxo do repositório publica a
+  documentação.</li>
+</ul>
+<h2 id="evidencias">Evidências<a class="headerlink" href="#evidencias" title="Permanent link">&para;</a></h2>
+<p>Saídas brutas dos comandos, sem alteração. Nenhuma traz valor de linha da origem.</p>
+<table>
+<thead>
+<tr>
+<th>Arquivo</th>
+<th>O que mostra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../evidencias/metricas-cdc/medicao_1.txt">medicao_1.txt</a> e <a href="../evidencias/metricas-cdc/medicao_2.txt">medicao_2.txt</a></td>
+<td>As duas rodadas de <code>medir-cdc</code></td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/recarga.txt">recarga.txt</a></td>
+<td><code>medir-recarga</code> e o WAL retido por vistoria</td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/auditoria_parado.txt">auditoria_parado.txt</a></td>
+<td><code>auditar-cdc</code> com o consumidor parado, código de saída 1</td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/auditoria_pos_queda.txt">auditoria_pos_queda.txt</a></td>
+<td><code>auditar-cdc</code> depois da recuperação de falha do PostgreSQL</td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/auditoria_final.txt">auditoria_final.txt</a></td>
+<td>Última auditoria: 3.175.243 linhas iguais, 0 diferentes</td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/falhas_antes_da_mudanca.txt">falhas_antes_da_mudanca.txt</a></td>
+<td>Saída de <a href="../evidencias/metricas-cdc/falhas_antes_da_mudanca.py">falhas_antes_da_mudanca.py</a> no commit <code>fb8c926</code></td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/falhas_depois_da_mudanca.txt">falhas_depois_da_mudanca.txt</a></td>
+<td>Saída de <a href="../evidencias/metricas-cdc/falhas_depois_da_mudanca.py">falhas_depois_da_mudanca.py</a> no consumidor atual</td>
+</tr>
+<tr>
+<td><a href="../evidencias/metricas-cdc/custo_do_checksum.txt">custo_do_checksum.txt</a></td>
+<td>Saída de <a href="../evidencias/metricas-cdc/custo_do_checksum.py">custo_do_checksum.py</a>, origem dos 17,4 s e 469 MiB, e <a href="../evidencias/metricas-cdc/custo_do_checksum_repeticao.txt">a repetição de 15,8 s</a>, cujas 306 linhas só na origem estavam pendentes no slot, com o consumidor parado</td>
+</tr>
+</tbody>
+</table>
+<p>Os scripts de falhas criam e removem um banco próprio. O de custo do checksum só lê, e roda
+no contêiner porque usa <code>resource</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-T<span class="w"> </span>-e<span class="w"> </span><span class="nv">LINHA_A_LINHA</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>--entrypoint<span class="w"> </span>uv<span class="w"> </span>carga<span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span>&lt;<span class="w"> </span>docs/evidencias/metricas-cdc/custo_do_checksum.py
+</span></code></pre></div>
+<h2 id="historico-de-versoes">Histórico de Versões<a class="headerlink" href="#historico-de-versoes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Versão</th>
+<th>Descrição</th>
+<th>Autor</th>
+<th>Revisão</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>Medição das métricas de consistência, latência, frescor e resiliência do CDC</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>31 de outubro de 2026</td>
+</tr>
+<tr>
+<td>1.1</td>
+<td>Inclui as saídas brutas e os scripts das falhas provocadas</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>31 de outubro de 2026</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
