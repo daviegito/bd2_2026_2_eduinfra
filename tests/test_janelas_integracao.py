@@ -105,3 +105,22 @@ def test_janelas_somam_o_mesmo_que_a_origem(configuracao):
         na_origem = conexao.execute("select count(*) from vistoria_item").fetchone()[0]
 
     assert sum(j.linhas for j in janelas.ler_janelas(configuracao).values()) == na_origem
+
+
+def test_vistoria_sem_item_nao_volta_como_nova(configuracao, escola_e_tecnico):
+    escola, tecnico = escola_e_tecnico
+    with psycopg.connect(configuracao.dsn) as conexao:
+        vistoria = conexao.execute(
+            """
+            insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, observacao)
+            values (%s, %s, 'vistoria_presencial', now() - interval '1 day', 'Teste das janelas: vistoria sem item')
+            returning id
+            """,
+            (escola, tecnico),
+        ).fetchone()[0]
+
+    primeira = janelas.processar(configuracao)
+    segunda = janelas.processar(configuracao)
+
+    assert vistoria not in {e.vistoria_id for e in primeira.eventos}
+    assert segunda.eventos == []

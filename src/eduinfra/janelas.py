@@ -125,12 +125,15 @@ def processar(configuracao: Configuracao) -> Relatorio:
             return Relatorio(marca_anterior=marca, marca_nova=marca)
 
         piso = marca - MARGEM_DA_MARCA if marca else datetime.min.replace(tzinfo=timezone.utc)
+        # Vistoria sem item não gera evento e nunca entra na partição: sem este filtro,
+        # ela voltaria como nova a cada execução enquanto estivesse na margem.
         candidatos = [
             EventoNovo(vistoria_id=id_, mes=mes_de(ocorrido), ocorrido_em=ocorrido, registrado_em=registrado)
             for id_, ocorrido, registrado in conexao.execute(
                 """
-                select id, ocorrido_em, registrado_em from vistoria
+                select id, ocorrido_em, registrado_em from vistoria v
                 where registrado_em > %s and registrado_em <= %s
+                  and exists (select 1 from vistoria_item i where i.vistoria_id = v.id)
                 order by id
                 """,
                 (piso, limite),
