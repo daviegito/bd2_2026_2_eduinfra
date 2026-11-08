@@ -1,47 +1,41 @@
 import sys
-import pyarrow as pa
-from deltalake import DeltaTable, write_deltalake
+import duckdb
 from eduinfra.configuracao import carregar_configuracao
 
-def injetar_defeito(configuracao):
+def injetar_defeito(conexao, dsn):
     print("\n--- [1/3] Injetando defeito de propósito na Gold ---")
-    caminho_tabela = configuracao.diretorio_dados / "warehouse" / "vistoria_item"
 
-    if not caminho_tabela.exists():
-        print(f"Erro: Tabela não encontrada em {caminho_tabela}. Rode a transformação primeiro!")
+    # Verifica se a tabela Gold existe no PostgreSQL
+    tabelas = [row[0] for row in conexao.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'"
+    ).fetchall()]
+
+    if "fato_vistoria_item" not in tabelas:
+        print("Erro: Tabela gold.fato_vistoria_item não encontrada no banco. Rode a transformação primeiro!")
         sys.exit(1)
 
-    print("Lendo amostra da tabela para garantir compatibilidade...")
-    dt = DeltaTable(str(caminho_tabela))
+    print("Injetando registro sujo na camada Gold do PostgreSQL...")
 
-    sample_table = dt.to_pyarrow_table()
+    # Busca um co_entidade real para não quebrar a integridade referencial
+    co_entidade = conexao.execute("SELECT co_entidade FROM pg.gold.dim_escola LIMIT 1").fetchone()
+    if not co_entidade:
+         print("Erro: dim_escola está vazia.")
+         sys.exit(1)
 
-    if sample_table.num_rows == 0:
-        print("Erro: A tabela está vazia. Não é possível injetar defeito baseado em dados existentes.")
-        sys.exit(1)
+    co_entidade = co_entidade[0]
 
-    # Pegamos a primeira linha para clonar a estrutura e os tipos de dados
-    first_row = sample_table.slice(0, 1)
+    # Injeta a linha com a situação proibida
+    conexao.execute(f"""
+        INSERT INTO pg.gold.fato_vistoria_item (vistoria_id, co_entidade, item_codigo, situacao)
+        VALUES (999999999, {co_entidade}, 'ITEM_DEMO', 'ERRO_DE_DOMINIO')
+    """)
 
-    # Exportamos TODAS as colunas dessa linha para um dicionário Python nativo
-    data_dict = first_row.to_pydict()
-
-    # Injetamos o defeito modificando apenas a coluna alvo
-    data_dict["situacao"] = ["ERRO_DE_DOMINIO"]
-
-    # Recriamos a tabela de defeito com todas as colunas intactas
-    defeito_table = pa.Table.from_pydict(data_dict, schema=sample_table.schema)
-
-    print(f"Injetando registro sujo...")
-
-    write_deltalake(str(caminho_tabela), defeito_table, mode="append")
     print("✅ Defeito injetado com sucesso!")
 
 def rodar_testes():
     print("\n--- [2/3] Executando testes de auditoria (E3) ---")
     import unittest
 
-    # Garante o path pro import dentro do container
     if "/app" not in sys.path:
         sys.path.insert(0, "/app")
 
@@ -67,17 +61,23 @@ def main():
     print("=== INICIANDO DEMONSTRAÇÃO DE AUDITORIA E3 ===")
     config = carregar_configuracao()
 
+    conexao = duckdb.connect()
+    conexao.execute("INSTALL postgres; LOAD postgres;")
+    conexao.execute(f"ATTACH '{config.dsn}' AS pg (TYPE POSTGRES);")
+
     try:
-        injetar_defeito(config)
+        injetar_defeito(conexao, config.dsn)
         rodar_testes()
     except Exception as e:
         print(f"Erro durante a demonstração: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        caminho_tabela = config.diretorio_dados / "warehouse" / "vistoria_item"
-        if caminho_tabela.exists():
-            DeltaTable(str(caminho_tabela)).delete("situacao = 'ERRO_DE_DOMINIO'")
+        print("Limpando defeito injetado...")
+        try:
+             conexao.execute("DELETE FROM pg.gold.fato_vistoria_item WHERE situacao = 'ERRO_DE_DOMINIO'")
+        except Exception:
+             pass
 
 if __name__ == "__main__":
     main()
