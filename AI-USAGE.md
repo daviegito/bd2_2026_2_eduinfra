@@ -302,4 +302,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
   passando, além da suíte de unidade inteira e dos testes do modelo analítico;
   `mkdocs build --strict` sem erro
+
+### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `docs/adr/0005-ferramenta-de-transformacao.md`, `docs/evidencias/adr-0005/`
+  (protótipos dbt e SQLMesh, scripts de medição e saídas), `docs/adr/README.md`,
+  `mkdocs.yml` e `.gitignore`
+- **O que foi pedido:** apoio para comparar dbt, SQLMesh e a opção nula, no critério
+  definido pela Squad (a ferramenta mais simples e fácil de usar), e redigir o ADR
+- **O que foi aproveitado:** a montagem da mesma Gold nas três alternativas a partir do
+  SQL do PR #55, os scripts de medição e comparação e a redação inicial do ADR,
+  revisados e ajustados por Gabriel. A decisão pelo dbt segue o critério da Squad
+- **Como foi verificado:** as três Golds foram comparadas tabela a tabela (contagem e
+  soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
+  ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
+  com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)

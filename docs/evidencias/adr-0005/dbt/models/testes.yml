@@ -1,0 +1,37 @@
+version: 2
+
+# As mesmas oito verificações nas duas ferramentas. unique, not_null, relationships e
+# accepted_values vêm prontos no dbt; chave composta e faixa de valores pedem teste próprio
+# (tests/) ou o pacote dbt_utils.
+models:
+  - name: dim_item
+    columns:
+      - name: item_codigo
+        data_tests: [unique, not_null]
+  - name: dim_escola
+    columns:
+      - name: co_entidade
+        data_tests: [unique, not_null]
+      - name: co_municipio
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_municipio')
+                field: co_municipio
+  - name: dim_escola_infraestrutura
+    columns:
+      - name: escola_infra_sk
+        data_tests: [unique, not_null]
+  - name: fato_vistoria_item
+    columns:
+      - name: situacao
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['existente', 'inexistente', 'em_obra', 'inutilizavel', 'nao_informado']
+      - name: escola_infra_sk
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_escola_infraestrutura')
+                field: escola_infra_sk

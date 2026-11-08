@@ -1,0 +1,11 @@
+name: eduinfra_gold
+version: "1.0"
+profile: eduinfra
+model-paths: ["models"]
+test-paths: ["tests"]
+
+models:
+  eduinfra_gold:
+    +materialized: table
+    # A opção nula também roda analyze em cada tabela da Gold.
+    +post-hook: "analyze {{ this }}"

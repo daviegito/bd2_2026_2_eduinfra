@@ -77,6 +77,7 @@ nav:
       - ADR 0001 — Insert-only: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
       - ADR 0002 — TLS: adr/0002-cadeia-tls-incompleta-do-inep.md
       - ADR 0004 — Ingestão: adr/0004-ingestao.md
+      - ADR 0005 — Transformação: adr/0005-ferramenta-de-transformacao.md
       - ADR 0007 — Telemetria e fila de erros: adr/0007-telemetria-e-fila-de-erros-do-cdc.md
   - Processo:
       - Diário de bordo: diario/diario-de-bordo.md
