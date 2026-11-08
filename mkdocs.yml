@@ -66,6 +66,7 @@ nav:
       - Testes: testes.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
+      - ENEM e junção com o Censo: enem.md
       - Compressão: serializacao-compressao.md
       - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
       - Métricas do CDC: metricas-cdc.md
