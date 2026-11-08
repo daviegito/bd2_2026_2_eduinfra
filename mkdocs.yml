@@ -71,6 +71,7 @@ nav:
       - Métricas do CDC: metricas-cdc.md
       - Dados atrasados: dado-atrasado.md
       - Camada analítica: camada-analitica.md
+      - Frescor e SLA da Gold: frescor-e-sla.md
   - Decisões:
       - Índice dos ADRs: adr/README.md
       - ADR 0001 — Insert-only: adr/0001-modelagem-insert-only-do-sistema-de-origem.md

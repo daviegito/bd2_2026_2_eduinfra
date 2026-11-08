@@ -282,6 +282,27 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
 - **Quem revisou:** Davi, no PR #59, com a revisão em andamento
 
+### 2026-11-02 — Frescor e SLA da Gold (issue #52)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/frescor.py`, os comandos `medir-frescor` e
+  `demonstrar-frescor` e o registro em `construir-gold` na CLI, `tests/test_frescor.py`,
+  `tests/test_frescor_integracao.py`, `docs/frescor-e-sla.md`, `docs/testes.md`,
+  `mkdocs.yml` e README
+- **O que foi pedido:** apoio para implementar a issue #52, no escopo definido por
+  Gabriel: medir o frescor da tabela que alimenta o painel, declarar o SLA, registrar
+  a métrica, falhar na violação e demonstrá-la
+- **O que foi aproveitado:** sugestões discutidas e aprovadas por Gabriel (frescor
+  como a espera da vistoria pendente mais antiga, e não o tempo desde a última
+  construção; SLA de 25 h; registro fora do schema `gold`), trechos de código, testes
+  e a redação inicial do documento, revisados e ajustados por ele
+- **Como foi verificado:** `construir-gold`, `demonstrar-frescor` e `medir-frescor`
+  rodados contra o banco com o Censo 2024 (violação com código de saída 1 e retorno
+  ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
+  passando, além da suíte de unidade inteira e dos testes do modelo analítico;
+  `mkdocs build --strict` sem erro
+
 ### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
