@@ -1,0 +1,50 @@
+# Auditoria do CDC
+
+## Consistência
+
+Checksum da tabela inteira, por linha:
+
+| Caminho | Iguais | Diferentes |
+| --- | ---: | ---: |
+| Linha de base e recarga (sem LSN) | 3165961 | 0 |
+| CDC (com LSN) | 9282 | 0 |
+
+Só na origem: 0 (0 pendentes no slot, 0 na fila de erros, 0 sem explicação). Só no Delta: 0.
+
+Contagem por operação, desde que a telemetria começou:
+
+| Operação | Lidas do WAL | Aplicadas no Delta | Na fila de erros | Já estavam no Delta | Pendentes no slot |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| insert | 7531 | 7021 | 0 | 510 | 0 |
+| update | 0 | 0 | 0 | 0 | 0 |
+| delete | 0 | 0 | 0 | 0 | 0 |
+| truncate | 0 | 0 | 0 | 0 | 0 |
+
+Ordem, em 437 transações entregues: 0 com LSN invertido, 0 reentregas, 118 com registrado_em invertido (maior diferença de 0,79 s), 195 com ocorrido_em fora de ordem e 67 além da tolerância de 7 dias do ADR 0004.
+
+## Latência e frescor
+
+Desde que a telemetria começou. Um commit feito com o consumidor parado conta o tempo parado até ser entregue.
+
+| Medida | Amostras | Mediana (s) | p95 (s) | Máximo (s) |
+| --- | ---: | ---: | ---: | ---: |
+| Ponta a ponta (commit até gravar no Delta) | 437 | 2,58 | 596,11 | 53491,29 |
+| Atraso de captura (commit até ler do WAL) | 437 | 1,74 | 592,43 | 53440,17 |
+| - espera pela próxima passada | 437 | 1,60 | 592,18 | 53430,39 |
+| - leitura e decodificação do WAL | 437 | 0,04 | 9,78 | 9,78 |
+| Atraso de carga (fim da leitura até gravar no Delta) | 437 | 0,47 | 51,12 | 51,12 |
+| - conversão e cabeçalhos | 437 | 0,02 | 2,26 | 3,70 |
+| - merge no Delta e fila de erros | 437 | 0,46 | 50,38 | 50,38 |
+
+Frescor: tudo o que confirmou até 2026-10-31T21:02:56.734597+00:00 já estava legível, 2,5 s atrás (SLA de 60,0 s).
+
+## Resiliência
+
+Desvios de esquema agora no catálogo: nenhum.
+Desvios de esquema vistos no WAL: nenhum.
+Fila de erros: 0 linhas (vazia).
+Slot: reserved, 76873280 bytes por entregar.
+
+## Resultado
+
+Nenhuma violação.
