@@ -27,26 +27,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Subir banco e construir a camada Gold
-        run: |
-          docker compose up -d banco
-          docker compose run --rm carga construir-gold
-
-      - name: Gerar o HTML do Painel da Gold
-        run: |
-          docker compose run --rm carga gerar-painel
-
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
 
+      #Geração Painel E4 (Injeção com env)
+      - name: Subir banco, construir Gold e gerar painel
+        env:
+          POSTGRES_USER: eduinfra
+          POSTGRES_PASSWORD: eduinfra
+          POSTGRES_DB: eduinfra
+          PORTA_POSTGRES: 5432
+          ANO_CENSO: 2024
+        run: |
+          docker compose up -d banco
+          docker compose run --rm carga construir-gold
+          docker compose run --rm -v ./docs:/app/docs carga gerar-painel
+
+      #Mostra o erro real se o banco falhar
+      - name: 🚨 Mostrar logs do banco se der erro
+        if: failure()
+        run: docker compose logs banco
+
       - name: Gerar o site e verificar links internos
         run: mkdocs build --strict
-
       - uses: actions/upload-artifact@v4
         with:
           name: site-documentacao
@@ -55,7 +61,7 @@ jobs:
   publicar:
     name: Publicar no GitHub Pages
     needs: validar
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/feat/testes_de_dados') && github.event_name != 'pull_request'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,26 +70,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Subir banco e construir a camada Gold
-        run: |
-          docker compose up -d banco
-          docker compose run --rm carga construir-gold
-
-      - name: Gerar o HTML do Painel da Gold
-        run: |
-          docker compose run --rm carga gerar-painel
-
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
 
+      # Repete a geração do painel E4 para deploy
+      - name: Subir banco, construir Gold e gerar painel
+        env:
+          POSTGRES_USER: eduinfra
+          POSTGRES_PASSWORD: eduinfra
+          POSTGRES_DB: eduinfra
+          PORTA_POSTGRES: 5432
+          ANO_CENSO: 2024
+        run: |
+          docker compose up -d banco
+          docker compose run --rm carga construir-gold
+          docker compose run --rm -v ./docs:/app/docs carga gerar-painel
+
+      - name: 🚨 Mostrar logs do banco se der erro
+        if: failure()
+        run: docker compose logs banco
+
       - name: Publicar na branch gh-pages
         run: mkdocs gh-deploy --strict
-
       - name: Solicitar atualização do Pages
         env:
           GH_TOKEN: ${{ github.token }}
