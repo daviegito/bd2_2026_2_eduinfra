@@ -1289,6 +1289,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#revisao-operacional-08112026-issue-60" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão operacional — 08/11/2026 (issue #60)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1629,6 +1640,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#revisao-operacional-08112026-issue-60" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão operacional — 08/11/2026 (issue #60)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1719,7 +1741,7 @@
 </ul>
 <h2 id="consequencias">Consequências<a class="headerlink" href="#consequencias" title="Permanent link">&para;</a></h2>
 <p><strong>O que ganhamos:</strong> carga reexecutável com manifesto, recuperação após falhas, histórico preservado e captura por ordem de commit. Parada e reentrega do consumidor não duplicam itens no destino.</p>
-<p><strong>O que perdemos:</strong> o consumidor próprio foi mais lento no lote de 85.000 itens e exige manter o protocolo e a operação do slot. O limite configurado de WAL retido é 1 GB; sua invalidação exige recuperar o fluxo e reconciliar o destino. Não há commit conjunto entre banco e arquivos: falha após o commit pode deixar a Silver antiga até nova execução. Entre os dois renames, a partição pode ficar temporariamente ausente. Reprocessar uma única correção pode custar a janela inteira, cerca de oito segundos no volume medido, e alterar números de meses já fechados. A duplicidade de caminhos analíticos aumenta o trabalho de operação e reconciliação.</p>
+<p><strong>O que perdemos:</strong> o consumidor próprio foi mais lento no lote de 85.000 itens e exige manter o protocolo e a operação do slot. O limite original de WAL retido era 1 GB. Na revisão de 08/11/2026 passou a 2 GB configuráveis após medir a Gold nacional; sua invalidação ainda exige recuperar o fluxo e reconciliar o destino. Não há commit conjunto entre banco e arquivos: falha após o commit pode deixar a Silver antiga até nova execução. Entre os dois renames, a partição pode ficar temporariamente ausente. Reprocessar uma única correção pode custar a janela inteira, cerca de oito segundos no volume medido, e alterar números de meses já fechados. A duplicidade de caminhos analíticos aumenta o trabalho de operação e reconciliação.</p>
 <p><strong>O que se torna irreversível:</strong> descartar o slot elimina seu ponto de retomada. A arquitetura pode mudar, mas exige nova carga de base, checkpoints e reconciliação; seu custo de migração não foi medido.</p>
 <h2 id="gatilho-de-revisao">Gatilho de revisão<a class="headerlink" href="#gatilho-de-revisao" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1755,6 +1777,20 @@
 </tr>
 </tbody>
 </table>
+<h2 id="revisao-operacional-08112026-issue-60">Revisão operacional — 08/11/2026 (issue #60)<a class="headerlink" href="#revisao-operacional-08112026-issue-60" title="Permanent link">&para;</a></h2>
+<p>Mantida a escolha B e a arquitetura com PostgreSQL compartilhado. Foi corrigida
+a passada sem transações publicadas: o consumidor captura o WAL persistido
+antes de ler, limita o peek a essa posição e a confirma se a leitura estiver
+vazia. Com eventos, preserva a confirmação somente após a entrega.</p>
+<p>A medição nacional com consumidor ativo reteve 985.449.528 bytes de WAL durante
+a construção SQL e terminou com 408 bytes retidos, sem perder o slot. O limite
+anterior de 1 GB não deixava margem adequada para a transação de construção;
+o job dbt com preparo das fontes reteve 1.196.987.160 bytes (acima de 1 GB) e
+terminou saudável com limite de 2 GB. O Compose passa a 2 GB por padrão,
+mantendo limite finito e possibilidade de configuração. Crescimento do domínio e outros consumidores exigem revisão.</p>
+<p>Os <a href="../../evidencias/issue-60/retencao-wal/">testes e as medições</a> documentam os
+limites da conclusão. Essa revisão não troca o mecanismo de CDC, não decide a
+ferramenta da Gold e não muda o contrato usado pelo painel e pelo frescor.</p>
 
 
 
