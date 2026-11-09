@@ -58,6 +58,7 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 | Fila de erros e desvio de esquema | `tests/test_contrato_cdc.py`, `tests/test_resiliencia_cdc_integracao.py` |
 | Eventos e deduplicação | `tests/test_eventos.py` |
 | Janelas e atraso | `tests/test_janelas.py`, `tests/test_janelas_integracao.py` |
+| Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
 | Camada analítica | `tests/test_camada_analitica.py` |
 | Compressão | `tests/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/test_insert_only.py` |

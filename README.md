@@ -220,7 +220,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga medir-cobertura-enem` | mede a junção das escolas do ENEM com as do Censo; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
-| `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
+| `docker compose run --rm carga processar-janelas` | reconcilia com a origem as janelas mensais tocadas pelas vistorias registradas desde a última execução, completando a fonte canônica de eventos ([dado atrasado](docs/dado-atrasado.md)) |
 | `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
 | `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
 | `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
@@ -229,7 +229,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
-| `docker compose run --rm carga construir-gold` | recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
+| `docker compose run --rm carga construir-gold` | copia uma versão da fonte canônica de eventos para `fonte.eventos_vistoria`, confere com a origem e recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
 | `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
 | `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
@@ -288,16 +288,18 @@ Docker, o diretório é `dados/` na raiz do repositório (variável
 | `silver/ano_censo=AAAA/` | Parquet zstd | ano do Censo | `ingerir` (lote) |
 | `silver/enem/ano=AAAA/` | Parquet zstd | ano do ENEM | `ingerir-enem` (lote) |
 | `warehouse/vistoria_item/` | Delta Lake | `ano_censo` e `sg_uf` | `publicar-analitica` |
-| `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base) e serviço `cdc` |
-| `analitico/eventos_vistoria/` | Parquet zstd | `ocorrido_mes=AAAA-MM` | `processar-janelas` (não roda no `tudo`) |
+| `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base), serviço `cdc` e `processar-janelas` |
+| `warehouse/eventos_vistoria_janelas.json` | JSON | — | `processar-janelas` e `reprocessar-janela` (controle das janelas) |
 
 - `warehouse/vistoria_item` é a tabela da camada analítica, montada a partir da
   Silver: um registro por item de vistoria, já com escola e município.
-- `warehouse/eventos_vistoria` recebe da origem, pelo CDC, cada item de vistoria
-  confirmado no banco.
-- `analitico/eventos_vistoria` é o caminho de dado atrasado em janelas mensais.
-  Ele coexiste com o CDC; a unificação dos dois destinos ainda não está
-  implementada (ADR 0004).
+- `warehouse/eventos_vistoria` é a **fonte canônica de eventos**
+  ([ADR 0008](docs/adr/0008-fonte-canonica-de-eventos.md)): um registro por item de
+  vistoria, com chave `(vistoria_id, item_codigo)`. A linha de base, o CDC e as
+  janelas de dado atrasado gravam nela pelo mesmo merge, então um evento que
+  chega por mais de um caminho aparece uma vez. A Gold lê só esta tabela.
+- O antigo destino das janelas em Parquet, `analitico/eventos_vistoria/`, não é
+  mais escrito nem lido e pode ser apagado.
 
 Os comandos `demonstrar-cdc`, `demonstrar-atraso` e `comparar-ingestao` inserem
 vistorias de teste na origem: rode-os num ambiente de desenvolvimento.
@@ -414,15 +416,17 @@ preparada caso outros eventos sejam publicados no futuro.
 
 ### Dado atrasado em janelas mensais
 
-`processar-janelas` leva à camada analítica as vistorias registradas desde a
-última execução, agrupadas pelo mês em que ocorreram. Uma vistoria que chega
-atrasada reabre a janela do mês dela em vez de ser descartada, e reprocessar uma
-janela é idempotente.
+A janela é o mês de `ocorrido_em`, a partição da fonte canônica de eventos.
+`processar-janelas` pega as vistorias registradas desde a última execução,
+reconcilia com a origem as janelas dos meses em que elas ocorreram e grava na
+fonte só o que o CDC ainda não entregou. Uma vistoria que chega atrasada reabre
+a janela do mês dela em vez de ser descartada, e reprocessar uma janela é
+idempotente.
 
 ```bash
 docker compose run --rm carga processar-janelas                  # janelas tocadas desde a última execução
 docker compose run --rm carga demonstrar-atraso                  # insere vistorias atrasadas e mostra a janela de cada uma
-docker compose run --rm carga reprocessar-janela --mes 2024-05   # regrava um mês a partir da origem
+docker compose run --rm carga reprocessar-janela --mes 2024-05   # reconcilia um mês com a origem
 ```
 
 Margem, tolerância, reabertura e medições estão em

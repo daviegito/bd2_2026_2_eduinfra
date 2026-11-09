@@ -3,8 +3,13 @@
 Os eventos de vistoria chegam à camada analítica em **janelas mensais pelo mês
 de `ocorrido_em`**, a data em que a realidade mudou na escola. Uma vistoria
 registrada com atraso cai no mês em que aconteceu, nunca no mês em que o sistema
-soube dela. Reprocessar uma janela regrava a partição inteira a partir da
-origem, e rodar duas vezes dá o mesmo resultado. Responde à issue #27.
+soube dela. Responde à issue #27.
+
+Desde o [ADR 0008](adr/0008-fonte-canonica-de-eventos.md), a janela é a partição
+`mes_ocorrencia` da **fonte canônica de eventos**, a tabela Delta
+`warehouse/eventos_vistoria`. O CDC e as janelas gravam nela, pela mesma chave
+`(vistoria_id, item_codigo)`. Um evento que chega pelos dois caminhos aparece uma
+vez, e a Gold lê só essa tabela.
 
 ## As decisões
 
@@ -18,9 +23,14 @@ Ela só tem resposta se o evento estiver no mês em que aconteceu. Janela por
 `registrado_em` colocaria uma vistoria feita em agosto e digitada em outubro no
 mês de outubro, e a série mostraria uma mudança que não aconteceu em outubro.
 
-`registrado_em` continua tendo um papel: é a **marca d'água**. Cada execução
-pega as vistorias registradas depois da anterior e descobre quais meses elas
-tocam. A marca diz *o que é novo*; `ocorrido_em` diz *onde o novo entra*.
+Os dois caminhos calculam o mês do mesmo jeito, a partir de `ocorrido_em` em UTC:
+o consumidor do CDC ao montar o evento e a leitura da origem em
+`eventos.LINHA_DE_BASE`. Por isso o evento atrasado cai na mesma partição, venha
+de onde vier.
+
+`registrado_em` continua tendo um papel: é a **marca d'água** das janelas. Cada
+execução pega as vistorias registradas depois da anterior e descobre quais meses
+elas tocam. A marca diz *o que é novo*; `ocorrido_em` diz *onde o novo entra*.
 
 ### 2. Janela mensal, aberta até 7 dias depois do fim do mês
 
@@ -40,51 +50,79 @@ Havia três destinos possíveis para um evento que chega com a janela já fechad
 | --- | --- |
 | Descartar | Perde dado que a origem tem. A camada analítica passaria a ter menos que a origem, e a diferença só cresceria. |
 | Guardar à parte | Cada consumidor teria que lembrar de somar a área "atrasados" ao mês certo. Na prática, alguém esquece. |
-| **Corrigir a janela e registrar a reabertura** | Escolhido. A origem é insert-only e guarda tudo, então a janela pode ser recalculada a qualquer momento. O registro avisa quem já usou o número do mês fechado que ele mudou. |
+| **Corrigir a janela e registrar a reabertura** | Escolhido. O evento entra na partição do mês em que ocorreu. O registro avisa quem já usou o número do mês fechado que ele mudou. |
 
-A reabertura fica em `_controle.json`, com o mês, quando foi reaberta, quantos
-eventos chegaram e o maior atraso. O processamento também emite um aviso no log.
+A reabertura fica no controle das janelas, com o mês, quando foi reaberta,
+quantos eventos chegaram e o maior atraso. O processamento também emite um aviso
+no log. Ela é registrada mesmo quando o CDC entregou o evento antes, porque a
+regra olha `registrado_em`, e não o caminho.
 
-### 4. Reprocessar é regravar a partição inteira
+### 4. Reprocessar é reconciliar o mês com a origem
 
-A janela é recalculada da origem, ordenada por `vistoria_id` e `item_codigo`, e
-gravada numa pasta temporária. Depois, um `os.replace` troca a partição de uma
-vez: quem lê vê a versão antiga ou a nova, nunca uma escrita pela metade. Se a
-conversão falhar, a partição anterior continua intacta (há teste para isso).
+As janelas não têm destino próprio. Reconciliar uma janela lê o mês da origem e
+compara a **impressão** dele com a da partição na fonte canônica. Se forem
+diferentes, grava pelo mesmo merge do CDC, que só insere a chave que falta. Se
+forem iguais, não grava nada: cada merge cria uma versão nova da tabela Delta.
 
-Cada janela tem uma **impressão**: a soma dos hashes de todas as linhas. Ela não
-depende da ordem física no arquivo e muda se qualquer valor mudar. É assim que
-se confere, com um número, que reprocessar duas vezes deu o mesmo resultado.
+A impressão é a soma exata, em 64 bits, do md5 de cada linha. Ela não depende da
+ordem e muda se qualquer valor mudar. `lsn_origem` fica de fora, porque distingue
+os caminhos em vez de descrever o evento. O resultado da janela diz se ela
+**confere com a origem**. Uma primeira versão somava o md5 de 128 bits; a soma
+virava ponto flutuante e o mês do Censo não conferia com ele mesmo.
+
+Rodar duas vezes dá o mesmo resultado, porque a origem é insert-only e o merge
+só insere o que falta.
 
 ### 5. A margem da marca d'água
 
 `registrado_em` recebe `now()`, que é a hora do **início** da transação, não a do
 commit. Uma transação longa pode confirmar depois da execução, com
-`registrado_em` anterior à marca, e escaparia. Por isso cada execução também
-relê os 10 minutos anteriores à marca (`MARGEM_DA_MARCA`). Para a margem não
-regravar janelas à toa, só conta como novo o evento cujo `vistoria_id` ainda não
-está na partição do seu mês. Vistoria sem item não gera evento: ela fica de fora
-das candidatas, senão voltaria como nova a cada execução enquanto estivesse na
-margem.
+`registrado_em` anterior à marca. Por isso cada execução também relê os 10
+minutos anteriores à marca (`MARGEM_DA_MARCA`).
+
+Para não contar duas vezes o que a margem traz de volta, o controle guarda os ids
+das vistorias que a execução anterior viu na margem, em faixas de ids
+consecutivos (a carga do Censo cabe numa faixa só). Não dá para perguntar isso à
+fonte canônica: o CDC pode ter entregado a vistoria antes, sem que nenhuma
+execução das janelas a tivesse visto.
+
+O furo da margem deixou de ser um risco de perda. O CDC captura pela ordem de
+commit, e a vistoria que escapar da margem chega por ele. As janelas são a rede
+de segurança do CDC, e não o contrário.
+
+### 6. O item que chega depois do cabeçalho
+
+`vistoria_item` não tem carimbo próprio, e o esquema deixa confirmar os itens
+numa transação depois da vistoria. Esses itens não movem a marca d'água. Por isso
+a vistoria que uma execução vê **ainda sem item** fica no controle, em
+`cabecalhos_sem_item`, e não conta como vista. Cada execução confere quais dessas
+ganharam itens: elas viram eventos novos e o mês delas é reconciliado, por mais
+que o item tenha demorado. A vistoria que continua sem item não volta como nova a
+cada execução. Ela não é evento e não chega à fonte.
 
 ## Onde ficam os dados
 
 ```
-dados/analitico/eventos_vistoria/
-  _controle.json                    marca d'água, impressão de cada janela, reaberturas
-  ocorrido_mes=2024-05/eventos.parquet
-  ocorrido_mes=2026-08/eventos.parquet
-  ocorrido_mes=2026-10/eventos.parquet
+dados/warehouse/
+  eventos_vistoria/                       fonte canônica, em Delta
+    _delta_log/
+    mes_ocorrencia=2024-05/...
+    mes_ocorrencia=2026-09/...
+  eventos_vistoria_janelas.json           marca d'água, vistas na margem, cabeçalhos sem item, janelas e reaberturas
 ```
 
-Cada linha é um item de uma vistoria: `vistoria_id`, `co_entidade`, `origem`,
-`ocorrido_em`, `registrado_em`, `item_codigo`, `situacao` e `quantidade`. O
-técnico não sai da origem.
+Cada linha é um item de uma vistoria: `vistoria_id`, `item_codigo`,
+`co_entidade`, `sg_uf`, `origem`, `ocorrido_em`, `registrado_em`, `situacao`,
+`quantidade`, `mes_ocorrencia` e `lsn_origem`, preenchido quando o evento veio
+pelo CDC. O técnico não sai da origem.
+
+O antigo destino em Parquet, `analitico/eventos_vistoria/`, não é mais escrito
+nem lido e pode ser apagado.
 
 ## Como usar
 
 ```bash
-docker compose run --rm carga processar-janelas            # incorpora o que foi registrado desde a última vez
+docker compose run --rm carga processar-janelas            # reconcilia o que foi registrado desde a última vez
 docker compose run --rm carga reprocessar-janela --mes 2024-05
 docker compose run --rm carga demonstrar-atraso            # a demonstração abaixo
 ```
@@ -97,105 +135,133 @@ elas ficam lá, marcadas na observação. Rode num ambiente de desenvolvimento.
 Os testes sem banco rodam direto:
 
 ```bash
-uv run pytest tests/test_janelas.py
+uv run pytest tests/test_janelas.py tests/test_fonte_de_eventos.py
 ```
 
-Os de integração precisam do banco carregado e do `DATABASE_URL` do `.env`,
-que aponta para a porta publicada pelo compose:
+O de integração da fonte única cria um banco e um slot próprios. Ele mostra o
+mesmo evento chegando pelos dois caminhos, nas duas ordens, e um evento
+atrasado:
 
 ```bash
-docker compose up --build -d                 # sobe o banco e roda a carga
+docker compose up -d banco
 set -a && source .env && set +a              # exporta DATABASE_URL
-uv run pytest tests/test_janelas_integracao.py
+uv run pytest tests/test_fonte_de_eventos_integracao.py tests/test_janelas_integracao.py
 ```
 
-Como a demonstração, eles inserem vistorias de teste na origem.
+`tests/test_janelas_integracao.py` usa o banco carregado e, como a demonstração,
+insere vistorias de teste na origem.
 
 ## Demonstração
 
-Saída real de `demonstrar-atraso` em 12/10/2026, sobre o banco carregado com o
-Censo 2024:
+Saída real de `demonstrar-atraso` em 08/11/2026, sobre o banco carregado com o
+Censo 2024, com a fonte canônica já publicada (`publicar-analitico`) e o serviço
+`cdc` parado:
 
 ```
 ## 1. Estado de partida
 
-marca d'água: 2026-09-26T16:41:44.889635+00:00 -> 2026-09-26T16:41:44.889635+00:00
+marca d'água: 2026-09-30T17:55:34.901865+00:00 -> 2026-09-30T17:55:34.901865+00:00
 vistorias novas desde a marca: 0
+itens que a fonte canônica ainda não tinha (o CDC não entregara): 0
 
-## 2. Vistoria da escola 53002580 ocorrida há 3 dias (2026-10-09), registrada agora
+## 2. Vistoria da escola 53002580 ocorrida há 3 dias (2026-11-05), registrada agora
 
-marca d'água: 2026-09-26T16:41:44.889635+00:00 -> 2026-10-12T15:46:26.539992+00:00
+marca d'água: 2026-09-30T17:55:34.901865+00:00 -> 2026-11-08T21:38:49.544766+00:00
 vistorias novas desde a marca: 1
-  janela 2026-10: 17 linhas, impressão 924855e5adcda8679
-  vistoria 181070: ocorreu 2026-10-09, registrada 2026-10-12, atraso 3.0 dias -> janela 2026-10 (dentro da tolerância)
+itens que a fonte canônica ainda não tinha (o CDC não entregara): 17
+  janela 2026-11: 17 linhas, impressão 8972aabef25abafce, confere com a origem
+  vistoria 362131: ocorreu 2026-11-05, registrada 2026-11-08, atraso 3.0 dias -> janela 2026-11 (dentro da tolerância)
 
-## 3. Vistoria ocorrida em 2026-08-15, com a janela 2026-08 fechada desde 2026-09-08, registrada agora
+## 3. Vistoria ocorrida em 2026-09-15, com a janela 2026-09 fechada desde 2026-10-08, registrada agora
 
-marca d'água: 2026-10-12T15:46:26.539992+00:00 -> 2026-10-12T15:46:27.942649+00:00
+marca d'água: 2026-11-08T21:38:49.544766+00:00 -> 2026-11-08T21:38:59.514943+00:00
 vistorias novas desde a marca: 1
-  janela 2026-08: 17 linhas, impressão 9388db934a447aebd
-  vistoria 181071: ocorreu 2026-08-15, registrada 2026-10-12, atraso 58.7 dias -> janela 2026-08 (FORA da tolerância: janela reaberta)
+itens que a fonte canônica ainda não tinha (o CDC não entregara): 17
+  janela 2026-09: 17 linhas, impressão 85822fadc2cb477ff, confere com a origem
+  vistoria 362132: ocorreu 2026-09-15, registrada 2026-11-08, atraso 54.9 dias -> janela 2026-09 (FORA da tolerância: janela reaberta)
 
-## 4. Reprocessar a janela 2026-10 duas vezes
+## 4. Reprocessar a janela 2026-11 duas vezes
 
-1ª: 17 linhas, impressão 924855e5adcda8679
-2ª: 17 linhas, impressão 924855e5adcda8679
+1ª: 17 linhas, impressão 8972aabef25abafce
+2ª: 17 linhas, impressão 8972aabef25abafce
 idênticas: sim
+
+## 5. Janelas na fonte canônica de eventos
+
+- 2024-05: 3078105 linhas
+- 2026-09: 17 linhas
+- 2026-11: 17 linhas
+```
+
+Em seguida, uma passada do CDC (`docker compose run --rm carga cdc`) leu as duas
+transações:
+
+```
+ResultadoDaPassada(transacoes=2, vistorias_vistas=2, itens_lidos=34, itens_inseridos=0, ...)
 ```
 
 O que ela mostra:
 
-- A vistoria de três dias atrás entrou em **outubro**, o mês em que ocorreu,
+- A vistoria de três dias atrás entrou em **novembro**, o mês em que ocorreu,
   dentro da tolerância.
-- A vistoria de agosto chegou 58,7 dias depois de ocorrer, com agosto fechado
-  desde 08/09. Ela **reabriu agosto**, e a reabertura ficou registrada em
-  `_controle.json`.
-- A primeira execução não reprocessou nada: a margem trouxe de volta as 181.065
-  vistorias da carga, mas todas já estavam na partição.
-- Reprocessar outubro duas vezes deu a mesma impressão.
+- A vistoria de setembro chegou 54,9 dias depois de ocorrer, com setembro fechado
+  desde 08/10. Ela entrou na partição de **setembro** e **reabriu** a janela, e a
+  reabertura ficou registrada no controle.
+- Com o CDC parado, as janelas gravaram os 34 itens. O CDC, ao voltar, leu os
+  mesmos 34 e inseriu **zero**: o evento aparece uma vez.
+- Reprocessar novembro duas vezes deu a mesma impressão.
+- A `construir-gold` seguinte conferiu 3.078.139 eventos na fonte e na origem,
+  sem nenhum só de um lado.
 
 ## Medições
 
-| Operação | Tempo | Memória máxima |
-| --- | ---: | ---: |
-| Demonstração completa (passos 1 a 4) | 3,7 s | 196 MB |
-| Reprocessar a janela 2024-05 (carga do Censo, 3.078.105 linhas) | 7,9 s e 8,1 s | 755 MB |
+Docker sobre WSL2, banco com o Censo 2024, em 08/11/2026:
 
-Reprocessar 2024-05 duas vezes deu a impressão `177cbda0abd575cc091396` nas duas,
-a mesma da primeira carga. A partição ocupa 2,8 MB em Parquet zstd.
+| Operação | Tempo |
+| --- | ---: |
+| Primeira reconciliação (`processar-janelas`), mês 2024-05 com 3.078.105 linhas, já presente | 18,6 s |
+| Reconciliação sem nada novo | 5,4 s |
+| Demonstração completa (passos 1 a 4) | 22,2 s |
+| Ler um mês da origem e calcular a impressão: vazio / 2024-05 | 1,3 s / 3,4 s |
 
-A primeira versão deste código não limitava a memória do DuckDB e foi encerrada
-pelo sistema por falta de memória nessa mesma janela. Agora a gravação usa
-`memory_limit = 1GB` e transborda para disco quando precisa.
+Os tempos incluem o início do contêiner. Cada reconciliação de mês carrega a
+extensão `postgres` do DuckDB, cerca de 1,3 s, e por isso a demonstração ficou
+mais lenta que a versão em Parquet (3,7 s).
 
 ## O que se perde
 
 - **Números de mês fechado podem mudar.** Quem publicou o total de agosto em
   setembro pode ver o número mudar em outubro. A reabertura registrada é o aviso,
   mas o consumidor precisa olhar para ela.
-- **Reprocessar custa a janela inteira.** Um único evento atrasado em 2024-05
-  regrava 3 milhões de linhas, cerca de 8 segundos. Com a janela mensal e o
-  volume atual, é aceitável; a carga anual do Censo concentra quase tudo num mês
-  só.
-- **A marca d'água vive num arquivo.** `_controle.json` é gravado por troca
-  atômica, mas não é transacional com a origem. Se o arquivo se perder, a próxima
-  execução trata tudo como carga inicial e regrava todas as janelas: fica certo,
-  só mais caro.
-- **A margem tem um limite.** Uma transação aberta por mais de 10 minutos antes
-  do commit ainda pode escapar da marca. O reprocessamento manual da janela
-  corrige.
+- **Reconciliar custa ler o mês inteiro.** Um único evento atrasado em 2024-05
+  faz a janela ler e comparar 3 milhões de linhas da origem. Só grava se faltar
+  algo.
+- **O controle vive num arquivo.** `eventos_vistoria_janelas.json` é gravado por
+  troca atômica, mas não é transacional com a tabela Delta. Se o arquivo se
+  perder, a próxima execução trata tudo como carga inicial e reconcilia todos os
+  meses: fica certo, só mais caro. A reabertura de um mês que ninguém registrou
+  nessa execução se perde, porque a primeira execução não conta atraso.
+- **Concorrência com o CDC.** Dois merges no mesmo mês ao mesmo tempo entram em
+  conflito no commit. O perdedor tenta de novo, até cinco vezes; depois disso,
+  falha, e a próxima execução refaz.
+- **O atraso do item tardio sai menor.** A tolerância e o atraso registrado na
+  reabertura usam o `registrado_em` da vistoria, porque o item não tem o dele. Um
+  item confirmado dias depois do cabeçalho reabre a janela com o atraso do
+  cabeçalho.
+- **A lista de cabeçalhos sem item só cresce com vistorias que nunca ganham item.**
+  Ela é guardada em faixas de ids e conferida por uma consulta só a cada execução.
 
 ## Quando revisar
 
-- Se reprocessar uma janela passar de 1 minuto, ou a janela mais pesada passar
+- Se reconciliar uma janela passar de 1 minuto, ou a janela mais pesada passar
   de 1 GB de memória: particionar também por UF dentro do mês.
 - Se a fração de eventos fora da tolerância passar de 5% num mês: a tolerância de
   7 dias está curta para o ritmo real de digitação.
-- Avaliar a unificação com o CDC já implementado. Atualmente, as janelas
-  continuam usando marca d'água em arquivo, enquanto o CDC mantém seu próprio
-  destino Delta e confirma o LSN; a substituição automática não foi implementada.
+- Se mais de 1% dos eventos de um mês forem completados pelas janelas, e não
+  pelo CDC: o CDC está perdendo eventos (ADR 0008).
 
 ## Decisão de ingestão
 
-O [ADR 0004](adr/0004-ingestao.md) consolida essa decisão, seus custos e a
-coexistência das janelas em Parquet com o CDC em Delta.
+O [ADR 0004](adr/0004-ingestao.md) consolida a escolha de lote e CDC. O
+[ADR 0008](adr/0008-fonte-canonica-de-eventos.md) substitui a coexistência das
+janelas em Parquet com o CDC em Delta por uma fonte única.

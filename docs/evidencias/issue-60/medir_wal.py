@@ -75,7 +75,7 @@ def medir(opcoes):
             if opcoes.comando:
                 subprocess.run(opcoes.comando, check=True)
             else:
-                modelo_analitico.construir(configuracao.dsn)
+                modelo_analitico.construir(configuracao)
         except Exception as erro:
             falha_build = str(erro)
 

@@ -1,6 +1,6 @@
 # 0004 — Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL
 
-- **Status:** aceito — registra a implementação integrada; revisado por Artur Mendonça Arruda e aprovado no PR #37
+- **Status:** aceito — registra a implementação integrada; revisado por Artur Mendonça Arruda e aprovado no PR #37. A coexistência das janelas em Parquet com o CDC em Delta foi substituída pela fonte única do [ADR 0008](0008-fonte-canonica-de-eventos.md)
 - **Data:** 2026-10-18
 - **Decisores:** Squad EduInfra
 

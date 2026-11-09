@@ -182,11 +182,12 @@ avisa; a herança entre anos é uma causa possível, mas não a única.
   escola por ano do ENEM, chave `(co_entidade, ano)`. Para saber se a escola tinha
   laboratório **na época da prova**, a junção correta é pelo ponto no tempo:
   `d.valid_from <= data_da_prova and data_da_prova < d.valid_to`.
-- **Fonte de eventos única.** A Gold lê as tabelas da origem (`public.vistoria` e
-  `public.vistoria_item`) em três pontos: `stg_mudanca_item` (de onde sai a
-  dimensão de variação lenta), o fato fino e os anos do fato largo. Quando a
-  unificação dos caminhos de dado atrasado decidir a fonte canônica, são esses
-  três blocos que mudam.
+- **Fonte de eventos única.** Decidida no
+  [ADR 0008](adr/0008-fonte-canonica-de-eventos.md): a Gold copia uma versão da
+  tabela Delta `warehouse/eventos_vistoria` para `fonte.eventos_vistoria`, confere
+  com a origem e lê só essa cópia nos três pontos de eventos: `stg_mudanca_item`
+  (de onde sai a dimensão de variação lenta), o fato fino e os anos do fato largo.
+  Vistoria sem item não é evento e não cria ano no fato largo.
 - **Histórico real só cresce com o tempo.** Com apenas a carga do Censo, cada
   escola tem uma versão. Versões novas aparecem conforme as vistorias presenciais
   chegam.
