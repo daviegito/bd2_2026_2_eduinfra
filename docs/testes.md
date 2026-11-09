@@ -50,9 +50,8 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 Para verificar o sistema contra defeitos de dados sujos nas tabelas da camada Gold, execute o script interativo de demonstração:
 
 ```bash
-docker compose run --rm carga python rodar_demonstracao.py
+docker compose run --rm --entrypoint uv carga run --no-sync python tests/rodar_demonstracao.py
 ```
-
 O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovará que a auditoria quebra a pipeline detectando o erro e, em seguida, fará o rollback automático.
 
 ## Testes por funcionalidade
