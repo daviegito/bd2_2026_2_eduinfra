@@ -1266,6 +1266,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1547,10 +1575,13 @@ vistorias; a origem PostgreSQL já pode receber esses registros.</p>
 arquivo; Delta acrescenta um log de transações aos arquivos Parquet. DuckDB é
 um mecanismo de consulta e processamento, não o armazenamento do Data Lake.
 Na E2, os arquivos ficam em um volume local compartilhado pelos serviços Docker.</p>
-<p>O bloco analítico resume destinos que <strong>coexistem</strong>, sem integração automática:
-a Silver do Censo em Parquet, os eventos do CDC em Delta, a tabela analítica
-particionada derivada da Silver e as janelas mensais em Parquet. A publicação da
-tabela derivada da Silver não significa que ela recebe automaticamente o CDC.
+<p>O bloco analítico tem três destinos: a Silver do Censo em Parquet, a tabela
+analítica particionada derivada da Silver e a <strong>fonte canônica de eventos</strong> em
+Delta, <code>warehouse/eventos_vistoria</code>. Os eventos de vistoria têm uma fonte só
+(<a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>). A linha de base, o CDC e as
+janelas de dado atrasado gravam nela, pela chave <code>(vistoria_id, item_codigo)</code>, e
+a transformação da Gold lê só ela. A tabela derivada da Silver é um retrato do
+Censo e não recebe o CDC.
 Os detalhes estão em <a href="../camada-analitica/">camada analítica</a>,
 <a href="../cdc-e-semantica-de-entrega/">CDC</a> e <a href="../adr/0004-ingestao/">ADR 0004</a>.</p>
 <p>Na arquitetura prevista, o assistente usará ferramentas MCP para consultar a
@@ -1582,7 +1613,7 @@ embeddings, cache e assistente ainda não estão implementados.</p>
 <tr>
 <td>CDC</td>
 <td>Inserções em <code>vistoria</code> e <code>vistoria_item</code></td>
-<td><code>warehouse/eventos_vistoria</code>, em Delta; <code>warehouse/fila_de_erros_cdc</code> e <code>warehouse/telemetria_cdc</code> para o que não converte e para a <a href="../metricas-cdc/">medição</a></td>
+<td><code>warehouse/eventos_vistoria</code>, em Delta (fonte canônica); <code>warehouse/fila_de_erros_cdc</code> e <code>warehouse/telemetria_cdc</code> para o que não converte e para a <a href="../metricas-cdc/">medição</a></td>
 <td>Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo</td>
 </tr>
 <tr>
@@ -1593,16 +1624,23 @@ embeddings, cache e assistente ainda não estão implementados.</p>
 </tr>
 <tr>
 <td>Janelas mensais</td>
-<td>Vistorias da origem</td>
-<td><code>analitico/eventos_vistoria</code>, em Parquet</td>
-<td>Organiza por mês de ocorrência e permite reprocessamento</td>
+<td>Vistorias da origem, pela marca d'água</td>
+<td><code>warehouse/eventos_vistoria</code>, a mesma fonte do CDC</td>
+<td>Reconcilia o mês de ocorrência com a origem pelo mesmo merge do CDC; registra reaberturas (<a href="../dado-atrasado/">dado atrasado</a>)</td>
+</tr>
+<tr>
+<td>Transformação (E3)</td>
+<td><code>warehouse/eventos_vistoria</code>, numa versão</td>
+<td><code>fonte.eventos_vistoria</code> e schema <code>gold</code>, no PostgreSQL</td>
+<td>Copia e confere a fonte com a origem na transação da Gold; recusa evento que a origem não tem</td>
 </tr>
 </tbody>
 </table>
 <p>Os caminhos são relativos ao diretório de dados, montado como <code>/dados</code> nos
 contêineres. As <a href="../adr/0004-ingestao/">limitações da ingestão</a> fazem parte da
-arquitetura: não há commit conjunto entre PostgreSQL e arquivos nem unificação
-automática dos destinos analíticos.</p>
+arquitetura: não há commit conjunto entre PostgreSQL e arquivos. A Gold enxerga o
+que já chegou à fonte canônica; o que ainda está só na origem aparece como
+pendente no <a href="../frescor-e-sla/">frescor</a>.</p>
 
 
 

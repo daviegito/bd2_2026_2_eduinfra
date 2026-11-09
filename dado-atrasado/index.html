@@ -1009,10 +1009,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-reprocessar-e-regravar-a-particao-inteira" class="md-nav__link">
+  <a href="#4-reprocessar-e-reconciliar-o-mes-com-a-origem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Reprocessar é regravar a partição inteira
+        4. Reprocessar é reconciliar o mês com a origem
       
     </span>
   </a>
@@ -1024,6 +1024,17 @@
     <span class="md-ellipsis">
       
         5. A margem da marca d'água
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-o-item-que-chega-depois-do-cabecalho" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. O item que chega depois do cabeçalho
       
     </span>
   </a>
@@ -1421,6 +1432,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1615,10 +1654,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#4-reprocessar-e-regravar-a-particao-inteira" class="md-nav__link">
+  <a href="#4-reprocessar-e-reconciliar-o-mes-com-a-origem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Reprocessar é regravar a partição inteira
+        4. Reprocessar é reconciliar o mês com a origem
       
     </span>
   </a>
@@ -1630,6 +1669,17 @@
     <span class="md-ellipsis">
       
         5. A margem da marca d'água
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-o-item-que-chega-depois-do-cabecalho" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. O item que chega depois do cabeçalho
       
     </span>
   </a>
@@ -1759,8 +1809,12 @@
 <p>Os eventos de vistoria chegam à camada analítica em <strong>janelas mensais pelo mês
 de <code>ocorrido_em</code></strong>, a data em que a realidade mudou na escola. Uma vistoria
 registrada com atraso cai no mês em que aconteceu, nunca no mês em que o sistema
-soube dela. Reprocessar uma janela regrava a partição inteira a partir da
-origem, e rodar duas vezes dá o mesmo resultado. Responde à issue #27.</p>
+soube dela. Responde à issue #27.</p>
+<p>Desde o <a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>, a janela é a partição
+<code>mes_ocorrencia</code> da <strong>fonte canônica de eventos</strong>, a tabela Delta
+<code>warehouse/eventos_vistoria</code>. O CDC e as janelas gravam nela, pela mesma chave
+<code>(vistoria_id, item_codigo)</code>. Um evento que chega pelos dois caminhos aparece uma
+vez, e a Gold lê só essa tabela.</p>
 <h2 id="as-decisoes">As decisões<a class="headerlink" href="#as-decisoes" title="Permanent link">&para;</a></h2>
 <h3 id="1-a-janela-e-o-mes-de-ocorrido_em">1. A janela é o mês de <code>ocorrido_em</code><a class="headerlink" href="#1-a-janela-e-o-mes-de-ocorrido_em" title="Permanent link">&para;</a></h3>
 <p>A origem guarda duas datas por vistoria (ADR 0001). <code>ocorrido_em</code> é quando a
@@ -1769,9 +1823,13 @@ escola mudou; <code>registrado_em</code> é quando o dado entrou no banco.</p>
 Ela só tem resposta se o evento estiver no mês em que aconteceu. Janela por
 <code>registrado_em</code> colocaria uma vistoria feita em agosto e digitada em outubro no
 mês de outubro, e a série mostraria uma mudança que não aconteceu em outubro.</p>
-<p><code>registrado_em</code> continua tendo um papel: é a <strong>marca d'água</strong>. Cada execução
-pega as vistorias registradas depois da anterior e descobre quais meses elas
-tocam. A marca diz <em>o que é novo</em>; <code>ocorrido_em</code> diz <em>onde o novo entra</em>.</p>
+<p>Os dois caminhos calculam o mês do mesmo jeito, a partir de <code>ocorrido_em</code> em UTC:
+o consumidor do CDC ao montar o evento e a leitura da origem em
+<code>eventos.LINHA_DE_BASE</code>. Por isso o evento atrasado cai na mesma partição, venha
+de onde vier.</p>
+<p><code>registrado_em</code> continua tendo um papel: é a <strong>marca d'água</strong> das janelas. Cada
+execução pega as vistorias registradas depois da anterior e descobre quais meses
+elas tocam. A marca diz <em>o que é novo</em>; <code>ocorrido_em</code> diz <em>onde o novo entra</em>.</p>
 <h3 id="2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes">2. Janela mensal, aberta até 7 dias depois do fim do mês<a class="headerlink" href="#2-janela-mensal-aberta-ate-7-dias-depois-do-fim-do-mes" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Mensal</strong> porque a escrita esperada do aplicativo é de cerca de 500
@@ -1802,41 +1860,63 @@ tocam. A marca diz <em>o que é novo</em>; <code>ocorrido_em</code> diz <em>onde
 </tr>
 <tr>
 <td><strong>Corrigir a janela e registrar a reabertura</strong></td>
-<td>Escolhido. A origem é insert-only e guarda tudo, então a janela pode ser recalculada a qualquer momento. O registro avisa quem já usou o número do mês fechado que ele mudou.</td>
+<td>Escolhido. O evento entra na partição do mês em que ocorreu. O registro avisa quem já usou o número do mês fechado que ele mudou.</td>
 </tr>
 </tbody>
 </table>
-<p>A reabertura fica em <code>_controle.json</code>, com o mês, quando foi reaberta, quantos
-eventos chegaram e o maior atraso. O processamento também emite um aviso no log.</p>
-<h3 id="4-reprocessar-e-regravar-a-particao-inteira">4. Reprocessar é regravar a partição inteira<a class="headerlink" href="#4-reprocessar-e-regravar-a-particao-inteira" title="Permanent link">&para;</a></h3>
-<p>A janela é recalculada da origem, ordenada por <code>vistoria_id</code> e <code>item_codigo</code>, e
-gravada numa pasta temporária. Depois, um <code>os.replace</code> troca a partição de uma
-vez: quem lê vê a versão antiga ou a nova, nunca uma escrita pela metade. Se a
-conversão falhar, a partição anterior continua intacta (há teste para isso).</p>
-<p>Cada janela tem uma <strong>impressão</strong>: a soma dos hashes de todas as linhas. Ela não
-depende da ordem física no arquivo e muda se qualquer valor mudar. É assim que
-se confere, com um número, que reprocessar duas vezes deu o mesmo resultado.</p>
+<p>A reabertura fica no controle das janelas, com o mês, quando foi reaberta,
+quantos eventos chegaram e o maior atraso. O processamento também emite um aviso
+no log. Ela é registrada mesmo quando o CDC entregou o evento antes, porque a
+regra olha <code>registrado_em</code>, e não o caminho.</p>
+<h3 id="4-reprocessar-e-reconciliar-o-mes-com-a-origem">4. Reprocessar é reconciliar o mês com a origem<a class="headerlink" href="#4-reprocessar-e-reconciliar-o-mes-com-a-origem" title="Permanent link">&para;</a></h3>
+<p>As janelas não têm destino próprio. Reconciliar uma janela lê o mês da origem e
+compara a <strong>impressão</strong> dele com a da partição na fonte canônica. Se forem
+diferentes, grava pelo mesmo merge do CDC, que só insere a chave que falta. Se
+forem iguais, não grava nada: cada merge cria uma versão nova da tabela Delta.</p>
+<p>A impressão é a soma exata, em 64 bits, do md5 de cada linha. Ela não depende da
+ordem e muda se qualquer valor mudar. <code>lsn_origem</code> fica de fora, porque distingue
+os caminhos em vez de descrever o evento. O resultado da janela diz se ela
+<strong>confere com a origem</strong>. Uma primeira versão somava o md5 de 128 bits; a soma
+virava ponto flutuante e o mês do Censo não conferia com ele mesmo.</p>
+<p>Rodar duas vezes dá o mesmo resultado, porque a origem é insert-only e o merge
+só insere o que falta.</p>
 <h3 id="5-a-margem-da-marca-dagua">5. A margem da marca d'água<a class="headerlink" href="#5-a-margem-da-marca-dagua" title="Permanent link">&para;</a></h3>
 <p><code>registrado_em</code> recebe <code>now()</code>, que é a hora do <strong>início</strong> da transação, não a do
 commit. Uma transação longa pode confirmar depois da execução, com
-<code>registrado_em</code> anterior à marca, e escaparia. Por isso cada execução também
-relê os 10 minutos anteriores à marca (<code>MARGEM_DA_MARCA</code>). Para a margem não
-regravar janelas à toa, só conta como novo o evento cujo <code>vistoria_id</code> ainda não
-está na partição do seu mês. Vistoria sem item não gera evento: ela fica de fora
-das candidatas, senão voltaria como nova a cada execução enquanto estivesse na
-margem.</p>
+<code>registrado_em</code> anterior à marca. Por isso cada execução também relê os 10
+minutos anteriores à marca (<code>MARGEM_DA_MARCA</code>).</p>
+<p>Para não contar duas vezes o que a margem traz de volta, o controle guarda os ids
+das vistorias que a execução anterior viu na margem, em faixas de ids
+consecutivos (a carga do Censo cabe numa faixa só). Não dá para perguntar isso à
+fonte canônica: o CDC pode ter entregado a vistoria antes, sem que nenhuma
+execução das janelas a tivesse visto.</p>
+<p>O furo da margem deixou de ser um risco de perda. O CDC captura pela ordem de
+commit, e a vistoria que escapar da margem chega por ele. As janelas são a rede
+de segurança do CDC, e não o contrário.</p>
+<h3 id="6-o-item-que-chega-depois-do-cabecalho">6. O item que chega depois do cabeçalho<a class="headerlink" href="#6-o-item-que-chega-depois-do-cabecalho" title="Permanent link">&para;</a></h3>
+<p><code>vistoria_item</code> não tem carimbo próprio, e o esquema deixa confirmar os itens
+numa transação depois da vistoria. Esses itens não movem a marca d'água. Por isso
+a vistoria que uma execução vê <strong>ainda sem item</strong> fica no controle, em
+<code>cabecalhos_sem_item</code>, e não conta como vista. Cada execução confere quais dessas
+ganharam itens: elas viram eventos novos e o mês delas é reconciliado, por mais
+que o item tenha demorado. A vistoria que continua sem item não volta como nova a
+cada execução. Ela não é evento e não chega à fonte.</p>
 <h2 id="onde-ficam-os-dados">Onde ficam os dados<a class="headerlink" href="#onde-ficam-os-dados" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dados/analitico/eventos_vistoria/
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  _controle.json                    marca d'água, impressão de cada janela, reaberturas
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>  ocorrido_mes=2024-05/eventos.parquet
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  ocorrido_mes=2026-08/eventos.parquet
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  ocorrido_mes=2026-10/eventos.parquet
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>dados/warehouse/
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  eventos_vistoria/                       fonte canônica, em Delta
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    _delta_log/
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    mes_ocorrencia=2024-05/...
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    mes_ocorrencia=2026-09/...
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  eventos_vistoria_janelas.json           marca d'água, vistas na margem, cabeçalhos sem item, janelas e reaberturas
 </span></code></pre></div>
-<p>Cada linha é um item de uma vistoria: <code>vistoria_id</code>, <code>co_entidade</code>, <code>origem</code>,
-<code>ocorrido_em</code>, <code>registrado_em</code>, <code>item_codigo</code>, <code>situacao</code> e <code>quantidade</code>. O
-técnico não sai da origem.</p>
+<p>Cada linha é um item de uma vistoria: <code>vistoria_id</code>, <code>item_codigo</code>,
+<code>co_entidade</code>, <code>sg_uf</code>, <code>origem</code>, <code>ocorrido_em</code>, <code>registrado_em</code>, <code>situacao</code>,
+<code>quantidade</code>, <code>mes_ocorrencia</code> e <code>lsn_origem</code>, preenchido quando o evento veio
+pelo CDC. O técnico não sai da origem.</p>
+<p>O antigo destino em Parquet, <code>analitico/eventos_vistoria/</code>, não é mais escrito
+nem lido e pode ser apagado.</p>
 <h2 id="como-usar">Como usar<a class="headerlink" href="#como-usar" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>processar-janelas<span class="w">            </span><span class="c1"># incorpora o que foi registrado desde a última vez</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>processar-janelas<span class="w">            </span><span class="c1"># reconcilia o que foi registrado desde a última vez</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>reprocessar-janela<span class="w"> </span>--mes<span class="w"> </span><span class="m">2024</span>-05
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>demonstrar-atraso<span class="w">            </span><span class="c1"># a demonstração abaixo</span>
 </span></code></pre></div>
@@ -1844,111 +1924,139 @@ técnico não sai da origem.</p>
 elas ficam lá, marcadas na observação. Rode num ambiente de desenvolvimento.</p>
 <h3 id="testes">Testes<a class="headerlink" href="#testes" title="Permanent link">&para;</a></h3>
 <p>Os testes sem banco rodam direto:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_janelas.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_janelas.py<span class="w"> </span>tests/test_fonte_de_eventos.py
 </span></code></pre></div>
-<p>Os de integração precisam do banco carregado e do <code>DATABASE_URL</code> do <code>.env</code>,
-que aponta para a porta publicada pelo compose:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d<span class="w">                 </span><span class="c1"># sobe o banco e roda a carga</span>
+<p>O de integração da fonte única cria um banco e um slot próprios. Ele mostra o
+mesmo evento chegando pelos dois caminhos, nas duas ordens, e um evento
+atrasado:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>banco
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">set</span><span class="w"> </span>-a<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.env<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span>+a<span class="w">              </span><span class="c1"># exporta DATABASE_URL</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_janelas_integracao.py
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/test_fonte_de_eventos_integracao.py<span class="w"> </span>tests/test_janelas_integracao.py
 </span></code></pre></div>
-<p>Como a demonstração, eles inserem vistorias de teste na origem.</p>
+<p><code>tests/test_janelas_integracao.py</code> usa o banco carregado e, como a demonstração,
+insere vistorias de teste na origem.</p>
 <h2 id="demonstracao">Demonstração<a class="headerlink" href="#demonstracao" title="Permanent link">&para;</a></h2>
-<p>Saída real de <code>demonstrar-atraso</code> em 12/10/2026, sobre o banco carregado com o
-Censo 2024:</p>
+<p>Saída real de <code>demonstrar-atraso</code> em 08/11/2026, sobre o banco carregado com o
+Censo 2024, com a fonte canônica já publicada (<code>publicar-analitico</code>) e o serviço
+<code>cdc</code> parado:</p>
 <div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>## 1. Estado de partida
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>marca d'água: 2026-09-26T16:41:44.889635+00:00 -&gt; 2026-09-26T16:41:44.889635+00:00
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>marca d'água: 2026-09-30T17:55:34.901865+00:00 -&gt; 2026-09-30T17:55:34.901865+00:00
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>vistorias novas desde a marca: 0
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>## 2. Vistoria da escola 53002580 ocorrida há 3 dias (2026-10-09), registrada agora
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
-</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>marca d'água: 2026-09-26T16:41:44.889635+00:00 -&gt; 2026-10-12T15:46:26.539992+00:00
-</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>vistorias novas desde a marca: 1
-</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>  janela 2026-10: 17 linhas, impressão 924855e5adcda8679
-</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>  vistoria 181070: ocorreu 2026-10-09, registrada 2026-10-12, atraso 3.0 dias -&gt; janela 2026-10 (dentro da tolerância)
-</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>
-</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>## 3. Vistoria ocorrida em 2026-08-15, com a janela 2026-08 fechada desde 2026-09-08, registrada agora
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>itens que a fonte canônica ainda não tinha (o CDC não entregara): 0
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>## 2. Vistoria da escola 53002580 ocorrida há 3 dias (2026-11-05), registrada agora
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>marca d'água: 2026-09-30T17:55:34.901865+00:00 -&gt; 2026-11-08T21:38:49.544766+00:00
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>vistorias novas desde a marca: 1
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>itens que a fonte canônica ainda não tinha (o CDC não entregara): 17
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>  janela 2026-11: 17 linhas, impressão 8972aabef25abafce, confere com a origem
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>  vistoria 362131: ocorreu 2026-11-05, registrada 2026-11-08, atraso 3.0 dias -&gt; janela 2026-11 (dentro da tolerância)
 </span><span id="__span-4-14"><a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>
-</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>marca d'água: 2026-10-12T15:46:26.539992+00:00 -&gt; 2026-10-12T15:46:27.942649+00:00
-</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>vistorias novas desde a marca: 1
-</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>  janela 2026-08: 17 linhas, impressão 9388db934a447aebd
-</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>  vistoria 181071: ocorreu 2026-08-15, registrada 2026-10-12, atraso 58.7 dias -&gt; janela 2026-08 (FORA da tolerância: janela reaberta)
-</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>
-</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>## 4. Reprocessar a janela 2026-10 duas vezes
-</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>
-</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>1ª: 17 linhas, impressão 924855e5adcda8679
-</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>2ª: 17 linhas, impressão 924855e5adcda8679
-</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>idênticas: sim
+</span><span id="__span-4-15"><a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>## 3. Vistoria ocorrida em 2026-09-15, com a janela 2026-09 fechada desde 2026-10-08, registrada agora
+</span><span id="__span-4-16"><a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>
+</span><span id="__span-4-17"><a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>marca d'água: 2026-11-08T21:38:49.544766+00:00 -&gt; 2026-11-08T21:38:59.514943+00:00
+</span><span id="__span-4-18"><a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>vistorias novas desde a marca: 1
+</span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>itens que a fonte canônica ainda não tinha (o CDC não entregara): 17
+</span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>  janela 2026-09: 17 linhas, impressão 85822fadc2cb477ff, confere com a origem
+</span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>  vistoria 362132: ocorreu 2026-09-15, registrada 2026-11-08, atraso 54.9 dias -&gt; janela 2026-09 (FORA da tolerância: janela reaberta)
+</span><span id="__span-4-22"><a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>
+</span><span id="__span-4-23"><a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>## 4. Reprocessar a janela 2026-11 duas vezes
+</span><span id="__span-4-24"><a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>
+</span><span id="__span-4-25"><a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>1ª: 17 linhas, impressão 8972aabef25abafce
+</span><span id="__span-4-26"><a id="__codelineno-4-26" name="__codelineno-4-26" href="#__codelineno-4-26"></a>2ª: 17 linhas, impressão 8972aabef25abafce
+</span><span id="__span-4-27"><a id="__codelineno-4-27" name="__codelineno-4-27" href="#__codelineno-4-27"></a>idênticas: sim
+</span><span id="__span-4-28"><a id="__codelineno-4-28" name="__codelineno-4-28" href="#__codelineno-4-28"></a>
+</span><span id="__span-4-29"><a id="__codelineno-4-29" name="__codelineno-4-29" href="#__codelineno-4-29"></a>## 5. Janelas na fonte canônica de eventos
+</span><span id="__span-4-30"><a id="__codelineno-4-30" name="__codelineno-4-30" href="#__codelineno-4-30"></a>
+</span><span id="__span-4-31"><a id="__codelineno-4-31" name="__codelineno-4-31" href="#__codelineno-4-31"></a>- 2024-05: 3078105 linhas
+</span><span id="__span-4-32"><a id="__codelineno-4-32" name="__codelineno-4-32" href="#__codelineno-4-32"></a>- 2026-09: 17 linhas
+</span><span id="__span-4-33"><a id="__codelineno-4-33" name="__codelineno-4-33" href="#__codelineno-4-33"></a>- 2026-11: 17 linhas
+</span></code></pre></div>
+<p>Em seguida, uma passada do CDC (<code>docker compose run --rm carga cdc</code>) leu as duas
+transações:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ResultadoDaPassada(transacoes=2, vistorias_vistas=2, itens_lidos=34, itens_inseridos=0, ...)
 </span></code></pre></div>
 <p>O que ela mostra:</p>
 <ul>
-<li>A vistoria de três dias atrás entrou em <strong>outubro</strong>, o mês em que ocorreu,
+<li>A vistoria de três dias atrás entrou em <strong>novembro</strong>, o mês em que ocorreu,
   dentro da tolerância.</li>
-<li>A vistoria de agosto chegou 58,7 dias depois de ocorrer, com agosto fechado
-  desde 08/09. Ela <strong>reabriu agosto</strong>, e a reabertura ficou registrada em
-  <code>_controle.json</code>.</li>
-<li>A primeira execução não reprocessou nada: a margem trouxe de volta as 181.065
-  vistorias da carga, mas todas já estavam na partição.</li>
-<li>Reprocessar outubro duas vezes deu a mesma impressão.</li>
+<li>A vistoria de setembro chegou 54,9 dias depois de ocorrer, com setembro fechado
+  desde 08/10. Ela entrou na partição de <strong>setembro</strong> e <strong>reabriu</strong> a janela, e a
+  reabertura ficou registrada no controle.</li>
+<li>Com o CDC parado, as janelas gravaram os 34 itens. O CDC, ao voltar, leu os
+  mesmos 34 e inseriu <strong>zero</strong>: o evento aparece uma vez.</li>
+<li>Reprocessar novembro duas vezes deu a mesma impressão.</li>
+<li>A <code>construir-gold</code> seguinte conferiu 3.078.139 eventos na fonte e na origem,
+  sem nenhum só de um lado.</li>
 </ul>
 <h2 id="medicoes">Medições<a class="headerlink" href="#medicoes" title="Permanent link">&para;</a></h2>
+<p>Docker sobre WSL2, banco com o Censo 2024, em 08/11/2026:</p>
 <table>
 <thead>
 <tr>
 <th>Operação</th>
 <th style="text-align: right;">Tempo</th>
-<th style="text-align: right;">Memória máxima</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Demonstração completa (passos 1 a 4)</td>
-<td style="text-align: right;">3,7 s</td>
-<td style="text-align: right;">196 MB</td>
+<td>Primeira reconciliação (<code>processar-janelas</code>), mês 2024-05 com 3.078.105 linhas, já presente</td>
+<td style="text-align: right;">18,6 s</td>
 </tr>
 <tr>
-<td>Reprocessar a janela 2024-05 (carga do Censo, 3.078.105 linhas)</td>
-<td style="text-align: right;">7,9 s e 8,1 s</td>
-<td style="text-align: right;">755 MB</td>
+<td>Reconciliação sem nada novo</td>
+<td style="text-align: right;">5,4 s</td>
+</tr>
+<tr>
+<td>Demonstração completa (passos 1 a 4)</td>
+<td style="text-align: right;">22,2 s</td>
+</tr>
+<tr>
+<td>Ler um mês da origem e calcular a impressão: vazio / 2024-05</td>
+<td style="text-align: right;">1,3 s / 3,4 s</td>
 </tr>
 </tbody>
 </table>
-<p>Reprocessar 2024-05 duas vezes deu a impressão <code>177cbda0abd575cc091396</code> nas duas,
-a mesma da primeira carga. A partição ocupa 2,8 MB em Parquet zstd.</p>
-<p>A primeira versão deste código não limitava a memória do DuckDB e foi encerrada
-pelo sistema por falta de memória nessa mesma janela. Agora a gravação usa
-<code>memory_limit = 1GB</code> e transborda para disco quando precisa.</p>
+<p>Os tempos incluem o início do contêiner. Cada reconciliação de mês carrega a
+extensão <code>postgres</code> do DuckDB, cerca de 1,3 s, e por isso a demonstração ficou
+mais lenta que a versão em Parquet (3,7 s).</p>
 <h2 id="o-que-se-perde">O que se perde<a class="headerlink" href="#o-que-se-perde" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Números de mês fechado podem mudar.</strong> Quem publicou o total de agosto em
   setembro pode ver o número mudar em outubro. A reabertura registrada é o aviso,
   mas o consumidor precisa olhar para ela.</li>
-<li><strong>Reprocessar custa a janela inteira.</strong> Um único evento atrasado em 2024-05
-  regrava 3 milhões de linhas, cerca de 8 segundos. Com a janela mensal e o
-  volume atual, é aceitável; a carga anual do Censo concentra quase tudo num mês
-  só.</li>
-<li><strong>A marca d'água vive num arquivo.</strong> <code>_controle.json</code> é gravado por troca
-  atômica, mas não é transacional com a origem. Se o arquivo se perder, a próxima
-  execução trata tudo como carga inicial e regrava todas as janelas: fica certo,
-  só mais caro.</li>
-<li><strong>A margem tem um limite.</strong> Uma transação aberta por mais de 10 minutos antes
-  do commit ainda pode escapar da marca. O reprocessamento manual da janela
-  corrige.</li>
+<li><strong>Reconciliar custa ler o mês inteiro.</strong> Um único evento atrasado em 2024-05
+  faz a janela ler e comparar 3 milhões de linhas da origem. Só grava se faltar
+  algo.</li>
+<li><strong>O controle vive num arquivo.</strong> <code>eventos_vistoria_janelas.json</code> é gravado por
+  troca atômica, mas não é transacional com a tabela Delta. Se o arquivo se
+  perder, a próxima execução trata tudo como carga inicial e reconcilia todos os
+  meses: fica certo, só mais caro. A reabertura de um mês que ninguém registrou
+  nessa execução se perde, porque a primeira execução não conta atraso.</li>
+<li><strong>Concorrência com o CDC.</strong> Dois merges no mesmo mês ao mesmo tempo entram em
+  conflito no commit. O perdedor tenta de novo, até cinco vezes; depois disso,
+  falha, e a próxima execução refaz.</li>
+<li><strong>O atraso do item tardio sai menor.</strong> A tolerância e o atraso registrado na
+  reabertura usam o <code>registrado_em</code> da vistoria, porque o item não tem o dele. Um
+  item confirmado dias depois do cabeçalho reabre a janela com o atraso do
+  cabeçalho.</li>
+<li><strong>A lista de cabeçalhos sem item só cresce com vistorias que nunca ganham item.</strong>
+  Ela é guardada em faixas de ids e conferida por uma consulta só a cada execução.</li>
 </ul>
 <h2 id="quando-revisar">Quando revisar<a class="headerlink" href="#quando-revisar" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Se reprocessar uma janela passar de 1 minuto, ou a janela mais pesada passar
+<li>Se reconciliar uma janela passar de 1 minuto, ou a janela mais pesada passar
   de 1 GB de memória: particionar também por UF dentro do mês.</li>
 <li>Se a fração de eventos fora da tolerância passar de 5% num mês: a tolerância de
   7 dias está curta para o ritmo real de digitação.</li>
-<li>Avaliar a unificação com o CDC já implementado. Atualmente, as janelas
-  continuam usando marca d'água em arquivo, enquanto o CDC mantém seu próprio
-  destino Delta e confirma o LSN; a substituição automática não foi implementada.</li>
+<li>Se mais de 1% dos eventos de um mês forem completados pelas janelas, e não
+  pelo CDC: o CDC está perdendo eventos (ADR 0008).</li>
 </ul>
 <h2 id="decisao-de-ingestao">Decisão de ingestão<a class="headerlink" href="#decisao-de-ingestao" title="Permanent link">&para;</a></h2>
-<p>O <a href="../adr/0004-ingestao/">ADR 0004</a> consolida essa decisão, seus custos e a
-coexistência das janelas em Parquet com o CDC em Delta.</p>
+<p>O <a href="../adr/0004-ingestao/">ADR 0004</a> consolida a escolha de lote e CDC. O
+<a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a> substitui a coexistência das
+janelas em Parquet com o CDC em Delta por uma fonte única.</p>
 
 
 

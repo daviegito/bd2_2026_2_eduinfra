@@ -1343,6 +1343,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1608,8 +1636,9 @@ esperando. O <strong>SLA</strong> é de <strong>25 horas</strong>. Cada mediçã
 violado. Responde à issue #52.</p>
 <h2 id="o-que-se-mede">O que se mede<a class="headerlink" href="#o-que-se-mede" title="Permanent link">&para;</a></h2>
 <p>A Gold é reconstruída inteira por <code>construir-gold</code>, numa transação só, a partir de
-um retrato da origem (<a href="../modelo-analitico/">modelo analítico</a>). O que a origem
-recebe depois desse retrato só aparece na Gold na construção seguinte.</p>
+uma versão da fonte canônica de eventos (<a href="../modelo-analitico/">modelo analítico</a>).
+O que a origem recebe depois só aparece na Gold quando chega à fonte, pelo CDC ou
+pelas janelas, e a Gold é construída de novo.</p>
 <table>
 <thead>
 <tr>
@@ -1620,7 +1649,7 @@ recebe depois desse retrato só aparece na Gold na construção seguinte.</p>
 <tbody>
 <tr>
 <td>Vistorias pendentes</td>
-<td>vistorias da origem cujos itens faltam em <code>gold.fato_vistoria_item</code>, ou cuja escola e ano faltam em <code>gold.fato_infra_escola_ano</code></td>
+<td>vistorias da origem com pelo menos um item que falta em <code>gold.fato_vistoria_item</code>, pela chave <code>(vistoria_id, item_codigo)</code></td>
 </tr>
 <tr>
 <td>Frescor</td>
@@ -1637,22 +1666,28 @@ recebe depois desse retrato só aparece na Gold na construção seguinte.</p>
 <li><strong>Não é "agora menos a última construção".</strong> Num dia sem vistorias, a Gold
   continua completa, e essa conta acusaria atraso sem haver dado faltando. O
   frescor só cresce quando existe dado na origem que o painel ainda não mostra.</li>
-<li><strong>Os dois fatos entram na conta.</strong> Eles saem do mesmo retrato, na mesma
-  transação, mas formam as linhas de jeitos diferentes. O fato fino só tem
-  vistorias com item. O fato anual forma os anos a partir de todas as vistorias,
-  com item ou sem: uma vistoria sem item, de uma escola num ano que ainda não
-  está lá, cria uma linha nova na próxima construção. Por isso ela conta como
-  pendente. Uma vistoria sem item num ano que o fato anual já tem não muda nada
-  e não conta.</li>
+<li><strong>O fato fino basta.</strong> Os dois fatos saem da mesma fonte de eventos, na mesma
+  transação, e o fato anual forma os anos a partir desses eventos
+  (<a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>). Uma vistoria cujos itens
+  estão no fato fino tem o ano dela no fato anual. A comparação é pela chave do
+  evento, e não só pela vistoria: com a fonte em Delta, a entrega pode ser parcial,
+  com um item aplicado e outro na fila de erros do CDC. Vistoria sem item não é evento:
+  nunca chega à Gold e não conta. A versão 1.1 contava a vistoria sem item de um
+  ano ausente do fato anual, quando ele formava os anos a partir de todas as
+  vistorias da origem; com a fonte de eventos, contá-la deixaria o SLA violado
+  para sempre.</li>
 <li><strong>O relógio é o do banco</strong>, o mesmo que carimba <code>registrado_em</code>. Como
   <code>registrado_em</code> é o início da transação que gravou a vistoria, o frescor medido
   nunca é menor que o real.</li>
 </ul>
 <p>Gold que não existe conta como violação: o painel não tem o que mostrar.</p>
 <h2 id="de-qual-caminho-o-sla-fala">De qual caminho o SLA fala<a class="headerlink" href="#de-qual-caminho-o-sla-fala" title="Permanent link">&para;</a></h2>
-<p>A Gold lê a origem (<code>public.vistoria</code> e <code>public.vistoria_item</code>), não o Delta do CDC.
-O SLA cobre o trecho <strong>origem → Gold</strong>, qualquer que seja o caminho que trouxe o
-dado à origem:</p>
+<p>A Gold lê a fonte canônica de eventos, a tabela Delta <code>eventos_vistoria</code>, que o
+CDC e as janelas de dado atrasado completam
+(<a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>). As pendentes continuam sendo
+contadas contra a origem. Por isso o SLA cobre o trecho inteiro <strong>origem → fonte
+→ Gold</strong>: um CDC parado aparece aqui como atraso, qualquer que seja o caminho que
+trouxe o dado à origem:</p>
 <ul>
 <li><strong>Vistorias do dia a dia</strong>, registradas na origem: entram no painel em até 25 h.</li>
 <li><strong>Censo anual</strong>, carregado pelo lote (<code>ingerir</code>): o prazo de 25 h começa quando a
@@ -1660,8 +1695,8 @@ dado à origem:</p>
   lote, registrado no manifesto <code>ingestao_execucao</code>, e não deste SLA.</li>
 </ul>
 <p>O frescor do CDC, que leva as vistorias à tabela Delta <code>eventos_vistoria</code> com SLA
-de 60 s, é outra medição, do PR #59 e do ADR 0007. Aquela tabela não alimenta o
-painel.</p>
+de 60 s, é outra medição, do PR #59 e do ADR 0007. Ela mede só o primeiro trecho;
+este SLA inclui esse trecho e a construção da Gold.</p>
 <h2 id="o-sla-de-25-horas">O SLA de 25 horas<a class="headerlink" href="#o-sla-de-25-horas" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>Uma construção por dia basta para a pergunta do painel.</strong> O painel responde se
@@ -1699,8 +1734,9 @@ migrações.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>construir-gold
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>demonstrar-frescor
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-frescor<span class="w"> </span>--sla-horas<span class="w"> </span><span class="m">0</span>.0005<span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>construir-gold
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-frescor<span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>processar-janelas<span class="w">   </span><span class="c1"># dispensável com o serviço cdc no ar</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>construir-gold
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-frescor<span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span>
 </span></code></pre></div>
 <p><code>demonstrar-frescor</code> insere uma vistoria na origem, que é insert-only: ela fica no
 banco, marcada na observação. Rode num ambiente de desenvolvimento. Para não esperar
@@ -1804,11 +1840,16 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.</p>
 <li><strong>Uma tabela monitorada.</strong> O SLA fala de <code>fato_infra_escola_ano</code>. As outras
   tabelas da Gold saem do mesmo retrato e herdam o mesmo frescor, mas não há
   medição separada para elas.</li>
-<li><strong>A consulta segue a forma dos fatos.</strong> Ela sabe que o fato fino só tem
-  vistorias com item e que o fato anual forma uma linha por escola e ano. Se a
-  Gold mudar a regra de formação das linhas, a consulta das pendentes muda junto.</li>
-<li><strong>O frescor depende de <code>registrado_em</code>.</strong> Se a fonte de eventos da Gold mudar
-  (issue #45), a consulta das pendentes muda junto.</li>
+<li><strong>A consulta segue a forma dos fatos.</strong> Ela sabe que o fato fino tem uma linha
+  por item de vistoria e que o fato anual sai dos mesmos eventos. Se a Gold mudar
+  a regra de formação das linhas, a consulta das pendentes muda junto.</li>
+<li><strong>O frescor depende de <code>registrado_em</code>.</strong> A consulta das pendentes compara a
+  origem com o fato fino, e não com a fonte de eventos. Um item parado na fila de
+  erros do CDC deixa a vistoria pendente, e o SLA violado, até ser reprocessado
+  (issue #58) ou completado por <code>processar-janelas</code>.</li>
+<li><strong>A consulta ficou mais cara.</strong> Comparar pela chave levou de 1,7 a 1,9 s com o
+  Censo 2024, contra 0,25 s comparando só pela vistoria, que não via a entrega
+  parcial.</li>
 </ul>
 <h2 id="quando-revisar">Quando revisar<a class="headerlink" href="#quando-revisar" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1844,6 +1885,13 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.</p>
 <td><a href="https://github.com/BrzGab">Gabriel Lopes de Amorim</a></td>
 <td><a href="https://github.com/PedroDev-sketch">Pedro Sanchez</a></td>
 <td>4 de novembro de 2026</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Gold lida da fonte única de eventos (ADR 0008): o SLA cobre origem → fonte → Gold, e a vistoria sem item deixa de contar</td>
+<td>Squad EduInfra</td>
+<td></td>
+<td>8 de novembro de 2026</td>
 </tr>
 </tbody>
 </table>
