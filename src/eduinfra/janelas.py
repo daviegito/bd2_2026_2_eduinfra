@@ -11,7 +11,9 @@ Decisões (issue #27; detalhes em docs/dado-atrasado.md):
   entregou não é gravado de novo.
 - O que é novo é descoberto pela marca d'água sobre ``registrado_em``: cada
   execução pega as vistorias registradas depois da última e reconcilia as janelas
-  dos meses em que elas ocorreram.
+  dos meses em que elas ocorreram. O item não tem carimbo próprio e pode ser
+  confirmado depois do cabeçalho: a vistoria vista ainda sem item fica pendente no
+  controle até ganhar itens, por mais que eles demorem.
 - Reconciliar uma janela compara a impressão do mês na origem com a do mês na
   fonte canônica e grava o que falta. A origem é insert-only e guarda tudo, então
   repetir dá o mesmo resultado.
@@ -40,6 +42,8 @@ TOLERANCIA = timedelta(days=7)
 # confirmado depois dela: now() é a hora de início da transação, não a do commit.
 # Cada execução relê essa margem e só trata como novo o que a anterior não viu.
 MARGEM_DA_MARCA = timedelta(minutes=10)
+
+COM_ITENS = "exists (select 1 from vistoria_item vi where vi.vistoria_id = v.id)"
 
 
 @dataclass(frozen=True)
@@ -109,23 +113,41 @@ def processar(configuracao: Configuracao) -> Relatorio:
             return Relatorio(marca_anterior=marca, marca_nova=marca)
 
         piso = marca - MARGEM_DA_MARCA if marca else datetime.min.replace(tzinfo=timezone.utc)
-        candidatos = [
-            EventoNovo(vistoria_id=id_, mes=mes_de(ocorrido), ocorrido_em=ocorrido, registrado_em=registrado)
-            for id_, ocorrido, registrado in conexao.execute(
-                """
-                select id, ocorrido_em, registrado_em from vistoria
-                where registrado_em > %s and registrado_em <= %s
-                order by id
-                """,
-                (piso, limite),
+        lidas = conexao.execute(
+            f"""
+            select v.id, v.ocorrido_em, v.registrado_em, {COM_ITENS}
+            from vistoria v
+            where v.registrado_em > %s and v.registrado_em <= %s
+            order by v.id
+            """,
+            (piso, limite),
+        ).fetchall()
+        candidatos = [_evento(*linha[:3]) for linha in lidas]
+        sem_item = {linha[0] for linha in lidas if not linha[3]}
+
+        # Cabeçalhos que execuções anteriores viram sem item: os que ganharam itens desde
+        # então são novos, mesmo fora da margem, porque o item não move a marca d'água.
+        pendentes = _expandir(controle.get("cabecalhos_sem_item", []))
+        completados = [
+            _evento(*linha)
+            for linha in conexao.execute(
+                f"select v.id, v.ocorrido_em, v.registrado_em from vistoria v where v.id = any(%s) and {COM_ITENS}",
+                (sorted(pendentes),),
             ).fetchall()
-        ]
+        ] if pendentes else []
 
     # A margem traz de volta vistorias que a execução anterior já contou. Não dá para
     # perguntar à fonte canônica, porque o CDC pode ter entregado antes sem que nenhuma
     # execução das janelas as visse: a anterior guarda quais viu na margem.
     vistas = _expandir(controle.get("vistas_na_margem", []))
-    eventos = [e for e in candidatos if not (marca and e.registrado_em <= marca and e.vistoria_id in vistas)]
+    eventos = [
+        e for e in candidatos
+        if e.vistoria_id not in sem_item and not (marca and e.registrado_em <= marca and e.vistoria_id in vistas)
+    ]
+    ja_contadas = {e.vistoria_id for e in eventos}
+    eventos += [e for e in completados if e.vistoria_id not in ja_contadas]
+    eventos.sort(key=lambda e: e.vistoria_id)
+    ainda_sem_item = (pendentes - {e.vistoria_id for e in completados}) | sem_item
 
     reconciliadas = [_reconciliar(configuracao, mes) for mes in sorted({e.mes for e in eventos})]
     janelas = [janela for janela, _ in reconciliadas]
@@ -149,6 +171,7 @@ def processar(configuracao: Configuracao) -> Relatorio:
 
     controle["marca_dagua"] = limite.isoformat()
     controle["vistas_na_margem"] = _faixas(e.vistoria_id for e in candidatos if e.registrado_em > limite - MARGEM_DA_MARCA)
+    controle["cabecalhos_sem_item"] = _faixas(ainda_sem_item)
     for janela in janelas:
         controle.setdefault("janelas", {})[janela.mes] = asdict(janela)
     _gravar_controle(configuracao, controle)
@@ -203,6 +226,10 @@ def _reconciliar(configuracao: Configuracao, mes: str) -> tuple[Janela, int]:
     log.info("janela %s reconciliada: %d linhas, %d completadas pelas janelas", mes, janela.linhas, inseridos)
 
     return janela, inseridos
+
+
+def _evento(vistoria_id: int, ocorrido_em: datetime, registrado_em: datetime) -> EventoNovo:
+    return EventoNovo(vistoria_id=vistoria_id, mes=mes_de(ocorrido_em), ocorrido_em=ocorrido_em, registrado_em=registrado_em)
 
 
 def _faixas(identificadores) -> list[list[int]]:

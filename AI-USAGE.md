@@ -329,4 +329,9 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   conferidos entre fonte, origem e fato fino. A execução real revelou um erro da
   primeira versão (soma da impressão em ponto flutuante), corrigido e coberto por
   teste; `mkdocs build --strict` sem erro
-- **Quem revisou:** pendente (PR)
+- **Quem revisou:** Pedro Vargas, no PR #70, que pediu dois ajustes (frescor com
+  entrega parcial e item confirmado depois do cabeçalho) e alertou para o volume de
+  WAL. As correções foram feitas com a IA: frescor pela chave do evento, cabeçalhos
+  sem item pendentes nas janelas e fonte `UNLOGGED` (1.348 MB → 940 MB de WAL por
+  construção, medido no Docker), com testes de integração que falham no código
+  anterior

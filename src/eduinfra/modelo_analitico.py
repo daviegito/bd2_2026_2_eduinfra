@@ -73,13 +73,16 @@ CONSULTAS_DA_DIMENSAO = [
 
 # A fonte de eventos da transformação: uma versão da tabela Delta, com a mesma chave dela.
 # A chave primária é a garantia, conferida pelo banco, de que cada evento aparece uma vez.
+# UNLOGGED porque é recriada a cada construção: sem isso, a cópia de 3 milhões de linhas
+# levava a construção de cerca de 1 GB para 1,3 GB de WAL, que o slot do CDC precisa reter
+# (limite de 1 GB, issue #60). Uma queda do servidor a esvazia; a próxima construção a refaz.
 TABELA_DA_FONTE = "fonte.eventos_vistoria"
 
 CONSULTAS_DA_FONTE = [
     "create schema if not exists fonte",
     f"drop table if exists {TABELA_DA_FONTE}",
     f"""
-    create table {TABELA_DA_FONTE} (
+    create unlogged table {TABELA_DA_FONTE} (
         vistoria_id bigint not null,
         item_codigo text not null,
         co_entidade integer not null,

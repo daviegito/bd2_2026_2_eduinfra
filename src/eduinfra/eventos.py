@@ -161,6 +161,8 @@ def impressao(eventos: pa.Table) -> str:
     """
     conexao = duckdb.connect()
     try:
+        # Os instantes viram texto na impressão: em UTC, ela não depende do fuso de quem calcula.
+        conexao.execute("set TimeZone = 'UTC'")
         conexao.register("eventos", eventos)
         total = conexao.execute(f"select coalesce(sum(md5_number_lower({CONTEUDO})), 0) from eventos").fetchone()[0]
     finally:

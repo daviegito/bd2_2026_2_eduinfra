@@ -16,7 +16,7 @@ pelas janelas, e a Gold é construída de novo.
 
 | Medida | Definição |
 | --- | --- |
-| Vistorias pendentes | vistorias da origem, com item, cujos itens faltam em `gold.fato_vistoria_item` |
+| Vistorias pendentes | vistorias da origem com pelo menos um item que falta em `gold.fato_vistoria_item`, pela chave `(vistoria_id, item_codigo)` |
 | Frescor | agora menos o `registrado_em` da pendente mais antiga; **zero** quando não há pendente |
 | Dentro do SLA | frescor menor ou igual ao SLA, com a Gold construída |
 
@@ -28,7 +28,9 @@ Três escolhas:
 - **O fato fino basta.** Os dois fatos saem da mesma fonte de eventos, na mesma
   transação, e o fato anual forma os anos a partir desses eventos
   ([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)). Uma vistoria cujos itens
-  estão no fato fino tem o ano dela no fato anual. Vistoria sem item não é evento:
+  estão no fato fino tem o ano dela no fato anual. A comparação é pela chave do
+  evento, e não só pela vistoria: com a fonte em Delta, a entrega pode ser parcial,
+  com um item aplicado e outro na fila de erros do CDC. Vistoria sem item não é evento:
   nunca chega à Gold e não conta. A versão 1.1 contava a vistoria sem item de um
   ano ausente do fato anual, quando ele formava os anos a partir de todas as
   vistorias da origem; com a fonte de eventos, contá-la deixaria o SLA violado
@@ -177,7 +179,11 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.
   a regra de formação das linhas, a consulta das pendentes muda junto.
 - **O frescor depende de `registrado_em`.** A consulta das pendentes compara a
   origem com o fato fino, e não com a fonte de eventos. Um item parado na fila de
-  erros do CDC deixa a vistoria pendente só se nenhum outro item dela chegou.
+  erros do CDC deixa a vistoria pendente, e o SLA violado, até ser reprocessado
+  (issue #58) ou completado por `processar-janelas`.
+- **A consulta ficou mais cara.** Comparar pela chave levou de 1,7 a 1,9 s com o
+  Censo 2024, contra 0,25 s comparando só pela vistoria, que não via a entrega
+  parcial.
 
 ## Quando revisar
 

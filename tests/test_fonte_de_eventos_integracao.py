@@ -6,7 +6,7 @@ pelos dois aparece uma vez, e a Gold lê só essa tabela.
 
 import os
 import uuid
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -15,7 +15,7 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import cdc, eventos, fluxo_cdc, janelas, modelo_analitico
+from eduinfra import cdc, eventos, fluxo_cdc, frescor, janelas, modelo_analitico
 from eduinfra.configuracao import Configuracao
 from tests.test_modelo_analitico import _semear_cadastro, vistoria
 
@@ -123,3 +123,78 @@ def test_gold_construida_da_fonte_unica_confere_com_a_origem(ambiente):
     assert resumo.fonte.confere
     assert resumo.fonte.na_fonte == resumo.fonte.na_origem == itens_na_origem(configuracao) == 6
     assert resumo.linhas["fato_vistoria_item"] == 6
+
+
+def cabecalho(configuracao: Configuracao, ocorrido: str) -> int:
+    """Uma vistoria confirmada ainda sem item: o esquema deixa o item vir noutra transação."""
+    with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
+        return conexao.execute(
+            "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
+            "values (1, (select id from tecnico limit 1), 'vistoria_presencial', %s) returning id",
+            (ocorrido,),
+        ).fetchone()[0]
+
+
+def item(configuracao: Configuracao, vistoria_id: int, codigo: str = "biblioteca") -> None:
+    with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
+        conexao.execute(
+            "insert into vistoria_item (vistoria_id, item_codigo, situacao) values (%s, %s, 'existente')",
+            (vistoria_id, codigo),
+        )
+
+
+@pytest.mark.parametrize("margem", [janelas.MARGEM_DA_MARCA, timedelta(0)], ids=["dentro-da-margem", "fora-da-margem"])
+def test_item_confirmado_depois_do_cabecalho_chega_pelas_janelas(ambiente, monkeypatch, margem):
+    configuracao, _ = ambiente
+    monkeypatch.setattr(janelas, "MARGEM_DA_MARCA", margem)
+    vistoria(configuracao.dsn, 2, "2024-05-29", ITENS, origem="censo_escolar")
+    janelas.processar(configuracao)
+
+    # O CDC não roda neste teste: só as janelas podem levar o item à fonte.
+    sem_item = cabecalho(configuracao, "2024-05-30")
+    antes = janelas.processar(configuracao)
+    item(configuracao, sem_item)
+    depois = janelas.processar(configuracao)
+    de_novo = janelas.processar(configuracao)
+
+    assert sem_item not in [e.vistoria_id for e in antes.eventos]
+    assert antes.completados == 0
+    assert [e.vistoria_id for e in depois.eventos] == [sem_item]
+    assert depois.completados == 1
+    assert na_fonte(configuracao, sem_item) == [("biblioteca", "2024-05", False)]
+    assert (de_novo.eventos, de_novo.completados) == ([], 0)
+    assert janelas._ler_controle(configuracao)["cabecalhos_sem_item"] == []
+    assert eventos.ler(configuracao)[0].num_rows == itens_na_origem(configuracao)
+
+
+def test_vistoria_que_continua_sem_item_nao_volta_como_nova(ambiente):
+    configuracao, _ = ambiente
+    vistoria(configuracao.dsn, 2, "2024-05-29", ITENS, origem="censo_escolar")
+    janelas.processar(configuracao)
+    sem_item = cabecalho(configuracao, "2024-05-30")
+
+    primeira = janelas.processar(configuracao)
+    segunda = janelas.processar(configuracao)
+
+    assert primeira.eventos == segunda.eventos == []
+    assert janelas._expandir(janelas._ler_controle(configuracao)["cabecalhos_sem_item"]) == {sem_item}
+
+
+def test_frescor_ve_a_vistoria_entregue_pela_metade(ambiente):
+    configuracao, _ = ambiente
+    parcial = vistoria(configuracao.dsn, 1, "2024-05-29", ITENS, origem="censo_escolar")
+    # Um item aplicado e o outro não, como se o CDC tivesse mandado o segundo para a fila de erros.
+    na_origem = eventos.ler_da_origem(configuracao)
+    eventos.gravar_sem_duplicar(configuracao, na_origem.slice(0, 1))
+
+    modelo_analitico.construir(configuracao)
+    pela_metade = frescor.medir(configuracao.dsn, timedelta(0), comando="teste")
+
+    assert pela_metade.vistorias_pendentes == 1
+    assert not pela_metade.dentro_do_sla
+    assert na_fonte(configuracao, parcial) != []
+
+    janelas.processar(configuracao)
+    modelo_analitico.construir(configuracao)
+
+    assert frescor.medir(configuracao.dsn, timedelta(0), comando="teste").vistorias_pendentes == 0

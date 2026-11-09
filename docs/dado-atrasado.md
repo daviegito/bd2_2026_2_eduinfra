@@ -90,6 +90,16 @@ O furo da margem deixou de ser um risco de perda. O CDC captura pela ordem de
 commit, e a vistoria que escapar da margem chega por ele. As janelas são a rede
 de segurança do CDC, e não o contrário.
 
+### 6. O item que chega depois do cabeçalho
+
+`vistoria_item` não tem carimbo próprio, e o esquema deixa confirmar os itens
+numa transação depois da vistoria. Esses itens não movem a marca d'água. Por isso
+a vistoria que uma execução vê **ainda sem item** fica no controle, em
+`cabecalhos_sem_item`, e não conta como vista. Cada execução confere quais dessas
+ganharam itens: elas viram eventos novos e o mês delas é reconciliado, por mais
+que o item tenha demorado. A vistoria que continua sem item não volta como nova a
+cada execução. Ela não é evento e não chega à fonte.
+
 ## Onde ficam os dados
 
 ```
@@ -98,7 +108,7 @@ dados/warehouse/
     _delta_log/
     mes_ocorrencia=2024-05/...
     mes_ocorrencia=2026-09/...
-  eventos_vistoria_janelas.json           marca d'água, vistas na margem, janelas e reaberturas
+  eventos_vistoria_janelas.json           marca d'água, vistas na margem, cabeçalhos sem item, janelas e reaberturas
 ```
 
 Cada linha é um item de uma vistoria: `vistoria_id`, `item_codigo`,
@@ -234,6 +244,12 @@ mais lenta que a versão em Parquet (3,7 s).
 - **Concorrência com o CDC.** Dois merges no mesmo mês ao mesmo tempo entram em
   conflito no commit. O perdedor tenta de novo, até cinco vezes; depois disso,
   falha, e a próxima execução refaz.
+- **O atraso do item tardio sai menor.** A tolerância e o atraso registrado na
+  reabertura usam o `registrado_em` da vistoria, porque o item não tem o dele. Um
+  item confirmado dias depois do cabeçalho reabre a janela com o atraso do
+  cabeçalho.
+- **A lista de cabeçalhos sem item só cresce com vistorias que nunca ganham item.**
+  Ela é guardada em faixas de ids e conferida por uma consulta só a cada execução.
 
 ## Quando revisar
 

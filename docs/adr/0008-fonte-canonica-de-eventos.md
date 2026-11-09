@@ -73,7 +73,9 @@ Docker sobre WSL2, em 08/11/2026:
 | Primeira reconciliação das janelas (`processar-janelas`) | 18,6 s; mês 2024-05 conferido por impressão, 0 linhas gravadas |
 | Segunda reconciliação, sem nada novo | 5,4 s, quase tudo início do contêiner |
 | `demonstrar-atraso` e depois uma passada do `cdc` | 34 itens gravados pelas janelas; o CDC leu os mesmos 34 e inseriu 0 |
-| `construir-gold` lendo a fonte | 85,9 s e 66,4 s; carga e conferência da fonte em cerca de 22 s e 16,8 s |
+| `construir-gold` lendo a fonte | 85,9 s, 66,4 s e 69,2 s; carga e conferência da fonte de 15 s a 22 s |
+| WAL de uma construção | 1.348 MB com a cópia da fonte em tabela comum; 940 MB com ela `UNLOGGED` |
+| WAL retido pelo slot, com o consumidor ativo e o #66 integrado (`docs/evidencias/issue-60/medir_wal.py`) | pico de 987 MB durante a construção; 4 MB depois de duas passadas do consumidor |
 | Conferência na construção | 3.078.139 na fonte, 3.078.139 na origem, 0 só de um lado |
 
 As três construções medidas antes desta mudança, lendo o OLTP, levaram 60,3 s,
@@ -104,13 +106,16 @@ Adotar C:
   mesmo tempo entram em conflito no commit; o perdedor tenta de novo, até cinco
   vezes.
 - **Janelas:** a reconciliação de um mês compara a impressão do mês na origem
-  com a da fonte e só faz merge se forem diferentes. A impressão é a soma exata,
+  com a da fonte e só faz merge se forem diferentes. A vistoria vista ainda sem
+  item fica pendente no controle até ganhar itens, porque o item não tem carimbo
+  próprio e não move a marca d'água. A impressão é a soma exata,
   em 64 bits, do md5 de cada linha, sem `lsn_origem`. O controle (marca d'água,
   janelas e reaberturas) fica em `warehouse/eventos_vistoria_janelas.json`. O
   Parquet `analitico/eventos_vistoria` deixa de ser escrito.
 - **Transformação:** `construir-gold` copia uma versão da tabela para
   `fonte.eventos_vistoria` no PostgreSQL, na mesma transação da Gold, com chave
-  primária. Em seguida, confere a cópia com `public.vistoria_item`. Os três
+  primária. A tabela é `UNLOGGED`: é recriada a cada construção e não precisa ir
+  para o WAL, que o slot do CDC retém até 1 GB (issue #60). Em seguida, confere a cópia com `public.vistoria_item`. Os três
   pontos de leitura de eventos passam a ler só essa cópia: `stg_mudanca_item`, o
   fato fino e os anos do fato largo. A construção recusa a fonte que tem evento
   ausente da origem. O que falta na fonte fica pendente no frescor. A versão
@@ -131,9 +136,13 @@ Gold sabe de qual versão da fonte foi construída.
   parar e ninguém rodar `processar-janelas`, a Gold fica para trás. O frescor
   ([issue #52](../frescor-e-sla.md)) passa a medir o trecho origem → fonte → Gold
   inteiro, e é ele que acusa o atraso.
-- Cada construção paga a cópia da fonte: de 17 s a 22 s para 3 milhões de
+- Cada construção paga a cópia da fonte: de 15 s a 22 s para 3 milhões de
   eventos, mais um CSV intermediário em disco temporário, com o tamanho da tabela
-  sem compressão.
+  sem compressão. Em tabela comum, a cópia somava cerca de 400 MB de WAL à
+  construção; `UNLOGGED`, não soma, e uma queda do servidor a esvazia até a
+  próxima construção.
+- O frescor passou a comparar pela chave do evento, para ver a entrega parcial: a
+  consulta das pendentes subiu de 0,25 s para cerca de 1,8 s.
 - Vistoria sem item não é evento e não entra na Gold. Antes, ela criava a linha
   do ano no fato anual. O frescor deixou de contá-la como pendente, o que reverte
   a regra do PR #62: com a nova fonte, contá-la deixaria o SLA violado para
@@ -175,3 +184,4 @@ recriado a partir da origem, mas nenhum código o lê mais.
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Fonte canônica de eventos e unificação dos caminhos de dado atrasado | Squad EduInfra |  | 8 de novembro de 2026 |
+| 1.1 | Fonte `UNLOGGED`, cabeçalhos sem item pendentes nas janelas e frescor pela chave do evento (revisão do PR #70) | Squad EduInfra | [Pedro Vargas](https://github.com/Pedrovargas10) | 9 de novembro de 2026 |

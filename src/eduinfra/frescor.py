@@ -45,15 +45,23 @@ CRIAR_REGISTRO = [
     """,
 ]
 
-# Uma vistoria está pendente se os itens dela faltam no fato fino. Os dois fatos saem da
-# mesma fonte de eventos, na mesma transação: o fato anual forma os anos a partir desses
-# eventos, então vistoria com itens no fato fino tem o ano dela no fato anual. Vistoria sem
-# item não é evento, nunca chega à Gold e não conta: contá-la deixaria o SLA violado para sempre.
+# Uma vistoria está pendente se algum item dela falta no fato fino, pela chave do evento:
+# com a fonte em Delta, a entrega pode ser parcial (um item na fila de erros do CDC, outro
+# aplicado). Os dois fatos saem da mesma fonte, na mesma transação, então o que está no fato
+# fino tem o ano no fato anual. Vistoria sem item não é evento, nunca chega à Gold e não conta:
+# contá-la deixaria o SLA violado para sempre. Pela chave, a consulta levou 1,7 a 1,9 s com o
+# Censo 2024; só pela vistoria, 0,25 s, mas não via a entrega parcial.
 CONSULTA_PENDENTES = """
     select count(*), min(v.registrado_em)
     from public.vistoria v
-    where exists (select 1 from public.vistoria_item vi where vi.vistoria_id = v.id)
-      and not exists (select 1 from gold.fato_vistoria_item f where f.vistoria_id = v.id)
+    where exists (
+        select 1 from public.vistoria_item vi
+        where vi.vistoria_id = v.id
+          and not exists (
+              select 1 from gold.fato_vistoria_item f
+              where f.vistoria_id = vi.vistoria_id and f.item_codigo = vi.item_codigo
+          )
+    )
 """
 
 
