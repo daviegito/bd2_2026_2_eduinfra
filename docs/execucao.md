@@ -1,5 +1,24 @@
 # Como executar e demonstrar
 
+## Transformação declarativa (issue #48)
+
+Com `.env` configurado, inclusive `DATA_REFERENCIA_ENEM=2024-11-03`:
+
+```bash
+docker compose run --build --rm transformacao
+```
+
+O serviço aguarda a carga do Censo e o CDC saudável, ingere o ENEM real,
+congela as sources, constrói/testa a Gold e gera o grafo. Uma falha na ingestão,
+no preparo, no build/testes ou na documentação devolve código diferente de zero.
+O fluxo padrão usa a Silver da #44 e a fonte canônica Delta da #45. A primeira
+execução baixa os pacotes públicos; reexecuções usam o manifesto e a Bronze.
+
+O modo explícito `--somente-infraestrutura` serve para execução parcial e não
+substitui a validação completa com ENEM. Para contratos, variáveis, referência
+temporal, grafo interativo e limites de publicação, consulte
+[Transformação declarativa](transformacao.md).
+
 Execute os comandos a partir da raiz do repositório. O fluxo padrão sobe o
 PostgreSQL, prepara os dados do Censo e inicia o consumidor CDC.
 
