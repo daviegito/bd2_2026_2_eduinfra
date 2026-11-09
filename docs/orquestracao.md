@@ -10,24 +10,31 @@ tudo que foi executado, que pode ser acompanhado por uma interface web.
 ## O que ele faz neste projeto
 
 O Dagster roda o pipeline em lote chamando os comandos que já existiam na CLI
-`eduinfra`, como `migrar` e `ingerir`. O código está em
+`eduinfra`, como `migrar`, `ingerir` e `construir-gold`. O código está em
 [orquestrador.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py).
 
 ```mermaid
 flowchart LR
     MIGRAR["migrar"] --> INGERIR["ingerir"]
     INGERIR --> ANALITICA["publicar_analitica"]
-    INGERIR --> JANELAS["processar_janelas"]
+    INGERIR --> BASE["publicar_linha_de_base"]
+    BASE --> JANELAS["processar_janelas"]
+    JANELAS --> GOLD["construir_gold"]
+    GOLD --> FRESCOR["medir_frescor"]
     REPROC["reprocessar_janela<br/>(partição mensal)"]
 ```
 
 - **Ordem das etapas.** Cada etapa só roda depois que as anteriores terminam
   bem. Se uma falha, as seguintes não rodam.
+- **Gold.** A Gold lê a tabela de eventos das vistorias. Por isso o pipeline
+  atualiza essa tabela antes de reconstruir a Gold.
+- **Frescor.** Depois da Gold, o `medir_frescor` falha se alguma vistoria
+  estiver há mais de 25 horas sem aparecer nela.
 - **Retry.** Cada etapa tem até 3 novas tentativas, com espera de 30, 90 e
   210 s entre elas. Isso cobre falhas passageiras, como o banco reiniciando.
 - **Agendamento.** O pipeline roda sozinho no horário de `AGENDA_ORQUESTRADOR`
-  do `.env`, que por padrão é todo dia às 3h. A agenda só dispara enquanto o
-  serviço está no ar.
+  do `.env`, que por padrão é todo dia às 3h. Cada execução reconstrói a Gold
+  inteira. A agenda só dispara enquanto o serviço está no ar.
 - **Backfill.** O `reprocessar_janela` reprocessa meses que já passaram. Pela
   interface dá para escolher vários meses, e o Dagster cria uma execução para
   cada um.
@@ -67,3 +74,4 @@ A interface fica em <http://localhost:3000>.
 2. Recrie o serviço com `docker compose up -d orquestrador`.
 3. Depois de alguns minutos, as execuções disparadas pela agenda aparecem
    sozinhas em *Runs*.
+4. Depois, volte para `"0 3 * * *"`. para evitar que a Gold seja construída toda vez a cada 5 minutos.
