@@ -130,6 +130,7 @@ def test_publicacao_entrega_as_quatro_operacoes_mesmo_vinda_da_versao_so_com_ins
     conexao.execute("alter publication eduinfra_cdc set (publish = 'insert')")
     monkeypatch.setenv("DATABASE_URL", configuracao.dsn)
     alembic = Config(str(configuracao.arquivo_alembic))
+    command.downgrade(alembic, "0007")
     command.stamp(alembic, "0006")
 
     command.upgrade(alembic, "head")

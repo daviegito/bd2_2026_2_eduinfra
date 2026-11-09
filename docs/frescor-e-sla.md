@@ -10,12 +10,13 @@ violado. Responde à issue #52.
 ## O que se mede
 
 A Gold é reconstruída inteira por `construir-gold`, numa transação só, a partir de
-um retrato da origem ([modelo analítico](modelo-analitico.md)). O que a origem
-recebe depois desse retrato só aparece na Gold na construção seguinte.
+uma versão da fonte canônica de eventos ([modelo analítico](modelo-analitico.md)).
+O que a origem recebe depois só aparece na Gold quando chega à fonte, pelo CDC ou
+pelas janelas, e a Gold é construída de novo.
 
 | Medida | Definição |
 | --- | --- |
-| Vistorias pendentes | vistorias da origem cujos itens faltam em `gold.fato_vistoria_item`, ou cuja escola e ano faltam em `gold.fato_infra_escola_ano` |
+| Vistorias pendentes | vistorias da origem com pelo menos um item que falta em `gold.fato_vistoria_item`, pela chave `(vistoria_id, item_codigo)` |
 | Frescor | agora menos o `registrado_em` da pendente mais antiga; **zero** quando não há pendente |
 | Dentro do SLA | frescor menor ou igual ao SLA, com a Gold construída |
 
@@ -24,13 +25,16 @@ Três escolhas:
 - **Não é "agora menos a última construção".** Num dia sem vistorias, a Gold
   continua completa, e essa conta acusaria atraso sem haver dado faltando. O
   frescor só cresce quando existe dado na origem que o painel ainda não mostra.
-- **Os dois fatos entram na conta.** Eles saem do mesmo retrato, na mesma
-  transação, mas formam as linhas de jeitos diferentes. O fato fino só tem
-  vistorias com item. O fato anual forma os anos a partir de todas as vistorias,
-  com item ou sem: uma vistoria sem item, de uma escola num ano que ainda não
-  está lá, cria uma linha nova na próxima construção. Por isso ela conta como
-  pendente. Uma vistoria sem item num ano que o fato anual já tem não muda nada
-  e não conta.
+- **O fato fino basta.** Os dois fatos saem da mesma fonte de eventos, na mesma
+  transação, e o fato anual forma os anos a partir desses eventos
+  ([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)). Uma vistoria cujos itens
+  estão no fato fino tem o ano dela no fato anual. A comparação é pela chave do
+  evento, e não só pela vistoria: com a fonte em Delta, a entrega pode ser parcial,
+  com um item aplicado e outro na fila de erros do CDC. Vistoria sem item não é evento:
+  nunca chega à Gold e não conta. A versão 1.1 contava a vistoria sem item de um
+  ano ausente do fato anual, quando ele formava os anos a partir de todas as
+  vistorias da origem; com a fonte de eventos, contá-la deixaria o SLA violado
+  para sempre.
 - **O relógio é o do banco**, o mesmo que carimba `registrado_em`. Como
   `registrado_em` é o início da transação que gravou a vistoria, o frescor medido
   nunca é menor que o real.
@@ -39,9 +43,12 @@ Gold que não existe conta como violação: o painel não tem o que mostrar.
 
 ## De qual caminho o SLA fala
 
-A Gold lê a origem (`public.vistoria` e `public.vistoria_item`), não o Delta do CDC.
-O SLA cobre o trecho **origem → Gold**, qualquer que seja o caminho que trouxe o
-dado à origem:
+A Gold lê a fonte canônica de eventos, a tabela Delta `eventos_vistoria`, que o
+CDC e as janelas de dado atrasado completam
+([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)). As pendentes continuam sendo
+contadas contra a origem. Por isso o SLA cobre o trecho inteiro **origem → fonte
+→ Gold**: um CDC parado aparece aqui como atraso, qualquer que seja o caminho que
+trouxe o dado à origem:
 
 - **Vistorias do dia a dia**, registradas na origem: entram no painel em até 25 h.
 - **Censo anual**, carregado pelo lote (`ingerir`): o prazo de 25 h começa quando a
@@ -49,8 +56,8 @@ dado à origem:
   lote, registrado no manifesto `ingestao_execucao`, e não deste SLA.
 
 O frescor do CDC, que leva as vistorias à tabela Delta `eventos_vistoria` com SLA
-de 60 s, é outra medição, do PR #59 e do ADR 0007. Aquela tabela não alimenta o
-painel.
+de 60 s, é outra medição, do PR #59 e do ADR 0007. Ela mede só o primeiro trecho;
+este SLA inclui esse trecho e a construção da Gold.
 
 ## O SLA de 25 horas
 
@@ -97,6 +104,7 @@ limit 10;
 docker compose run --rm carga construir-gold
 docker compose run --rm carga demonstrar-frescor
 docker compose run --rm carga medir-frescor --sla-horas 0.0005; echo $?
+docker compose run --rm carga processar-janelas   # dispensável com o serviço cdc no ar
 docker compose run --rm carga construir-gold
 docker compose run --rm carga medir-frescor; echo $?
 ```
@@ -166,11 +174,16 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.
 - **Uma tabela monitorada.** O SLA fala de `fato_infra_escola_ano`. As outras
   tabelas da Gold saem do mesmo retrato e herdam o mesmo frescor, mas não há
   medição separada para elas.
-- **A consulta segue a forma dos fatos.** Ela sabe que o fato fino só tem
-  vistorias com item e que o fato anual forma uma linha por escola e ano. Se a
-  Gold mudar a regra de formação das linhas, a consulta das pendentes muda junto.
-- **O frescor depende de `registrado_em`.** Se a fonte de eventos da Gold mudar
-  (issue #45), a consulta das pendentes muda junto.
+- **A consulta segue a forma dos fatos.** Ela sabe que o fato fino tem uma linha
+  por item de vistoria e que o fato anual sai dos mesmos eventos. Se a Gold mudar
+  a regra de formação das linhas, a consulta das pendentes muda junto.
+- **O frescor depende de `registrado_em`.** A consulta das pendentes compara a
+  origem com o fato fino, e não com a fonte de eventos. Um item parado na fila de
+  erros do CDC deixa a vistoria pendente, e o SLA violado, até ser reprocessado
+  (issue #58) ou completado por `processar-janelas`.
+- **A consulta ficou mais cara.** Comparar pela chave levou de 1,7 a 1,9 s com o
+  Censo 2024, contra 0,25 s comparando só pela vistoria, que não via a entrega
+  parcial.
 
 ## Quando revisar
 
@@ -187,3 +200,4 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.
 | --- | --- | --- | --- | --- |
 | 1.0 | Frescor da Gold, SLA de 25 h, registro e demonstração da violação | [Gabriel Lopes de Amorim](https://github.com/BrzGab) |  | 2 de novembro de 2026 |
 | 1.1 | Conta como pendente a vistoria sem item de escola e ano que faltam no fato anual | [Gabriel Lopes de Amorim](https://github.com/BrzGab) | [Pedro Sanchez](https://github.com/PedroDev-sketch) | 4 de novembro de 2026 |
+| 1.2 | Gold lida da fonte única de eventos (ADR 0008): o SLA cobre origem → fonte → Gold, e a vistoria sem item deixa de contar | Squad EduInfra |  | 8 de novembro de 2026 |

@@ -33,11 +33,7 @@ SO_NO_DELTA = "so_no_delta"
 IGUAIS = "iguais"
 DIFERENTES = "diferentes"
 
-# lsn_origem fica de fora: a origem não o conhece, e ele distingue os caminhos em vez de descrever o evento.
-IMPRESSAO = """
-md5_number(concat_ws('|', vistoria_id, item_codigo, co_entidade, sg_uf, origem, ocorrido_em::varchar,
-                     registrado_em::varchar, situacao, coalesce(quantidade::varchar, 'nulo'), mes_ocorrencia))
-"""
+IMPRESSAO = eventos.IMPRESSAO
 
 ESQUEMA_DAS_PENDENCIAS = pa.schema([pa.field("vistoria_id", pa.int64()), pa.field("item_codigo", pa.string())])
 

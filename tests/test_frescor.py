@@ -88,9 +88,8 @@ def test_medir_frescor_sai_com_codigo_1_fora_do_sla(banco_falso):
 
 
 def test_construir_gold_registra_o_frescor(banco_falso, monkeypatch):
-    monkeypatch.setattr(modelo_analitico, "construir", lambda dsn: modelo_analitico.ResumoGold({}, 0.0))
-    # A auditoria da E3 roda em seguida e precisa do banco; aqui ela não tem testes.
-    monkeypatch.setattr(unittest.TestLoader, "loadTestsFromName", lambda self, nome: unittest.TestSuite())
+    fonte = modelo_analitico.ConferenciaDaFonte(versao_delta=1, na_fonte=0, na_origem=0, so_na_origem=0, so_na_fonte=0)
+    monkeypatch.setattr(modelo_analitico, "construir", lambda configuracao: modelo_analitico.ResumoGold({}, 0.0, fonte))
 
     assert cli.main(["construir-gold"]) == 0
     assert banco_falso == [("construir-gold", frescor.SLA_PADRAO)]
