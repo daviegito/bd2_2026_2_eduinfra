@@ -44,8 +44,26 @@ def publicar_analitica() -> None:
 
 
 @asset(deps=[ingerir], retry_policy=RETRY)
+def publicar_linha_de_base() -> None:
+    # Carga inicial da fonte de eventos da Gold (ADR 0008). Quando a tabela já existe, não faz nada.
+    rodar("publicar-analitico")
+
+
+@asset(deps=[publicar_linha_de_base], retry_policy=RETRY)
 def processar_janelas() -> None:
     rodar("processar-janelas")
+
+
+@asset(deps=[processar_janelas], retry_policy=RETRY)
+def construir_gold() -> None:
+    rodar("construir-gold")
+
+
+# Sem retry: medir-frescor sai com código 1 quando o SLA de 25 h foi violado, e repetir a medição
+# minutos depois não muda isso. A falha deve aparecer na execução como alerta.
+@asset(deps=[construir_gold])
+def medir_frescor() -> None:
+    rodar("medir-frescor")
 
 
 @asset(partitions_def=JANELAS_MENSAIS, retry_policy=RETRY)
@@ -53,10 +71,17 @@ def reprocessar_janela(context: AssetExecutionContext) -> None:
     rodar("reprocessar-janela", "--mes", context.partition_key[:7])
 
 
-pipeline = define_asset_job(
-    "pipeline",
-    selection=AssetSelection.assets(migrar, ingerir, publicar_analitica, processar_janelas),
-)
+ETAPAS_DO_PIPELINE = [
+    migrar,
+    ingerir,
+    publicar_analitica,
+    publicar_linha_de_base,
+    processar_janelas,
+    construir_gold,
+    medir_frescor,
+]
+
+pipeline = define_asset_job("pipeline", selection=AssetSelection.assets(*ETAPAS_DO_PIPELINE))
 
 agenda = ScheduleDefinition(
     job=pipeline,
@@ -66,7 +91,7 @@ agenda = ScheduleDefinition(
 )
 
 defs = Definitions(
-    assets=[migrar, ingerir, publicar_analitica, processar_janelas, reprocessar_janela],
+    assets=[*ETAPAS_DO_PIPELINE, reprocessar_janela],
     jobs=[pipeline],
     schedules=[agenda],
 )

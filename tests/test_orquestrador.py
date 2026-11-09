@@ -8,12 +8,12 @@ from dagster import Backoff, DefaultScheduleStatus, Definitions, Failure, materi
 
 from eduinfra import orquestrador
 from eduinfra.orquestrador import (
+    ETAPAS_DO_PIPELINE,
     agenda,
+    construir_gold,
     defs,
-    ingerir,
-    migrar,
+    medir_frescor,
     processar_janelas,
-    publicar_analitica,
     reprocessar_janela,
 )
 
@@ -35,11 +35,32 @@ def test_definicoes_carregam():
 
 
 def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
-    resultado = materialize([migrar, ingerir, publicar_analitica, processar_janelas])
+    resultado = materialize(ETAPAS_DO_PIPELINE)
 
     assert resultado.success
     assert chamadas[:2] == ["migrar", "ingerir"]
-    assert set(chamadas[2:]) == {"publicar-analitica", "processar-janelas"}
+    assert set(chamadas) == {
+        "migrar",
+        "ingerir",
+        "publicar-analitica",
+        "publicar-analitico",
+        "processar-janelas",
+        "construir-gold",
+        "medir-frescor",
+    }
+    # A Gold lê a fonte de eventos que a linha de base cria e as janelas completam (ADR 0008).
+    ordem = chamadas.index
+    assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("construir-gold") < ordem("medir-frescor")
+
+
+def test_gold_e_frescor_entram_na_execucao_agendada():
+    assert {construir_gold.key, medir_frescor.key} <= set(agenda.job.selection.resolve(ETAPAS_DO_PIPELINE))
+
+
+def test_frescor_fora_do_sla_falha_sem_retry():
+    assert medir_frescor.op.retry_policy is None
+    assert construir_gold.op.retry_policy is orquestrador.RETRY
+    assert processar_janelas.op.retry_policy is orquestrador.RETRY
 
 
 def test_backfill_passa_o_mes_da_particao_para_a_cli(chamadas):
