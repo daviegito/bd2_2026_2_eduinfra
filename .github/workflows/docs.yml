@@ -53,7 +53,7 @@ jobs:
           docker compose run --rm carga gerar_amostra --escolas 1000
 
           # 4. Reativa a segurança do banco
-          docker compose exec -T banco psql -U eduinfra -d eduinfra -c "ALTER DATABASE eduinfra SET session_replication_role = 'DEFAULT';"
+          docker compose exec -T banco psql -U eduinfra -d eduinfra -c "ALTER DATABASE eduinfra SET session_replication_role = 'origin';"
 
           # 5. Garante a existência do município 11 para que os testes e as views não retornem em branco
           docker compose exec -T banco psql -U eduinfra -d eduinfra -c "INSERT INTO public.municipio (co_municipio) VALUES (11) ON CONFLICT DO NOTHING;" || true
