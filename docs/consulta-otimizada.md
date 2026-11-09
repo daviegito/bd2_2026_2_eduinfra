@@ -178,6 +178,16 @@ docker exec eduinfra-medicao-gold psql -U eduinfra -d eduinfra -c "vacuum analyz
 export DATABASE_URL=postgresql://eduinfra@127.0.0.1:55999/eduinfra
 ```
 
+Desde o [ADR 0008](adr/0008-fonte-canonica-de-eventos.md), `construir-gold` lê a tabela Delta
+`warehouse/eventos_vistoria`, que `publicar-analitico` cria a partir da origem. Esse comando também
+cria o slot do CDC, que a cópia não usa, então apague o slot logo depois:
+
+```bash
+export DIRETORIO_DADOS="$(mktemp -d)"
+uv run python -m eduinfra.cli publicar-analitico
+docker exec eduinfra-medicao-gold psql -U eduinfra -d eduinfra -c "select pg_drop_replication_slot('eduinfra_cdc')"
+```
+
 Depois, construa a Gold e gere as evidências:
 
 ```bash
@@ -211,3 +221,4 @@ na mesma mediana. Os arquivos trazem o plano de execução, sem valor de linha d
 | --- | --- | --- | --- | --- |
 | 1.0 | Otimização da agregação nacional a partir do plano de execução, com a leitura materializada na Gold | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 1 de novembro de 2026 |
 | 1.1 | Explica os termos do plano e as duas rodadas, simplifica a descrição da consulta e tira as referências a issue e PR | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 7 de novembro de 2026 |
+| 1.2 | Inclui na reprodução a publicação da fonte de eventos, que a Gold passou a ler | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
