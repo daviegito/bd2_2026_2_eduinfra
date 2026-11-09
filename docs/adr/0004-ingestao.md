@@ -59,7 +59,7 @@ Adotar B, com as seguintes garantias e limites:
 
 **O que ganhamos:** carga reexecutável com manifesto, recuperação após falhas, histórico preservado e captura por ordem de commit. Parada e reentrega do consumidor não duplicam itens no destino.
 
-**O que perdemos:** o consumidor próprio foi mais lento no lote de 85.000 itens e exige manter o protocolo e a operação do slot. O limite configurado de WAL retido é 1 GB; sua invalidação exige recuperar o fluxo e reconciliar o destino. Não há commit conjunto entre banco e arquivos: falha após o commit pode deixar a Silver antiga até nova execução. Entre os dois renames, a partição pode ficar temporariamente ausente. Reprocessar uma única correção pode custar a janela inteira, cerca de oito segundos no volume medido, e alterar números de meses já fechados. A duplicidade de caminhos analíticos aumenta o trabalho de operação e reconciliação.
+**O que perdemos:** o consumidor próprio foi mais lento no lote de 85.000 itens e exige manter o protocolo e a operação do slot. O limite original de WAL retido era 1 GB. Na revisão de 08/11/2026 passou a 2 GB configuráveis após medir a Gold nacional; sua invalidação ainda exige recuperar o fluxo e reconciliar o destino. Não há commit conjunto entre banco e arquivos: falha após o commit pode deixar a Silver antiga até nova execução. Entre os dois renames, a partição pode ficar temporariamente ausente. Reprocessar uma única correção pode custar a janela inteira, cerca de oito segundos no volume medido, e alterar números de meses já fechados. A duplicidade de caminhos analíticos aumenta o trabalho de operação e reconciliação.
 
 **O que se torna irreversível:** descartar o slot elimina seu ponto de retomada. A arquitetura pode mudar, mas exige nova carga de base, checkpoints e reconciliação; seu custo de migração não foi medido.
 
@@ -81,3 +81,22 @@ Adotar B, com as seguintes garantias e limites:
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Consolida as decisões e evidências de ingestão da E2 | [Pedro Vargas](https://github.com/Pedrovargas10) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) | 18 de outubro de 2026 |
+
+
+## Revisão operacional — 08/11/2026 (issue #60)
+
+Mantida a escolha B e a arquitetura com PostgreSQL compartilhado. Foi corrigida
+a passada sem transações publicadas: o consumidor captura o WAL persistido
+antes de ler, limita o peek a essa posição e a confirma se a leitura estiver
+vazia. Com eventos, preserva a confirmação somente após a entrega.
+
+A medição nacional com consumidor ativo reteve 985.449.528 bytes de WAL durante
+a construção SQL e terminou com 408 bytes retidos, sem perder o slot. O limite
+anterior de 1 GB não deixava margem adequada para a transação de construção;
+o job dbt com preparo das fontes reteve 1.196.987.160 bytes (acima de 1 GB) e
+terminou saudável com limite de 2 GB. O Compose passa a 2 GB por padrão,
+mantendo limite finito e possibilidade de configuração. Crescimento do domínio e outros consumidores exigem revisão.
+
+Os [testes e as medições](../evidencias/issue-60/retencao-wal.md) documentam os
+limites da conclusão. Essa revisão não troca o mecanismo de CDC, não decide a
+ferramenta da Gold e não muda o contrato usado pelo painel e pelo frescor.
