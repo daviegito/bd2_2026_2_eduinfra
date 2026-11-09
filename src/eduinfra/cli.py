@@ -38,7 +38,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar_painel"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
@@ -183,7 +183,7 @@ def main(argumentos: list[str] | None = None) -> int:
 
         gerar_amostra(configuracao, opcoes.escolas)
 
-    if opcoes.comando == "gerar_painel":
+    if opcoes.comando == "gerar-painel":
         from eduinfra.painel import gerar_painel
         gerar_painel()
         return 0
