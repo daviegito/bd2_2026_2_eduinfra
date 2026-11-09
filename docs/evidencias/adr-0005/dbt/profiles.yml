@@ -1,0 +1,12 @@
+eduinfra:
+  target: local
+  outputs:
+    local:
+      type: postgres
+      host: "{{ env_var('PGHOST', 'localhost') }}"
+      port: "{{ env_var('PGPORT', '5432') | as_number }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('PGDATABASE', 'eduinfra_adr0005') }}"
+      schema: gold_dbt
+      threads: 4

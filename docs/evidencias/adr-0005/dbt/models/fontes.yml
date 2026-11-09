@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: origem
+    schema: public
+    tables:
+      - name: vistoria
+      - name: vistoria_item
+      - name: escola
+      - name: municipio
+      - name: item_infraestrutura

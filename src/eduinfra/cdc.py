@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import psycopg
 
-from eduinfra.pgoutput import Transacao, decodificar, formatar_lsn
+from eduinfra.pgoutput import Transacao, decodificar, formatar_lsn, interpretar_lsn
 
 log = logging.getLogger(__name__)
 
@@ -57,16 +57,22 @@ def ler_transacoes(
     slot: str = SLOT_PADRAO,
     publicacao: str = PUBLICACAO_PADRAO,
     limite_de_mudancas: int | None = None,
+    ate_lsn: int | None = None,
 ) -> list[Transacao]:
     linhas = conexao.execute(
         """
         select data from pg_logical_slot_peek_binary_changes(
-            %s, null, %s, 'proto_version', '1', 'publication_names', %s)
+            %s, %s::pg_lsn, %s, 'proto_version', '1', 'publication_names', %s)
         """,
-        (slot, limite_de_mudancas, publicacao),
+        (slot, formatar_lsn(ate_lsn) if ate_lsn is not None else None, limite_de_mudancas, publicacao),
     ).fetchall()
 
     return decodificar(bytes(linha[0]) for linha in linhas)
+
+
+def posicao_persistida(conexao: psycopg.Connection) -> int:
+    """Limite já visível ao decodificador, capturado antes da leitura do slot."""
+    return interpretar_lsn(conexao.execute("select pg_current_wal_flush_lsn()::text").fetchone()[0])
 
 
 def confirmar(conexao: psycopg.Connection, lsn_fim: int, slot: str = SLOT_PADRAO) -> None:

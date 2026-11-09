@@ -18,6 +18,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 
 ## Entradas
 
+### 2026-11-08 — Avanço seguro do slot e retenção durante a Gold (issue #60)
+
+- **Ferramenta:** Codex.
+- **Onde:** `cdc.py`, `fluxo_cdc.py`, testes de slot ocioso, medição reproduzível,
+  configuração de retenção e documentação operacional.
+- **O que foi pedido:** assumir a issue #60 sem responsável e resolver o bloqueio
+  direto da #48, preservando os contratos das PRs abertas.
+- **O que foi aproveitado:** limite de leitura pelo WAL já persistido, confirmação
+  da passada vazia, cenários de transação concorrente e medição com consumidor ativo.
+- **Como foi verificado:** seis testes específicos e a suíte existente passaram
+  em banco descartável; a construção SQL nacional foi medida com checkpoint
+  durante a execução e uma vistoria concorrente entregue sem duplicação.
+  Procedimento e resultados em `docs/evidencias/issue-60/retencao-wal.md`.
+  Após sincronizar com a main contendo a #62, passaram 215 testes e houve uma
+  falha de janelas, reproduzida também sem o patch da #60 e registrada nas evidências.
+- **Quem revisou:** revisão humana pendente; Pedro Vargas aprovou o escopo.
+
 ### 2026-08-25 — Geração da proposta de domínio (ENEM × Infraestrutura Escolar)
 
 - **Ferramenta:** Claude (assistente conversacional)
@@ -302,6 +319,38 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
   passando, além da suíte de unidade inteira e dos testes do modelo analítico;
   `mkdocs build --strict` sem erro
+
+### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `docs/adr/0005-ferramenta-de-transformacao.md`, `docs/evidencias/adr-0005/`
+  (protótipos dbt e SQLMesh, scripts de medição e saídas), `docs/adr/README.md`,
+  `mkdocs.yml` e `.gitignore`
+- **O que foi pedido:** apoio para comparar dbt, SQLMesh e a opção nula, no critério
+  definido pela Squad (a ferramenta mais simples e fácil de usar), e redigir o ADR
+- **O que foi aproveitado:** a montagem da mesma Gold nas três alternativas a partir do
+  SQL do PR #55, os scripts de medição e comparação e a redação inicial do ADR,
+  revisados e ajustados por Gabriel. A decisão pelo dbt segue o critério da Squad
+- **Como foi verificado:** as três Golds foram comparadas tabela a tabela (contagem e
+  soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
+  ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
+  com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
+- **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação
+- **Onde:** `src/eduinfra/janelas.py`, `tests/test_janelas_integracao.py` e
+  `docs/dado-atrasado.md`
+- **O que foi pedido:** apoio para corrigir a falha relatada no PR #66, em que uma
+  vistoria sem item voltava como nova a cada execução das janelas
+- **O que foi aproveitado:** o diagnóstico da causa, a condição na consulta das
+  candidatas e o teste, revisados por Gabriel
+- **Como foi verificado:** o teste novo falhou sem a correção e passou com ela; os 17
+  testes das janelas e os 142 de unidade passaram, e a suíte de integração das janelas
+  passou duas vezes seguidas com a vistoria sem item dentro da margem
 - **Quem revisou:** pendente (PR)
 
 ### 2026-11-08 — Fonte única de eventos de vistoria (ADR 0008)
