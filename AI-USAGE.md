@@ -18,6 +18,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 
 ## Entradas
 
+### 2026-11-08 — Avanço seguro do slot e retenção durante a Gold (issue #60)
+
+- **Ferramenta:** Codex.
+- **Onde:** `cdc.py`, `fluxo_cdc.py`, testes de slot ocioso, medição reproduzível,
+  configuração de retenção e documentação operacional.
+- **O que foi pedido:** assumir a issue #60 sem responsável e resolver o bloqueio
+  direto da #48, preservando os contratos das PRs abertas.
+- **O que foi aproveitado:** limite de leitura pelo WAL já persistido, confirmação
+  da passada vazia, cenários de transação concorrente e medição com consumidor ativo.
+- **Como foi verificado:** seis testes específicos e a suíte existente passaram
+  em banco descartável; a construção SQL nacional foi medida com checkpoint
+  durante a execução e uma vistoria concorrente entregue sem duplicação.
+  Procedimento e resultados em `docs/evidencias/issue-60/retencao-wal.md`.
+  Após sincronizar com a main contendo a #62, passaram 215 testes e houve uma
+  falha de janelas, reproduzida também sem o patch da #60 e registrada nas evidências.
+- **Quem revisou:** revisão humana pendente; Pedro Vargas aprovou o escopo.
+
 ### 2026-08-25 — Geração da proposta de domínio (ENEM × Infraestrutura Escolar)
 
 - **Ferramenta:** Claude (assistente conversacional)
@@ -302,3 +319,118 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   com cada número e cada explicação de termo conferidos nos planos de `docs/explain/` e no código de
   `comparar-consulta`
 - **Quem revisou:** Lucas, no PR #61
+
+### 2026-11-02 — Frescor e SLA da Gold (issue #52)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/frescor.py`, os comandos `medir-frescor` e
+  `demonstrar-frescor` e o registro em `construir-gold` na CLI, `tests/test_frescor.py`,
+  `tests/test_frescor_integracao.py`, `docs/frescor-e-sla.md`, `docs/testes.md`,
+  `mkdocs.yml` e README
+- **O que foi pedido:** apoio para implementar a issue #52, no escopo definido por
+  Gabriel: medir o frescor da tabela que alimenta o painel, declarar o SLA, registrar
+  a métrica, falhar na violação e demonstrá-la
+- **O que foi aproveitado:** sugestões discutidas e aprovadas por Gabriel (frescor
+  como a espera da vistoria pendente mais antiga, e não o tempo desde a última
+  construção; SLA de 25 h; registro fora do schema `gold`), trechos de código, testes
+  e a redação inicial do documento, revisados e ajustados por ele
+- **Como foi verificado:** `construir-gold`, `demonstrar-frescor` e `medir-frescor`
+  rodados contra o banco com o Censo 2024 (violação com código de saída 1 e retorno
+  ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
+  passando, além da suíte de unidade inteira e dos testes do modelo analítico;
+  `mkdocs build --strict` sem erro
+
+### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `docs/adr/0005-ferramenta-de-transformacao.md`, `docs/evidencias/adr-0005/`
+  (protótipos dbt e SQLMesh, scripts de medição e saídas), `docs/adr/README.md`,
+  `mkdocs.yml` e `.gitignore`
+- **O que foi pedido:** apoio para comparar dbt, SQLMesh e a opção nula, no critério
+  definido pela Squad (a ferramenta mais simples e fácil de usar), e redigir o ADR
+- **O que foi aproveitado:** a montagem da mesma Gold nas três alternativas a partir do
+  SQL do PR #55, os scripts de medição e comparação e a redação inicial do ADR,
+  revisados e ajustados por Gabriel. A decisão pelo dbt segue o critério da Squad
+- **Como foi verificado:** as três Golds foram comparadas tabela a tabela (contagem e
+  soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
+  ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
+  com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
+- **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação
+- **Onde:** `src/eduinfra/janelas.py`, `tests/test_janelas_integracao.py` e
+  `docs/dado-atrasado.md`
+- **O que foi pedido:** apoio para corrigir a falha relatada no PR #66, em que uma
+  vistoria sem item voltava como nova a cada execução das janelas
+- **O que foi aproveitado:** o diagnóstico da causa, a condição na consulta das
+  candidatas e o teste, revisados por Gabriel
+- **Como foi verificado:** o teste novo falhou sem a correção e passou com ela; os 17
+  testes das janelas e os 142 de unidade passaram, e a suíte de integração das janelas
+  passou duas vezes seguidas com a vistoria sem item dentro da margem
+- **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Ingestão do ENEM 2024 e junção com o Censo
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/enem.py`, `ingestao_enem.py`, `cobertura_enem.py`, a
+  migração `0008`, a generalização da publicação da Silver (`transformacao.py`) e do
+  download (`microdados.py`), os comandos `ingerir-enem` e `medir-cobertura-enem`,
+  `tests/test_enem.py`, `tests/test_ingestao_enem.py`, `docs/enem.md` e README
+- **O que foi pedido:** implementar a issue de integração do ENEM: conferir o link
+  do pacote, verificar a chave `CO_ESCOLA` × `CO_ENTIDADE`, medir a cobertura,
+  agregar por escola com critério declarado e generalizar o manifesto
+- **O que foi aproveitado:** código, testes e a redação inicial de `docs/enem.md`,
+  a revisar. O link foi conferido com a cadeia TLS do ADR 0002 (o 403 era do portal
+  `gov.br`, não do servidor de download). A máscara do `CO_ESCOLA` (prefixo `60`,
+  escolas com menos de 10 participantes) foi encontrada pela nota 2 do dicionário
+  oficial e conferida no arquivo real
+- **Como foi verificado:** transformação e cobertura rodadas sobre o ENEM 2024 e o
+  Censo 2024 reais (números em `docs/enem.md`, conferidos contra contagens diretas
+  no CSV bruto); testes sem banco passando; `mkdocs build --strict` sem erro. No
+  Docker: `tests/test_ingestao_enem.py` e `tests/test_ingestao.py` passando (16
+  testes), a migração `0008` testada na ida e na volta em banco descartável, e
+  `migrar`, `ingerir`, `ingerir-enem` (a segunda execução foi ignorada pelo
+  manifesto) e `medir-cobertura-enem` rodados no Compose, com a mesma cobertura da
+  evidência; a cadeia TLS do download foi conferida de dentro do contêiner
+- **Quem revisou:** Pedro Vargas, no PR #69, que apontou o teste de migração do CDC
+  quebrado pelo rename da 0008 e a colisão da revisão 0008 com o #67. O teste foi
+  corrigido com a IA (volta à 0007 antes do stamp, mesma linha do #67) e a suíte
+  completa passou com a main integrada
+
+### 2026-11-08 — Fonte única de eventos de vistoria (ADR 0008)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/eventos.py`, `janelas.py`, `modelo_analitico.py`,
+  `frescor.py` e a CLI; `tests/test_fonte_de_eventos.py`,
+  `tests/test_fonte_de_eventos_integracao.py` e ajustes nos testes de janelas, Gold
+  e frescor; `docs/adr/0008-fonte-canonica-de-eventos.md`, `docs/dado-atrasado.md`,
+  `docs/arquitetura.md`, `docs/frescor-e-sla.md` e README
+- **O que foi pedido:** resolver a issue de unificação dos caminhos de eventos:
+  decidir a fonte canônica, a chave de deduplicação, garantir o evento atrasado na
+  janela de `ocorrido_em`, expor uma fonte única para a transformação e testar a
+  duplicata entre os caminhos
+- **O que foi aproveitado:** a decisão proposta (Delta `eventos_vistoria` como fonte,
+  janelas reconciliando por merge na mesma chave, Gold lendo uma cópia versionada em
+  `fonte.eventos_vistoria`), código, testes e a redação do ADR 0008, a revisar. A
+  mudança reverte a regra do PR #62 no frescor (vistoria sem item deixa de contar
+  como pendente), o que precisa da revisão de quem a propôs
+- **Como foi verificado:** suíte sem banco (150 testes) e suíte de integração
+  inteira (73 testes) passando contra o PostgreSQL do Compose; `publicar-analitico`,
+  `processar-janelas`, `demonstrar-atraso`, `cdc`, `construir-gold`, `medir-frescor`
+  e `auditar-cdc` rodados no Docker sobre o Censo 2024, com 3.078.139 eventos
+  conferidos entre fonte, origem e fato fino. A execução real revelou um erro da
+  primeira versão (soma da impressão em ponto flutuante), corrigido e coberto por
+  teste; `mkdocs build --strict` sem erro
+- **Quem revisou:** Pedro Vargas, no PR #70, que pediu dois ajustes (frescor com
+  entrega parcial e item confirmado depois do cabeçalho) e alertou para o volume de
+  WAL. As correções foram feitas com a IA: frescor pela chave do evento, cabeçalhos
+  sem item pendentes nas janelas e fonte `UNLOGGED` (1.348 MB → 940 MB de WAL por
+  construção, medido no Docker), com testes de integração que falham no código
+  anterior

@@ -1,0 +1,23 @@
+gateways:
+  local:
+    connection:
+      type: postgres
+      host: {{ env_var('PGHOST', 'localhost') }}
+      port: {{ env_var('PGPORT', '5432') }}
+      user: {{ env_var('POSTGRES_USER') }}
+      password: {{ env_var('POSTGRES_PASSWORD') }}
+      database: {{ env_var('PGDATABASE', 'eduinfra_adr0005') }}
+
+default_gateway: local
+
+model_defaults:
+  dialect: postgres
+  start: '2024-01-01'
+  cron: '@daily'
+
+# O SQLMesh monta o modelo antes de rodar: a lista de colunas do fato anual precisa estar
+# aqui, e não vem do catálogo no banco como na opção nula e no dbt.
+variables:
+  itens: [acessibilidade_rampas, agua_potavel, almoxarifado, banheiro_pne, biblioteca, cozinha,
+          energia_rede_publica, esgoto_rede_publica, internet, internet_alunos, lab_ciencias,
+          lab_informatica, parque_infantil, patio_coberto, quadra_esportes, refeitorio, sala_leitura]

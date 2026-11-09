@@ -66,18 +66,22 @@ nav:
       - Testes: testes.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
+      - ENEM e junção com o Censo: enem.md
       - Compressão: serializacao-compressao.md
       - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
       - Métricas do CDC: metricas-cdc.md
       - Consulta otimizada: consulta-otimizada.md
       - Dados atrasados: dado-atrasado.md
       - Camada analítica: camada-analitica.md
+      - Frescor e SLA da Gold: frescor-e-sla.md
   - Decisões:
       - Índice dos ADRs: adr/README.md
       - ADR 0001 — Insert-only: adr/0001-modelagem-insert-only-do-sistema-de-origem.md
       - ADR 0002 — TLS: adr/0002-cadeia-tls-incompleta-do-inep.md
       - ADR 0004 — Ingestão: adr/0004-ingestao.md
+      - ADR 0005 — Transformação: adr/0005-ferramenta-de-transformacao.md
       - ADR 0007 — Telemetria e fila de erros: adr/0007-telemetria-e-fila-de-erros-do-cdc.md
+      - ADR 0008 — Fonte única de eventos: adr/0008-fonte-canonica-de-eventos.md
   - Processo:
       - Diário de bordo: diario/diario-de-bordo.md
       - Uso de IA: https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md

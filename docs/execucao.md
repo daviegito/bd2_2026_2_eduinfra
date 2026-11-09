@@ -65,6 +65,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | Aplica as migrações |
 | `docker compose run --rm carga ingerir` | Ingere o Censo com manifesto e publicação da Silver |
+| `docker compose run --rm carga ingerir-enem` | Ingere o ENEM 2024 no mesmo manifesto e publica a Silver por escola ([ENEM](enem.md)) |
+| `docker compose run --rm carga medir-cobertura-enem` | Mede a junção das escolas do ENEM com as do Censo |
 | `docker compose run --rm carga caracterizar` | Exibe contagens e tamanhos da origem |
 | `docker compose run --rm carga tudo` | Migra, ingere, publica a linha de base e verifica a tabela analítica |
 | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
