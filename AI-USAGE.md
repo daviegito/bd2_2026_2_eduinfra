@@ -297,5 +297,8 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ganho de tempo com cache quente, e uma leitura inicial que atribuía ao índice uma queda vinda do cache
 - **Como foi verificado:** o aquecimento pedido por Artur expôs o efeito do cache. Duas rodadas sobre
   uma cópia dos dados reais, com a view e a Gold devolvendo as mesmas linhas, e as hipóteses da origem
-  guardadas em `docs/explain/hipoteses.txt`. 188 testes (unitários e de integração) na mesma cópia
-- **Quem revisou:** a revisão pela squad ainda não aconteceu
+  guardadas em `docs/explain/hipoteses.txt`. 188 testes (unitários e de integração) na mesma cópia.
+  As correções de `docs/consulta-otimizada.md` pedidas na revisão do Lucas foram redigidas com a IA,
+  com cada número e cada explicação de termo conferidos nos planos de `docs/explain/` e no código de
+  `comparar-consulta`
+- **Quem revisou:** Lucas, no PR #61

@@ -1,21 +1,17 @@
 # Consulta otimizada
 
-Esta página mostra como uma consulta foi otimizada a partir do plano de execução (issue
-[#51](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/51)). O plano mostrou que o custo
+Esta página mostra como uma consulta foi otimizada a partir do plano de execução, que é o caminho
+escolhido pelo PostgreSQL para rodar a consulta e aparece no `EXPLAIN`. O plano mostrou que o custo
 está em recalcular o estado atual das escolas a cada leitura, então a otimização foi ler esse
 estado já materializado na camada Gold. Os planos e as saídas estão listados em
 [Evidências](#evidencias).
 
-A medição depende do modelo dimensional do PR
-[#55](https://github.com/daviegito/bd2_2026_2_eduinfra/pull/55), que ainda não está na `main`.
-Os números vêm do commit `183d9e9` desse PR.
-
 ## A consulta
 
-Quantas escolas não têm biblioteca, por rede. É a
-[agregação nacional da caracterização](caracterizacao.md#taxa-e-padrao-de-leitura), com
-tolerância de 5 s como consulta de painel, e responde ao lado de infraestrutura da pergunta de
-gestão.
+A consulta conta quantas escolas não têm biblioteca em cada rede de ensino (federal, estadual,
+municipal e privada). Na [caracterização da carga](caracterizacao.md#taxa-e-padrao-de-leitura), ela
+aparece como consulta de painel e de pipeline, que precisa responder em até 5 s, e é a mais lenta
+das que foram medidas ali, com 1.890 ms. Ela cobre o lado de infraestrutura da pergunta de gestão.
 
 ```sql
 select e.tp_dependencia, count(*) as escolas
@@ -26,23 +22,29 @@ group by e.tp_dependencia
 order by e.tp_dependencia;
 ```
 
-`escola_estado_atual` é uma view comum, com `DISTINCT ON` sobre `vistoria` e `vistoria_item`. Ela
-não guarda nada: cada leitura refaz o cálculo.
+`escola_estado_atual` é uma view comum sobre `vistoria` e `vistoria_item`. O `DISTINCT ON` dela
+ordena as vistorias da mais recente para a mais antiga e fica com a primeira linha de cada escola e
+item. Uma view comum não guarda resultado, então cada leitura refaz esse cálculo.
 
 ## O que o plano mostrou
 
-Os dados são o Censo 2024 mais as vistorias de teste: 3.177.929 itens, 186.937 vistorias e 181.065
-escolas. Em [rodada_2/antes.txt](explain/rodada_2/antes.txt), a consulta usa 469.476 blocos e o
-plano aponta três problemas:
+Os dados são o Censo 2024 mais as vistorias de teste, com 3.177.929 itens, 186.937 vistorias e 181.065
+escolas. Em [rodada_2/antes.txt](explain/rodada_2/antes.txt), a consulta usa 469.476 blocos (as
+páginas de 8 kB que o PostgreSQL lê do cache ou do disco), e o plano aponta três problemas.
 
 1. **Recálculo a cada leitura.** Para achar a vistoria mais recente de cada escola, o plano lê
    186.937 itens em 23.029 blocos de `vistoria_item`, varre `vistoria` inteira e ordena tudo em
-   disco (9.160 kB, `external merge`).
-2. **Estimativa errada.** O planejador esperava 868 linhas depois do filtro de `situacao`, e vieram
-   110.806, um erro de 127 vezes. Esse número é 0,5% das linhas, a seletividade padrão de quando não
-   há estatística, porque o filtro está acima do `DISTINCT ON` da view. Com essa estimativa ele
-   escolheu um nested loop em `escola`, com 110.806 buscas e 443.220 blocos (94% do total).
-3. **Disco temporário.** O hash e a ordenação passaram de `work_mem`, com 2.153 blocos escritos.
+   disco (9.160 kB, `external merge`), porque a ordenação não coube na memória.
+2. **Estimativa errada.** O planejador, que é a parte do PostgreSQL que escolhe o plano a partir da
+   quantidade de linhas que espera encontrar, previa 868 linhas depois do filtro de `situacao`, e
+   vieram 110.806, um erro de 127 vezes. Esses 868 são 0,5% das linhas, a seletividade padrão, que é
+   a fração fixa suposta pelo planejador quando ele não tem estatística sobre a condição. Aqui não há
+   estatística porque o filtro está acima do `DISTINCT ON` da view. Com essa estimativa ele escolheu
+   um nested loop em `escola`, que busca em `escola` uma linha para cada linha que vem da view. Isso
+   funciona bem com poucas linhas, e com 110.806 buscas custou 443.220 blocos (94% do total).
+3. **Disco temporário.** A tabela de hash que junta `vistoria_item` a `vistoria` e a ordenação
+   passaram de `work_mem`, a memória que cada uma dessas operações pode usar antes de ir para o
+   disco, e escreveram 2.153 blocos temporários.
 
 ## Hipóteses testadas na origem
 
@@ -82,10 +84,11 @@ group by e.tp_dependencia
 order by e.tp_dependencia;
 ```
 
-O `not exists` pega a linha mais recente de cada escola, para dar a mesma resposta da view. A
-primeira versão usava `DISTINCT ON`, e [o plano](explain/gold_com_distinct_on.txt) mostrou 372.961
-blocos para percorrer a chave primária e visitar a tabela a cada linha, então a troca por anti-join
-leva o total a 7.125.
+O `not exists` descarta a linha de uma escola quando existe outra de ano posterior, então sobra a
+mais recente de cada escola e a resposta é a mesma da view. O PostgreSQL executa isso como anti-join,
+uma junção que mantém só as linhas sem correspondência do outro lado. A primeira versão usava
+`DISTINCT ON`, e [o plano](explain/gold_com_distinct_on.txt) mostrou 372.961 blocos para percorrer a
+chave primária e visitar a tabela a cada linha, então a troca pelo anti-join leva o total a 7.125.
 
 O painel não precisa disso, porque o grão do projeto é 2024:
 
@@ -99,14 +102,19 @@ order by e.tp_dependencia;
 ```
 
 Nenhum índice novo entrou. O plano do painel lê o fato inteiro em 2.496 blocos e descarta poucas
-linhas: 181.065 das 186.066 são de 2024, e o filtro de `biblioteca` mantém perto de 60% delas. Um
-índice nessas colunas teria pouco a delimitar.
+linhas, porque 181.065 das 186.066 são de 2024 e o filtro de `biblioteca` mantém perto de 60% delas.
+Um índice nessas colunas teria pouco a delimitar.
 
 ## Resultado
 
-Cada consulta teve aquecimento e depois 5 execuções com `TIMING OFF`, alternadas entre si para a
-oscilação da máquina não cair toda sobre uma delas. A tabela traz a mediana, com buffers da raiz do
-plano, que já somam os nós filhos.
+O comando `comparar-consulta` rodou duas vezes, na mesma cópia dos dados e com as mesmas
+configurações, para ver o que se repete de uma rodada para outra. A rodada 2 é uma repetição e não
+corrige a 1. Os blocos ficaram iguais, com diferença de até 4, e os tempos mudaram.
+
+Em cada rodada, cada consulta teve duas execuções de aquecimento, descartadas, e depois 5 execuções com
+`TIMING OFF`, que tira a cronometragem de cada etapa do plano e mantém o tempo total. As execuções
+das três consultas foram alternadas entre si, para a oscilação da máquina não cair toda sobre uma
+delas. A tabela traz a mediana, com os buffers da raiz do plano, que já somam as etapas abaixo dela.
 
 | Medida | Rodada 1, view | Rodada 1, Gold | Rodada 1, painel | Rodada 2, view | Rodada 2, Gold | Rodada 2, painel |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -117,16 +125,17 @@ plano, que já somam os nós filhos.
 | Temporários escritos (`temp written`) | 2.153 | 0 | 0 | 2.153 | 0 | 0 |
 
 O total de blocos cai de cerca de 469 mil para 7 mil na Gold, sem disco temporário. Os blocos lidos
-da Gold aparecem porque a view, rodando entre uma execução e outra, tira o fato do `shared_buffers` de
-128 MB. No plano de diagnóstico, sem essa alternância, são 7.125 em cache e nenhum lido.
+da Gold aparecem porque a view, rodando entre uma execução e outra, tira o fato do `shared_buffers`,
+o cache de blocos do PostgreSQL, que tem 128 MB. No plano de diagnóstico, sem essa alternância, são
+7.125 em cache e nenhum lido.
 
 O tempo acompanhou. As execuções da view ficaram entre 522,4 e 1.296,1 ms e as da Gold entre 113,4 e
 297,4 ms, sem sobreposição. Os planos salvos vão de 947,2 para 220,6 ms na rodada 1 e de 1.167,0 para
 123,7 ms na rodada 2. A máquina rodava outros contêineres, então os tempos são indicativos e os
 buffers, que se repetem, são a medida mais estável.
 
-A estimativa também deixou de ser um problema: o resumo das rodadas lista erros de 10 vezes ou mais
-só no plano da view.
+A estimativa também deixou de ser um problema. Nos resumos das duas rodadas, os erros de estimativa
+de 10 vezes ou mais aparecem só no plano da view.
 
 ## Custos
 
@@ -156,8 +165,8 @@ O espaço e o WAL são do modelo dimensional inteiro, que existe para mais do qu
 
 ## Como reproduzir
 
-Depende de `construir-gold`, do PR #55. Para não arriscar o slot do banco principal, crie a cópia na
-raiz do repositório:
+Os números desta página foram medidos com a Gold do commit `183d9e9`, construída por
+`construir-gold`. Para não arriscar o slot do banco principal, crie a cópia na raiz do repositório:
 
 ```bash
 docker run -d --name eduinfra-medicao-gold -p 127.0.0.1:55999:5432 \
@@ -177,6 +186,7 @@ uv run python -m eduinfra.cli comparar-consulta --repeticoes 5 --pasta-dos-plano
 uv run python docs/explain/hipoteses.py > docs/explain/hipoteses.txt
 ```
 
+A segunda rodada é o mesmo `comparar-consulta` com `--pasta-dos-planos docs/explain/rodada_2`.
 `comparar-consulta` só lê e sai com código 1 se a view e a Gold devolverem linhas diferentes.
 `hipoteses.py` desfaz cada hipótese, mas bloqueia `vistoria_item` enquanto testa o índice e gera WAL,
 então não rode esse script no banco principal.
@@ -200,3 +210,4 @@ na mesma mediana. Os arquivos trazem o plano de execução, sem valor de linha d
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Otimização da agregação nacional a partir do plano de execução, com a leitura materializada na Gold | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 1 de novembro de 2026 |
+| 1.1 | Explica os termos do plano e as duas rodadas, simplifica a descrição da consulta e tira as referências a issue e PR | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 7 de novembro de 2026 |
