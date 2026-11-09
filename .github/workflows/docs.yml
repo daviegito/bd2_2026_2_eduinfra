@@ -43,6 +43,8 @@ jobs:
           ANO_CENSO: 2024
         run: |
           docker compose up -d banco
+          docker compose run --rm carga migrar
+          docker compose run --rm carga gerar_amostra --escolas 1000
           docker compose run --rm carga construir-gold
           docker compose run --rm -v ./docs:/app/docs carga gerar-painel
 
