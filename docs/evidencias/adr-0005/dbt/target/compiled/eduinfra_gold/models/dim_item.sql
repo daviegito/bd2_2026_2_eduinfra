@@ -1,4 +1,0 @@
-
-
-select codigo as item_codigo, descricao, categoria
-from "eduinfra_adr0005"."public"."item_infraestrutura"
