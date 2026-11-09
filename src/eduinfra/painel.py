@@ -266,7 +266,7 @@ def gerar_painel():
 </body>
 </html>"""
 
-    destino = Path("docs/index.html")
+    destino = Path("docs/painel.html")
     destino.parent.mkdir(exist_ok=True)
     destino.write_text(html, encoding="utf-8")
     print(f"✅ Painel estático exportado com sucesso para {destino}")
