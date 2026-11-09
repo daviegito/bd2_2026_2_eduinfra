@@ -192,5 +192,8 @@ O pacote fica em `bruto/enem/` no volume de dados. Na primeira execução,
 
 - Só o layout de 2024 em diante é aceito; o cabeçalho é validado, e um arquivo
   de outro layout é recusado com mensagem.
-- O fato `fato_desempenho_escola_ano` da Gold ([modelo analítico](modelo-analitico.md))
-  ainda precisa ser construído a partir desta Silver.
+- A Gold consome esta Silver pelo [fluxo dbt da #48](transformacao.md):
+  `docker compose run --build --rm transformacao` constrói
+  `fato_desempenho_escola_ano`, incluindo somente escolas encontradas no Censo e
+  registrando as exclusões. A referência temporal da infraestrutura é um parâmetro
+  explícito da transformação, não um campo individual do ENEM.
