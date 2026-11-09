@@ -41,6 +41,8 @@ log = logging.getLogger(__name__)
 
 TAMANHO_BLOCO_HASH = 1 << 22
 
+FONTE = "censo"
+
 
 @dataclass(frozen=True)
 class ResumoIngestao:
@@ -69,7 +71,7 @@ def ingerir(configuracao: Configuracao, forcar: bool = False) -> ResumoIngestao:
         csv_bruto = garantir_microdados(configuracao)
         hash_origem = hash_do_arquivo(csv_bruto)
 
-        vigente_no_banco = _hash_vigente(conexao, ano)
+        vigente_no_banco = _hash_vigente(conexao, FONTE, ano)
 
         if not forcar and vigente_no_banco == hash_origem:
             if hash_da_silver(configuracao) == hash_origem:
@@ -128,11 +130,11 @@ def _publicar_silver(
         descartar_preparo(preparo)
 
 
-def _hash_vigente(conexao: psycopg.Connection, ano: int) -> str | None:
-    """Hash do arquivo da última execução concluída do ano (a versão vigente)."""
+def _hash_vigente(conexao: psycopg.Connection, fonte: str, ano: int) -> str | None:
+    """Hash do arquivo da última execução concluída da fonte no ano (a versão vigente)."""
     linha = conexao.execute(
-        "select hash_sha256 from ingestao_execucao where ano_censo = %s order by id desc limit 1",
-        (ano,),
+        "select hash_sha256 from ingestao_execucao where fonte = %s and ano = %s order by id desc limit 1",
+        (fonte, ano),
     ).fetchone()
 
     return linha[0] if linha else None
@@ -150,12 +152,13 @@ def _registrar(
     conexao.execute(
         """
         insert into ingestao_execucao (
-            ano_censo, arquivo_origem, hash_sha256, forcada,
+            fonte, ano, arquivo_origem, hash_sha256, forcada,
             municipios_inseridos, escolas_inseridas, vistorias_inseridas, itens_inseridos,
             iniciado_em
-        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """,
         (
+            FONTE,
             configuracao.ano_censo,
             csv_bruto.name,
             hash_origem,

@@ -1,32 +1,10 @@
-"""Janelas mensais, tolerância a atraso e regravação idempotente da partição, sem banco."""
+"""Janelas mensais e tolerância a atraso, sem banco. A fonte que elas completam está em test_fonte_de_eventos.py."""
 
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 import pytest
 
-from eduinfra.janelas import (
-    TOLERANCIA,
-    EventoNovo,
-    fechamento,
-    gravar_particao,
-    impressao_da_particao,
-    limites,
-    mes_de,
-)
-
-CABECALHO = "vistoria_id,co_entidade,origem,ocorrido_em,registrado_em,item_codigo,situacao,quantidade"
-LINHAS = [
-    "10,53002580,vistoria_presencial,2026-10-09 15:00:00+00,2026-10-12 15:00:00+00,biblioteca,existente,",
-    "10,53002580,vistoria_presencial,2026-10-09 15:00:00+00,2026-10-12 15:00:00+00,lab_ciencias,existente,",
-    "11,53002581,vistoria_presencial,2026-10-01 09:00:00+00,2026-10-01 09:30:00+00,biblioteca,inexistente,",
-]
-
-
-def escrever_csv(pasta: Path, linhas: list[str]) -> Path:
-    arquivo = pasta / "eventos.csv"
-    arquivo.write_text("\n".join([CABECALHO, *linhas]) + "\n", encoding="utf-8")
-    return arquivo
+from eduinfra.janelas import TOLERANCIA, EventoNovo, _expandir, _faixas, fechamento, limites, mes_de
 
 
 def utc(*partes: int) -> datetime:
@@ -60,51 +38,13 @@ def test_tolerancia_a_atraso(registrado_em, dentro):
     assert evento.dentro_da_tolerancia is dentro
 
 
-def test_regravar_duas_vezes_da_a_mesma_particao(tmp_path):
-    destino = tmp_path / "ocorrido_mes=2026-10" / "eventos.parquet"
+@pytest.mark.parametrize(
+    "identificadores",
+    [[], [5], list(range(1, 181_066)), [1, 2, 3, 10, 11, 40]],
+    ids=["nenhum", "um", "carga-do-censo", "com-buracos"],
+)
+def test_vistas_na_margem_voltam_iguais_do_controle(identificadores):
+    faixas = _faixas(identificadores)
 
-    primeira = gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-    segunda = gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-
-    assert primeira == segunda
-    assert primeira.linhas == 3
-    assert impressao_da_particao(destino) == primeira.impressao
-
-
-def test_impressao_nao_depende_da_ordem_das_linhas(tmp_path):
-    destino = tmp_path / "eventos.parquet"
-
-    em_ordem = gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-    invertida = gravar_particao(escrever_csv(tmp_path, LINHAS[::-1]), destino, "2026-10", tmp_path)
-
-    assert em_ordem.impressao == invertida.impressao
-
-
-def test_impressao_muda_se_um_valor_muda(tmp_path):
-    destino = tmp_path / "eventos.parquet"
-    alterada = [LINHAS[0].replace("existente", "em_obra"), *LINHAS[1:]]
-
-    original = gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-    corrigida = gravar_particao(escrever_csv(tmp_path, alterada), destino, "2026-10", tmp_path)
-
-    assert original.impressao != corrigida.impressao
-
-
-def test_janela_sem_eventos_remove_a_particao(tmp_path):
-    destino = tmp_path / "ocorrido_mes=2026-10" / "eventos.parquet"
-    gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-
-    vazia = gravar_particao(escrever_csv(tmp_path, []), destino, "2026-10", tmp_path)
-
-    assert vazia.linhas == 0
-    assert not destino.parent.exists()
-
-
-def test_falha_na_conversao_preserva_a_particao_anterior(tmp_path):
-    destino = tmp_path / "eventos.parquet"
-    anterior = gravar_particao(escrever_csv(tmp_path, LINHAS), destino, "2026-10", tmp_path)
-
-    with pytest.raises(Exception):
-        gravar_particao(escrever_csv(tmp_path, ["isto,não,é,uma,linha,válida"]), destino, "2026-10", tmp_path)
-
-    assert impressao_da_particao(destino) == anterior.impressao
+    assert _expandir(faixas) == set(identificadores)
+    assert len(faixas) <= 3
