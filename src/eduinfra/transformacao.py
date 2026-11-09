@@ -110,16 +110,29 @@ def montar_camada_silver(
 
 
 def publicar_particao(configuracao: Configuracao, preparo: Path) -> Path:
-    """Troca a partição do ano pelo conjunto preparado, como uma unidade.
+    destino = publicar_diretorio(preparo, particao_silver(configuracao), _copia_antiga(configuracao))
+    log.info("partição silver ano_censo=%d publicada", configuracao.ano_censo)
+
+    return destino
+
+
+def recuperar_particao(configuracao: Configuracao) -> None:
+    recuperar_diretorio(particao_silver(configuracao), _copia_antiga(configuracao))
+
+
+def hash_da_silver(configuracao: Configuracao) -> str | None:
+    """Hash do arquivo de origem que gerou a partição publicada, se houver."""
+    return hash_publicado(particao_silver(configuracao), _copia_antiga(configuracao))
+
+
+def publicar_diretorio(preparo: Path, destino: Path, antigo: Path) -> Path:
+    """Troca a partição pelo conjunto preparado, como uma unidade.
 
     Os arquivos nunca são trocados um a um: o diretório inteiro é renomeado.
     Um leitor enxerga a versão antiga completa, a nova completa, ou (por um
     instante, entre os dois renames) nenhuma partição; nunca uma mistura.
     """
-    recuperar_particao(configuracao)
-
-    destino = particao_silver(configuracao)
-    antigo = _copia_antiga(configuracao)
+    recuperar_diretorio(destino, antigo)
     destino.parent.mkdir(parents=True, exist_ok=True)
 
     if destino.exists():
@@ -132,29 +145,24 @@ def publicar_particao(configuracao: Configuracao, preparo: Path) -> Path:
         raise
 
     shutil.rmtree(antigo, ignore_errors=True)
-    log.info("partição silver ano_censo=%d publicada", configuracao.ano_censo)
 
     return destino
 
 
-def recuperar_particao(configuracao: Configuracao) -> None:
-    """Desfaz o que uma queda entre os dois renames de publicar_particao deixou."""
-    destino = particao_silver(configuracao)
-    antigo = _copia_antiga(configuracao)
-
+def recuperar_diretorio(destino: Path, antigo: Path) -> None:
+    """Desfaz o que uma queda entre os dois renames de publicar_diretorio deixou."""
     if antigo.exists() and not destino.exists():
         destino.parent.mkdir(parents=True, exist_ok=True)
         os.rename(antigo, destino)
-        log.warning("partição silver ano_censo=%d restaurada da cópia anterior", configuracao.ano_censo)
+        log.warning("partição %s restaurada da cópia anterior", destino.name)
     elif antigo.exists():
         shutil.rmtree(antigo, ignore_errors=True)
 
 
-def hash_da_silver(configuracao: Configuracao) -> str | None:
-    """Hash do arquivo de origem que gerou a partição publicada, se houver."""
-    recuperar_particao(configuracao)
+def hash_publicado(destino: Path, antigo: Path) -> str | None:
+    recuperar_diretorio(destino, antigo)
 
-    marcador = particao_silver(configuracao) / MARCADOR_ORIGEM
+    marcador = destino / MARCADOR_ORIGEM
     if not marcador.exists():
         return None
 

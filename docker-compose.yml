@@ -11,7 +11,8 @@ services:
       - -c
       - max_wal_senders=10
       - -c
-      - max_slot_wal_keep_size=1GB
+      # A Gold nacional reteve cerca de 940 MiB num único build (issue #60).
+      - max_slot_wal_keep_size=${MAX_SLOT_WAL_KEEP_SIZE:-2GB}
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -32,6 +33,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
       DIRETORIO_DADOS: /dados
       ANO_CENSO: ${ANO_CENSO:-2024}
+      ANO_ENEM: ${ANO_ENEM:-2024}
     volumes:
       - dados_censo:/dados
     depends_on:

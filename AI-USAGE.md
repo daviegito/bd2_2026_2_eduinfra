@@ -18,6 +18,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 
 ## Entradas
 
+### 2026-11-08 — Avanço seguro do slot e retenção durante a Gold (issue #60)
+
+- **Ferramenta:** Codex.
+- **Onde:** `cdc.py`, `fluxo_cdc.py`, testes de slot ocioso, medição reproduzível,
+  configuração de retenção e documentação operacional.
+- **O que foi pedido:** assumir a issue #60 sem responsável e resolver o bloqueio
+  direto da #48, preservando os contratos das PRs abertas.
+- **O que foi aproveitado:** limite de leitura pelo WAL já persistido, confirmação
+  da passada vazia, cenários de transação concorrente e medição com consumidor ativo.
+- **Como foi verificado:** seis testes específicos e a suíte existente passaram
+  em banco descartável; a construção SQL nacional foi medida com checkpoint
+  durante a execução e uma vistoria concorrente entregue sem duplicação.
+  Procedimento e resultados em `docs/evidencias/issue-60/retencao-wal.md`.
+  Após sincronizar com a main contendo a #62, passaram 215 testes e houve uma
+  falha de janelas, reproduzida também sem o patch da #60 e registrada nas evidências.
+- **Quem revisou:** revisão humana pendente; Pedro Vargas aprovou o escopo.
+
 ### 2026-08-25 — Geração da proposta de domínio (ENEM × Infraestrutura Escolar)
 
 - **Ferramenta:** Claude (assistente conversacional)
@@ -231,3 +248,168 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `git branch -a --contains 5e4c802` e buscando o texto em todas as branches.
   Os commits foram feitos à mão, sem a IA
 - **Quem revisou:** Marcos Vinícius
+
+### 2026-10-26 — Modelo dimensional da Gold e dimensão de variação lenta (E3-3 e E3-4)
+
+- **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
+- **Onde:** `src/eduinfra/modelo_analitico.py`, `src/eduinfra/cli.py`,
+  `tests/test_modelo_analitico.py`, `docs/modelo-analitico.md`, `mkdocs.yml` e README
+- **O que foi pedido:** Auxílio no desenho e na implementação das dimensões, da dimensão de
+  variação lenta (tipo 2) e dos dois fatos de granularidades diferentes, com testes
+  e o comando de medição, a partir do esquema da origem
+- **O que foi aproveitado:** o código, os testes e a documentação. Decisões de
+  projeto sugeridas e a revisar pela Squad: o histórico da dimensão vem dos eventos
+  insert-only e não de um segundo ano do Censo, `nao_informado` não é estado, a
+  chave substituta é um hash de (escola, início) e o fato largo usa o perfil
+  vigente ao fim do ano
+- **Como foi verificado:** `pytest` com PostgreSQL 16 real e banco descartável por
+  teste (11 testes novos, 32 com os de ingestão, transformação e insert-only); três
+  defeitos reintroduzidos de propósito (tratar `nao_informado` como estado, criar
+  versão a cada vistoria, chave instável) e o teste correspondente falhou em cada
+  caso, o que levou a reforçar o teste da chave. A construção e a comparação rodaram
+  num banco **sintético** com o volume do Censo (181 mil escolas, 3 milhões de
+  itens).
+- **Quem revisou:** Pedro Teixeira Moriel Sanchez
+
+### 2026-10-31 — Métricas do CDC, telemetria e fila de erros (issue #52, ADR 0007)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `src/eduinfra/telemetria_cdc.py`, `auditoria_cdc.py`, `fila_de_erros.py`,
+  `contrato_cdc.py`, `comparacao_latencia.py`, `fluxo_cdc.py`, `pgoutput.py`, migração 0007,
+  testes correspondentes, `docs/metricas-cdc.md` e ADR 0007
+- **O que foi pedido:** implementar a lista de oito métricas que Artur escreveu antes da
+  implementação (checksum de linhas, contagem por operação, fora de ordem, latência ponta a ponta,
+  atraso de captura, atraso de carga, desvio de esquema e fila de erros), avaliando cada uma contra a
+  arquitetura. Diante dos testes, Artur decidiu criar a fila de erros em vez de parar e alertar,
+  publicar as quatro operações em vez de só `INSERT` e comparar a tabela inteira em vez da amostra que
+  a lista previa
+- **O que foi aproveitado:** o código, os testes e o rascunho da documentação; o frescor como nona
+  métrica, por causa da issue #52, aceito por Artur; e a leitura do fora de ordem em três eixos. Foi
+  descartada uma medição de 3 amostras que sugeria cerca de 12 s para o evento atrasado, porque a
+  medida por fora marcava o instante antes de atualizar a tabela. Corrigida a medida, as 30 amostras
+  deram cerca de 4 s
+- **Como foi verificado:** 176 testes (unitários e de integração), com as falhas provocadas em bancos
+  descartáveis. A revisão do Davi achou um teste que dependia do intervalo entre dois commits, depois
+  corrigido. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
+  A hipótese de que os arquivos pequenos piorariam o merge não se confirmou nesta escala. Os números
+  de `docs/metricas-cdc.md` vêm das saídas dos comandos ali documentados, guardadas em
+  `docs/evidencias/metricas-cdc/`
+  O conflito com o #55 ao trazer a main (`cli.py` e este arquivo) foi resolvido com a IA, juntando os
+  comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
+  o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
+- **Quem revisou:** Davi, no PR #59, com a revisão em andamento
+
+### 2026-11-02 — Frescor e SLA da Gold (issue #52)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/frescor.py`, os comandos `medir-frescor` e
+  `demonstrar-frescor` e o registro em `construir-gold` na CLI, `tests/test_frescor.py`,
+  `tests/test_frescor_integracao.py`, `docs/frescor-e-sla.md`, `docs/testes.md`,
+  `mkdocs.yml` e README
+- **O que foi pedido:** apoio para implementar a issue #52, no escopo definido por
+  Gabriel: medir o frescor da tabela que alimenta o painel, declarar o SLA, registrar
+  a métrica, falhar na violação e demonstrá-la
+- **O que foi aproveitado:** sugestões discutidas e aprovadas por Gabriel (frescor
+  como a espera da vistoria pendente mais antiga, e não o tempo desde a última
+  construção; SLA de 25 h; registro fora do schema `gold`), trechos de código, testes
+  e a redação inicial do documento, revisados e ajustados por ele
+- **Como foi verificado:** `construir-gold`, `demonstrar-frescor` e `medir-frescor`
+  rodados contra o banco com o Censo 2024 (violação com código de saída 1 e retorno
+  ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
+  passando, além da suíte de unidade inteira e dos testes do modelo analítico;
+  `mkdocs build --strict` sem erro
+
+### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `docs/adr/0005-ferramenta-de-transformacao.md`, `docs/evidencias/adr-0005/`
+  (protótipos dbt e SQLMesh, scripts de medição e saídas), `docs/adr/README.md`,
+  `mkdocs.yml` e `.gitignore`
+- **O que foi pedido:** apoio para comparar dbt, SQLMesh e a opção nula, no critério
+  definido pela Squad (a ferramenta mais simples e fácil de usar), e redigir o ADR
+- **O que foi aproveitado:** a montagem da mesma Gold nas três alternativas a partir do
+  SQL do PR #55, os scripts de medição e comparação e a redação inicial do ADR,
+  revisados e ajustados por Gabriel. A decisão pelo dbt segue o critério da Squad
+- **Como foi verificado:** as três Golds foram comparadas tabela a tabela (contagem e
+  soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
+  ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
+  com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
+- **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação
+- **Onde:** `src/eduinfra/janelas.py`, `tests/test_janelas_integracao.py` e
+  `docs/dado-atrasado.md`
+- **O que foi pedido:** apoio para corrigir a falha relatada no PR #66, em que uma
+  vistoria sem item voltava como nova a cada execução das janelas
+- **O que foi aproveitado:** o diagnóstico da causa, a condição na consulta das
+  candidatas e o teste, revisados por Gabriel
+- **Como foi verificado:** o teste novo falhou sem a correção e passou com ela; os 17
+  testes das janelas e os 142 de unidade passaram, e a suíte de integração das janelas
+  passou duas vezes seguidas com a vistoria sem item dentro da margem
+- **Quem revisou:** pendente (PR)
+
+### 2026-11-08 — Ingestão do ENEM 2024 e junção com o Censo
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/enem.py`, `ingestao_enem.py`, `cobertura_enem.py`, a
+  migração `0008`, a generalização da publicação da Silver (`transformacao.py`) e do
+  download (`microdados.py`), os comandos `ingerir-enem` e `medir-cobertura-enem`,
+  `tests/test_enem.py`, `tests/test_ingestao_enem.py`, `docs/enem.md` e README
+- **O que foi pedido:** implementar a issue de integração do ENEM: conferir o link
+  do pacote, verificar a chave `CO_ESCOLA` × `CO_ENTIDADE`, medir a cobertura,
+  agregar por escola com critério declarado e generalizar o manifesto
+- **O que foi aproveitado:** código, testes e a redação inicial de `docs/enem.md`,
+  a revisar. O link foi conferido com a cadeia TLS do ADR 0002 (o 403 era do portal
+  `gov.br`, não do servidor de download). A máscara do `CO_ESCOLA` (prefixo `60`,
+  escolas com menos de 10 participantes) foi encontrada pela nota 2 do dicionário
+  oficial e conferida no arquivo real
+- **Como foi verificado:** transformação e cobertura rodadas sobre o ENEM 2024 e o
+  Censo 2024 reais (números em `docs/enem.md`, conferidos contra contagens diretas
+  no CSV bruto); testes sem banco passando; `mkdocs build --strict` sem erro. No
+  Docker: `tests/test_ingestao_enem.py` e `tests/test_ingestao.py` passando (16
+  testes), a migração `0008` testada na ida e na volta em banco descartável, e
+  `migrar`, `ingerir`, `ingerir-enem` (a segunda execução foi ignorada pelo
+  manifesto) e `medir-cobertura-enem` rodados no Compose, com a mesma cobertura da
+  evidência; a cadeia TLS do download foi conferida de dentro do contêiner
+- **Quem revisou:** Pedro Vargas, no PR #69, que apontou o teste de migração do CDC
+  quebrado pelo rename da 0008 e a colisão da revisão 0008 com o #67. O teste foi
+  corrigido com a IA (volta à 0007 antes do stamp, mesma linha do #67) e a suíte
+  completa passou com a main integrada
+
+### 2026-11-08 — Fonte única de eventos de vistoria (ADR 0008)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/eventos.py`, `janelas.py`, `modelo_analitico.py`,
+  `frescor.py` e a CLI; `tests/test_fonte_de_eventos.py`,
+  `tests/test_fonte_de_eventos_integracao.py` e ajustes nos testes de janelas, Gold
+  e frescor; `docs/adr/0008-fonte-canonica-de-eventos.md`, `docs/dado-atrasado.md`,
+  `docs/arquitetura.md`, `docs/frescor-e-sla.md` e README
+- **O que foi pedido:** resolver a issue de unificação dos caminhos de eventos:
+  decidir a fonte canônica, a chave de deduplicação, garantir o evento atrasado na
+  janela de `ocorrido_em`, expor uma fonte única para a transformação e testar a
+  duplicata entre os caminhos
+- **O que foi aproveitado:** a decisão proposta (Delta `eventos_vistoria` como fonte,
+  janelas reconciliando por merge na mesma chave, Gold lendo uma cópia versionada em
+  `fonte.eventos_vistoria`), código, testes e a redação do ADR 0008, a revisar. A
+  mudança reverte a regra do PR #62 no frescor (vistoria sem item deixa de contar
+  como pendente), o que precisa da revisão de quem a propôs
+- **Como foi verificado:** suíte sem banco (150 testes) e suíte de integração
+  inteira (73 testes) passando contra o PostgreSQL do Compose; `publicar-analitico`,
+  `processar-janelas`, `demonstrar-atraso`, `cdc`, `construir-gold`, `medir-frescor`
+  e `auditar-cdc` rodados no Docker sobre o Censo 2024, com 3.078.139 eventos
+  conferidos entre fonte, origem e fato fino. A execução real revelou um erro da
+  primeira versão (soma da impressão em ponto flutuante), corrigido e coberto por
+  teste; `mkdocs build --strict` sem erro
+- **Quem revisou:** Pedro Vargas, no PR #70, que pediu dois ajustes (frescor com
+  entrega parcial e item confirmado depois do cabeçalho) e alertou para o volume de
+  WAL. As correções foram feitas com a IA: frescor pela chave do evento, cabeçalhos
+  sem item pendentes nas janelas e fonte `UNLOGGED` (1.348 MB → 940 MB de WAL por
+  construção, medido no Docker), com testes de integração que falham no código
+  anterior

@@ -1,0 +1,529 @@
+"""Modelo dimensional da Gold (E3): grão declarado, SCD tipo 2 e consistência com a origem.
+
+Cada teste cria o próprio banco, porque a origem é insert-only e não há como limpar linhas,
+e a própria fonte canônica de eventos (ADR 0008), num diretório temporário.
+"""
+
+import hashlib
+import os
+import uuid
+from datetime import date
+from pathlib import Path
+from urllib.parse import urlsplit
+
+import psycopg
+import pytest
+from alembic import command
+from alembic.config import Config
+
+import pyarrow as pa
+
+from eduinfra import eventos, janelas, modelo_analitico
+from eduinfra.configuracao import Configuracao
+
+pytestmark = pytest.mark.integracao
+
+DSN_ADMIN = os.environ.get("DATABASE_URL")
+RAIZ = Path(__file__).resolve().parents[1]
+DIRETORIOS: dict[str, Path] = {}
+
+
+@pytest.fixture
+def dsn(tmp_path):
+    if not DSN_ADMIN:
+        pytest.skip("DATABASE_URL não definida")
+
+    nome = f"eduinfra_gold_{uuid.uuid4().hex[:10]}"
+    with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
+        admin.execute(f'create database "{nome}"')
+
+    destino = urlsplit(DSN_ADMIN)._replace(path=f"/{nome}").geturl()
+    os.environ["DATABASE_URL"] = destino
+    DIRETORIOS[destino] = tmp_path
+    try:
+        command.upgrade(Config(str(RAIZ / "alembic.ini")), "head")
+        _semear_cadastro(destino)
+        yield destino
+    finally:
+        DIRETORIOS.pop(destino, None)
+        os.environ["DATABASE_URL"] = DSN_ADMIN
+        with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
+            admin.execute(f'drop database if exists "{nome}" with (force)')
+
+
+def _semear_cadastro(dsn: str) -> None:
+    with psycopg.connect(dsn, autocommit=True) as conexao:
+        conexao.execute("insert into tecnico (matricula, nome, lotacao_uf) values ('T1', 'Técnico', 'DF')")
+        conexao.execute("insert into municipio values (5300108, 'Brasília', 'DF', 53), (5208707, 'Goiânia', 'GO', 52)")
+        conexao.execute(
+            """
+            insert into escola (co_entidade, no_entidade, co_municipio, tp_dependencia, tp_localizacao, ano_censo_referencia)
+            values (1, 'ESCOLA UM', 5300108, 2, 1, 2024),
+                   (2, 'ESCOLA DOIS', 5300108, 4, 1, 2024),
+                   (3, 'ESCOLA TRES', 5208707, 3, 2, 2024)
+            """
+        )
+
+
+def configuracao_de(dsn: str) -> Configuracao:
+    return Configuracao(
+        dsn=dsn,
+        url_censo="https://exemplo.invalido/censo.zip",
+        ano_censo=2024,
+        data_referencia=date(2024, 5, 29),
+        diretorio_dados=DIRETORIOS[dsn],
+        arquivo_alembic=RAIZ / "alembic.ini",
+    )
+
+
+def construir(dsn: str) -> modelo_analitico.ResumoGold:
+    """Leva à fonte canônica, pelo caminho das janelas, o que a origem tem, e constrói a Gold."""
+    configuracao = configuracao_de(dsn)
+    janelas.processar(configuracao)
+
+    return modelo_analitico.construir(configuracao)
+
+
+def vistoria(dsn: str, escola: int, ocorrido: str, itens: dict, origem: str = "vistoria_presencial") -> int:
+    with psycopg.connect(dsn, autocommit=True) as conexao:
+        vistoria_id = conexao.execute(
+            "insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
+            "values (%s, (select id from tecnico limit 1), %s, %s) returning id",
+            (escola, origem, ocorrido),
+        ).fetchone()[0]
+        for item, valor in itens.items():
+            situacao, quantidade = valor if isinstance(valor, tuple) else (valor, None)
+            conexao.execute(
+                "insert into vistoria_item (vistoria_id, item_codigo, situacao, quantidade) values (%s, %s, %s, %s)",
+                (vistoria_id, item, situacao, quantidade),
+            )
+
+    return vistoria_id
+
+
+def consultar(dsn: str, sql: str, parametros: tuple = ()) -> list[tuple]:
+    with psycopg.connect(dsn) as conexao:
+        return conexao.execute(sql, parametros).fetchall()
+
+
+def impressao_da_gold(dsn: str) -> str:
+    resumo = []
+    for tabela in modelo_analitico.TABELAS_DA_GOLD:
+        # to_jsonb evita converter 'infinity' para datetime, que o Python não representa.
+        linhas = consultar(dsn, f"select to_jsonb(t)::text from gold.{tabela} t order by 1")
+        resumo.append((tabela, linhas))
+
+    return hashlib.sha256(repr(resumo).encode()).hexdigest()
+
+
+def historia_da_escola_um(dsn: str) -> None:
+    """Censo 2024, uma revisita com mudança em 2025 e uma revisita que repete o estado."""
+    vistoria(dsn, 1, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente", "internet": "nao_informado"},
+             origem="censo_escolar")
+    vistoria(dsn, 1, "2025-03-10", {"biblioteca": "existente", "lab_ciencias": "existente"})
+    vistoria(dsn, 1, "2025-06-01", {"biblioteca": "existente", "lab_ciencias": "existente"})
+
+
+def test_cada_mudanca_cria_uma_versao_e_a_anterior_continua_la(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+
+    versoes = consultar(
+        dsn,
+        "select valid_from::date as inicio, valid_to::text as fim, is_current, n_existentes, itens ->> 'lab_ciencias', valid_from::text as inicio_texto "
+        "from gold.dim_escola_infraestrutura where co_entidade = 1 order by valid_from",
+    )
+
+    # A vistoria de 01/06/2025 repete o estado e não cria versão.
+    assert len(versoes) == 2
+    antiga, atual = versoes
+    assert (str(antiga[0]), antiga[2], antiga[3], antiga[4]) == ("2024-05-29", False, 1, "inexistente")
+    assert (str(atual[0]), atual[1], atual[2], atual[3], atual[4]) == ("2025-03-10", "infinity", True, 2, "existente")
+    # O fim de uma versão é exatamente o começo da seguinte, sem lacuna.
+    assert antiga[1] == atual[5]
+
+
+def test_consulta_por_data_devolve_o_perfil_que_valia_naquele_dia(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+
+    sql = (
+        "select itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
+        "where co_entidade = 1 and valid_from <= %s and %s < valid_to"
+    )
+
+    assert consultar(dsn, sql, ("2025-01-01", "2025-01-01")) == [("inexistente",)]
+    assert consultar(dsn, sql, ("2025-04-01", "2025-04-01")) == [("existente",)]
+    assert consultar(dsn, sql, ("2024-01-01", "2024-01-01")) == []
+
+
+def test_as_versoes_de_uma_escola_nao_se_sobrepoem_e_ha_uma_so_vigente(dsn):
+    historia_da_escola_um(dsn)
+    vistoria(dsn, 1, "2025-09-01", {"biblioteca": "inexistente"})
+    vistoria(dsn, 2, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
+    construir(dsn)
+
+    sobrepostas = consultar(
+        dsn,
+        """
+        select count(*) from gold.dim_escola_infraestrutura a
+        join gold.dim_escola_infraestrutura b
+          on a.co_entidade = b.co_entidade and a.valid_from < b.valid_from and b.valid_from < a.valid_to
+        """,
+    )[0][0]
+    vigentes = consultar(
+        dsn, "select co_entidade, count(*) filter (where is_current) from gold.dim_escola_infraestrutura group by 1"
+    )
+
+    assert sobrepostas == 0
+    assert all(quantidade == 1 for _, quantidade in vigentes)
+
+
+def test_nao_informado_nao_apaga_o_que_ja_se_sabia(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"internet": "existente", "biblioteca": "existente"}, origem="censo_escolar")
+    vistoria(dsn, 1, "2025-02-01", {"internet": "nao_informado", "biblioteca": "inexistente"})
+    construir(dsn)
+
+    versoes = consultar(
+        dsn, "select itens ->> 'internet', itens ->> 'biblioteca' from gold.dim_escola_infraestrutura "
+             "where co_entidade = 1 order by valid_from"
+    )
+
+    assert versoes == [("existente", "existente"), ("existente", "inexistente")]
+
+
+def test_evento_atrasado_refaz_o_historico_sem_trocar_as_chaves_das_versoes_antigas(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    chaves_antes = dict(consultar(dsn, "select escola_infra_sk, co_entidade::text || '@' || valid_from::text from gold.dim_escola_infraestrutura"))
+
+    # Vistoria feita em janeiro de 2024 e digitada só agora: chega depois, ocorre antes.
+    vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "existente"})
+    construir(dsn)
+
+    versoes = consultar(
+        dsn, "select valid_from::date, itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
+             "where co_entidade = 1 order by valid_from"
+    )
+    chaves_depois = dict(consultar(dsn, "select escola_infra_sk, co_entidade::text || '@' || valid_from::text from gold.dim_escola_infraestrutura"))
+
+    assert [(str(v[0]), v[1]) for v in versoes] == [
+        ("2024-01-15", "existente"),
+        ("2024-05-29", "inexistente"),
+        ("2025-03-10", "existente"),
+    ]
+    # Cada chave antiga continua apontando para a MESMA versão (escola e início), não só existindo.
+    assert all(chaves_depois.get(chave) == versao for chave, versao in chaves_antes.items())
+
+
+def test_fato_fino_tem_uma_linha_por_vistoria_e_item(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+
+    na_origem = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
+    no_fato = consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0]
+    duplicadas = consultar(
+        dsn, "select count(*) from (select 1 from gold.fato_vistoria_item group by vistoria_id, item_codigo having count(*) > 1) d"
+    )[0][0]
+
+    assert (no_fato, duplicadas) == (na_origem, 0)
+
+
+def test_fato_largo_tem_uma_linha_por_escola_e_ano_e_aponta_para_a_versao_vigente_no_fim_do_ano(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+
+    linhas = consultar(
+        dsn,
+        """
+        select f.ano, f.n_existentes, f.lab_ciencias, f.internet, d.valid_from::date, f.pct_existentes
+        from gold.fato_infra_escola_ano f
+        join gold.dim_escola_infraestrutura d using (escola_infra_sk)
+        where f.co_entidade = 1 order by f.ano
+        """,
+    )
+
+    assert [(l[0], l[1], l[2], l[3], str(l[4])) for l in linhas] == [
+        (2024, 1, False, None, "2024-05-29"),
+        (2025, 2, True, None, "2025-03-10"),
+    ]
+    assert float(linhas[0][5]) == 50.0
+
+
+def test_fato_largo_bate_com_a_view_de_estado_atual_da_origem(dsn):
+    for escola in (1, 2, 3):
+        vistoria(dsn, escola, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente", "quadra_esportes": "existente"},
+                 origem="censo_escolar")
+    construir(dsn)
+
+    divergencias = consultar(
+        dsn,
+        """
+        select f.co_entidade
+        from gold.fato_infra_escola_ano f
+        left join (
+            select co_entidade, count(*) as n from public.escola_estado_atual
+            where situacao = 'existente' group by 1
+        ) o using (co_entidade)
+        where f.ano = 2024 and f.n_existentes <> coalesce(o.n, 0)
+        """,
+    )
+
+    assert divergencias == []
+
+
+def test_construir_duas_vezes_da_exatamente_o_mesmo_resultado(dsn):
+    historia_da_escola_um(dsn)
+    vistoria(dsn, 3, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
+
+    construir(dsn)
+    primeira = impressao_da_gold(dsn)
+    construir(dsn)
+
+    assert impressao_da_gold(dsn) == primeira
+
+
+def test_falha_na_construcao_preserva_a_gold_anterior(dsn, monkeypatch):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    antes = impressao_da_gold(dsn)
+
+    vistoria(dsn, 2, "2025-02-01", {"biblioteca": "existente"})
+    etapas_reais = modelo_analitico._etapas
+
+    def etapas_que_falham_no_fim(itens):
+        etapas = etapas_reais(itens)
+        etapas[-2] = lambda conexao: (_ for _ in ()).throw(RuntimeError("falha simulada no fato largo"))
+        return etapas
+
+    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_que_falham_no_fim)
+
+    with pytest.raises(RuntimeError, match="falha simulada"):
+        construir(dsn)
+
+    assert impressao_da_gold(dsn) == antes
+
+
+def test_comparacao_de_granularidades_responde_igual_nos_dois_graos(dsn):
+    for escola, rede_com_lab in ((1, "existente"), (2, "inexistente"), (3, "existente")):
+        vistoria(dsn, escola, "2024-05-29", {"lab_ciencias": rede_com_lab, "biblioteca": "existente"}, origem="censo_escolar")
+    construir(dsn)
+
+    comparacao = modelo_analitico.comparar(dsn, repeticoes=2)
+    texto = modelo_analitico.formatar_markdown(comparacao)
+
+    assert comparacao.mesmo_resultado
+    assert comparacao.fino.linhas == 6
+    assert comparacao.largo.linhas == 3
+    assert "uma linha por escola, por item, por vistoria" in texto
+    assert "uma linha por escola por ano, um item por coluna" in texto
+    assert "Os resultados são idênticos." in texto
+
+
+def test_serie_historica_nao_muda_quando_a_dimensao_ganha_uma_versao_nova(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente"}, origem="censo_escolar")
+    construir(dsn)
+    consulta = (
+        "select ano, escola_infra_sk, n_existentes, lab_ciencias "
+        "from gold.fato_infra_escola_ano where co_entidade = 1 and ano = %s"
+    )
+    de_2024_antes = consultar(dsn, consulta, (2024,))
+
+    # A escola passa a ter laboratório em 2025: a dimensão ganha uma versão e fecha a anterior.
+    vistoria(dsn, 1, "2025-03-10", {"lab_ciencias": "existente"})
+    construir(dsn)
+
+    # O que já tinha sido dito sobre 2024 continua igual; 2025 nasce com o perfil novo.
+    assert consultar(dsn, consulta, (2024,)) == de_2024_antes
+    assert consultar(dsn, consulta, (2025,))[0][3] is True
+    assert de_2024_antes[0][3] is False
+
+
+def chaves_por_versao(dsn: str) -> dict[int, str]:
+    return dict(
+        consultar(
+            dsn,
+            "select escola_infra_sk, co_entidade::text || '@' || (valid_from at time zone 'UTC')::text "
+            "from gold.dim_escola_infraestrutura",
+        )
+    )
+
+
+def test_revisita_sem_quantidade_nao_cria_versao_nem_apaga_a_quantidade_conhecida(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": ("existente", 2)}, origem="censo_escolar")
+    vistoria(dsn, 1, "2025-02-01", {"lab_ciencias": "existente"})  # não informa a quantidade
+    construir(dsn)
+
+    versoes = consultar(
+        dsn, "select valid_from::date::text, quantidades ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
+             "where co_entidade = 1 order by valid_from"
+    )
+    assert versoes == [("2024-05-29", "2")]
+
+    # Uma quantidade nova é mudança; depois de a situação mudar, a quantidade antiga não volta.
+    vistoria(dsn, 1, "2025-03-01", {"lab_ciencias": ("existente", 3)})
+    vistoria(dsn, 1, "2025-04-01", {"lab_ciencias": "inexistente"})
+    vistoria(dsn, 1, "2025-05-01", {"lab_ciencias": "existente"})
+    construir(dsn)
+
+    versoes = consultar(
+        dsn, "select valid_from::date::text, itens ->> 'lab_ciencias', quantidades ->> 'lab_ciencias' "
+             "from gold.dim_escola_infraestrutura where co_entidade = 1 order by valid_from"
+    )
+    assert versoes == [
+        ("2024-05-29", "existente", "2"),
+        ("2025-03-01", "existente", "3"),
+        ("2025-04-01", "inexistente", None),
+        ("2025-05-01", "existente", None),
+    ]
+
+
+def test_chave_substituta_nao_depende_do_fuso_horario_da_sessao(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    em_utc = chaves_por_versao(dsn)
+
+    banco = urlsplit(dsn).path.lstrip("/")
+    with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
+        admin.execute(f"alter database \"{banco}\" set timezone to 'Asia/Tokyo'")
+    assert consultar(dsn, "show timezone") == [("Asia/Tokyo",)]
+
+    construir(dsn)
+
+    assert chaves_por_versao(dsn) == em_utc
+
+
+def test_evento_atrasado_que_repete_o_estado_antecipa_a_versao_e_a_chave_antiga_some(dsn):
+    vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": "inexistente"}, origem="censo_escolar")
+    construir(dsn)
+    antes = chaves_por_versao(dsn)
+
+    vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "inexistente"})  # mesmo estado, data anterior
+    construir(dsn)
+    depois = chaves_por_versao(dsn)
+
+    # As duas versões se fundem numa só, que começa em 15/01. A chave de 29/05 deixa de existir...
+    assert list(depois.values()) == ["1@2024-01-15 00:00:00"]
+    assert not set(antes) & set(depois)
+    # ...e nenhuma chave passou a apontar para outra versão.
+    assert all(depois.get(chave, versao) == versao for chave, versao in antes.items())
+
+
+def test_duas_vistorias_no_mesmo_dia_desempatam_igual_nos_dois_graos(dsn):
+    # Registradas na ordem inversa da ocorrência: a das 15h entra primeiro (id menor).
+    vistoria(dsn, 1, "2024-05-29 15:00:00+00", {"lab_ciencias": "inexistente"})
+    vistoria(dsn, 1, "2024-05-29 09:00:00+00", {"lab_ciencias": "existente"})
+    vistoria(dsn, 2, "2024-05-29 10:00:00+00", {"lab_ciencias": "existente"}, origem="censo_escolar")
+    construir(dsn)
+
+    parametros = {"ano": 2024}
+    with psycopg.connect(dsn) as conexao:
+        fino = conexao.execute(modelo_analitico.CONSULTA_NO_GRAO_FINO, parametros).fetchall()
+        largo = conexao.execute(modelo_analitico.CONSULTA_NO_GRAO_LARGO, parametros).fetchall()
+    versao_final = consultar(
+        dsn, "select itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura where co_entidade = 1 and is_current"
+    )
+
+    assert versao_final == [("inexistente",)]  # vale a das 15h, não a de maior id
+    assert fino == largo
+    assert modelo_analitico.comparar(dsn, repeticoes=1).mesmo_resultado
+
+
+def test_fato_fino_aponta_para_a_versao_vigente_no_instante_da_vistoria(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+
+    linhas = consultar(
+        dsn,
+        """
+        select f.data_ocorrencia::text, f.item_codigo, d.valid_from::date::text, d.itens ->> 'lab_ciencias'
+        from gold.fato_vistoria_item f
+        join gold.dim_escola_infraestrutura d using (escola_infra_sk)
+        where f.co_entidade = 1 and f.item_codigo = 'lab_ciencias'
+        order by f.ocorrido_em
+        """,
+    )
+
+    # 29/05/2024 aponta para a versão de 2024; 10/03/2025 para a que ela mesma criou; a revisita
+    # de 01/06/2025 repete o estado e aponta para a versão de 10/03/2025.
+    assert linhas == [
+        ("2024-05-29", "lab_ciencias", "2024-05-29", "inexistente"),
+        ("2025-03-10", "lab_ciencias", "2025-03-10", "existente"),
+        ("2025-06-01", "lab_ciencias", "2025-03-10", "existente"),
+    ]
+    sem_versao = consultar(dsn, "select count(*) from gold.fato_vistoria_item where escola_infra_sk is null "
+                                "and situacao <> 'nao_informado'")[0][0]
+    assert sem_versao == 0
+
+
+def test_a_construcao_enxerga_um_unico_retrato_da_origem(dsn, monkeypatch):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    itens_antes = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
+
+    etapas_reais = modelo_analitico._etapas
+
+    def etapas_com_vistoria_no_meio(itens):
+        etapas = etapas_reais(itens)
+        # Depois da dimensão (índice 2) e antes dos fatos, outra sessão confirma uma vistoria.
+        etapas.insert(3, lambda conexao: vistoria(dsn, 2, "2025-07-01", {"biblioteca": "existente"}))
+        return etapas
+
+    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_com_vistoria_no_meio)
+    construir(dsn)
+
+    # A vistoria entrou na origem, mas a Gold desta construção não a viu em tabela nenhuma.
+    assert consultar(dsn, "select count(*) from public.vistoria_item")[0][0] == itens_antes + 1
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0] == itens_antes
+    assert consultar(dsn, "select count(*) from gold.fato_infra_escola_ano where co_entidade = 2")[0][0] == 0
+
+    monkeypatch.setattr(modelo_analitico, "_etapas", etapas_reais)
+    construir(dsn)
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0] == itens_antes + 1
+
+
+def test_comparar_com_a_gold_vazia_explica_o_que_fazer(dsn):
+    construir(dsn)
+
+    with pytest.raises(RuntimeError, match="Gold está vazia"):
+        modelo_analitico.comparar(dsn, repeticoes=1)
+
+
+def test_gold_le_so_a_fonte_de_eventos_e_confere_com_a_origem(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    configuracao = configuracao_de(dsn)
+
+    # Na origem, mas ainda não na fonte canônica: a Gold não enxerga e a conferência aponta.
+    fora = vistoria(dsn, 2, "2025-02-01", {"biblioteca": "existente", "quadra_esportes": "inexistente"})
+    pendente = modelo_analitico.construir(configuracao)
+
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item where vistoria_id = %s", (fora,)) == [(0,)]
+    assert (pendente.fonte.so_na_origem, pendente.fonte.so_na_fonte) == (2, 0)
+    assert not pendente.fonte.confere
+
+    em_dia = construir(dsn)
+
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item where vistoria_id = %s", (fora,)) == [(2,)]
+    assert em_dia.fonte.confere
+    assert em_dia.fonte.na_fonte == em_dia.fonte.na_origem == consultar(dsn, "select count(*) from vistoria_item")[0][0]
+    assert em_dia.fonte.na_fonte == em_dia.linhas["fato_vistoria_item"]
+    assert em_dia.fonte.versao_delta > pendente.fonte.versao_delta
+    comentario = consultar(dsn, "select obj_description('fonte.eventos_vistoria'::regclass)")[0][0]
+    assert f"Versão {em_dia.fonte.versao_delta} de warehouse/eventos_vistoria" in comentario
+
+
+def test_evento_na_fonte_que_a_origem_nao_tem_e_recusado_sem_tocar_a_gold(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    antes = impressao_da_gold(dsn)
+    configuracao = configuracao_de(dsn)
+
+    intruso, _ = eventos.ler(configuracao, "2025-03")
+    linha = intruso.slice(0, 1).to_pylist()[0] | {"vistoria_id": 999_999}
+    eventos.gravar_sem_duplicar(configuracao, pa.Table.from_pylist([linha], schema=eventos.ESQUEMA))
+
+    with pytest.raises(RuntimeError, match="1 eventos que a origem não tem"):
+        modelo_analitico.construir(configuracao)
+
+    assert impressao_da_gold(dsn) == antes

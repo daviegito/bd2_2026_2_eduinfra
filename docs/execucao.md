@@ -65,12 +65,17 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | Aplica as migrações |
 | `docker compose run --rm carga ingerir` | Ingere o Censo com manifesto e publicação da Silver |
+| `docker compose run --rm carga ingerir-enem` | Ingere o ENEM 2024 no mesmo manifesto e publica a Silver por escola ([ENEM](enem.md)) |
+| `docker compose run --rm carga medir-cobertura-enem` | Mede a junção das escolas do ENEM com as do Censo |
 | `docker compose run --rm carga caracterizar` | Exibe contagens e tamanhos da origem |
 | `docker compose run --rm carga tudo` | Migra, ingere, publica a linha de base e verifica a tabela analítica |
 | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
 | `docker compose run --rm carga demonstrar-cdc` | Demonstra captura, interrupção e reentrega sem duplicação |
 | `docker compose run --rm carga demonstrar-atraso` | Demonstra o tratamento de eventos atrasados |
 | `docker compose run --rm carga comparar-ingestao` | Compara captura incremental com captura pelo slot, sem medir a escrita Delta |
+| `docker compose run --rm carga medir-cdc --repeticoes 30` | Insere vistorias de teste, mede latência e ordem com o consumidor ligado e termina com a auditoria |
+| `docker compose run --rm carga auditar-cdc` | Só lê: confere checksum, contagem por operação, fila de erros, esquema e frescor. Sai com código 1 se houver violação |
+| `docker compose run --rm carga medir-recarga` | Mede a recarga periódica e o WAL retido, com o consumidor parado |
 | `docker compose run --rm carga comparar-compressao` | Compara formatos e compressão |
 | `docker compose run --rm carga comparar-particionamento` | Compara estratégias de particionamento |
 
@@ -107,6 +112,7 @@ uv run eduinfra tudo
 | Formato e compressão | `comparar-compressao --repeticoes 15` | [Compressão](serializacao-compressao.md#resultados) |
 | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
 | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |
+| Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
 
 Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos

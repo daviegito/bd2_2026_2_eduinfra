@@ -26,8 +26,8 @@ podem exigir internet para baixar a extensão; verifique os motivos de eventuais
 ## Testes de integração
 
 Use um banco de desenvolvimento descartável. Os testes de CDC e janelas
-inserem vistorias na origem; os de ingestão criam e removem bancos próprios e
-precisam de permissão para isso.
+inserem vistorias na origem; os de ingestão e de resiliência do CDC criam e
+removem bancos próprios e precisam de permissão para isso.
 
 1. Prepare o ambiente conforme o [guia de execução](execucao.md).
 2. Aguarde o serviço `carga` terminar com sucesso.
@@ -52,12 +52,17 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 | Funcionalidade | Arquivos principais |
 | --- | --- |
 | Ingestão e recuperação da Silver | `tests/test_ingestao.py` |
-| CDC e reentrega | `tests/test_pgoutput.py`, `tests/test_fluxo_cdc_integracao.py` |
+| ENEM: agregação, cobertura e ingestão idempotente | `tests/test_enem.py`, `tests/test_ingestao_enem.py` |
+| CDC e reentrega | `tests/test_pgoutput.py`, `tests/test_fluxo_cdc.py`, `tests/test_fluxo_cdc_integracao.py` |
+| Métricas do CDC | `tests/test_telemetria_cdc.py`, `tests/test_auditoria_cdc.py`, `tests/test_comparacao_latencia.py`, `tests/test_comparacao_latencia_integracao.py` |
+| Fila de erros e desvio de esquema | `tests/test_contrato_cdc.py`, `tests/test_resiliencia_cdc_integracao.py` |
 | Eventos e deduplicação | `tests/test_eventos.py` |
 | Janelas e atraso | `tests/test_janelas.py`, `tests/test_janelas_integracao.py` |
+| Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
 | Camada analítica | `tests/test_camada_analitica.py` |
 | Compressão | `tests/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/test_insert_only.py` |
+| Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |
 
 ## Verificações opcionais
 
