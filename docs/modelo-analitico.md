@@ -177,8 +177,8 @@ avisa; a herança entre anos é uma causa possível, mas não a única.
 
 ## O que ainda depende de outras entregas
 
-- **ENEM.** O fato de desempenho ainda não existe, porque o ENEM ainda não foi
-  ingerido. Interface esperada: `fato_desempenho_escola_ano`, com uma linha por
+- **ENEM.** O fato de desempenho ainda não existe. O ENEM 2024 já está na Silver,
+  agregado por escola, em `silver/enem/ano=2024/` ([ENEM](enem.md)). Interface esperada: `fato_desempenho_escola_ano`, com uma linha por
   escola por ano do ENEM, chave `(co_entidade, ano)`. Para saber se a escola tinha
   laboratório **na época da prova**, a junção correta é pelo ponto no tempo:
   `d.valid_from <= data_da_prova and data_da_prova < d.valid_to`.

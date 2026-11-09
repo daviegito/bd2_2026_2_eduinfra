@@ -61,7 +61,7 @@ flowchart LR
     AGENTE --> USER
 ```
 
-Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
+Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. Na E3, o ENEM 2024 passou a ser ingerido na Silver, agregado por escola. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
 
 | Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |
@@ -216,6 +216,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
 | `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
 | `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
+| `docker compose run --rm carga ingerir-enem` | baixa o ENEM 2024, se preciso, e publica a Silver agregada por escola; idempotente pelo mesmo manifesto ([ENEM](docs/enem.md)) |
+| `docker compose run --rm carga medir-cobertura-enem` | mede a junção das escolas do ENEM com as do Censo; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
 | `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
@@ -284,6 +286,7 @@ Docker, o diretório é `dados/` na raiz do repositório (variável
 | Caminho | Formato | Partição | Quem grava |
 | --- | --- | --- | --- |
 | `silver/ano_censo=AAAA/` | Parquet zstd | ano do Censo | `ingerir` (lote) |
+| `silver/enem/ano=AAAA/` | Parquet zstd | ano do ENEM | `ingerir-enem` (lote) |
 | `warehouse/vistoria_item/` | Delta Lake | `ano_censo` e `sg_uf` | `publicar-analitica` |
 | `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base) e serviço `cdc` |
 | `analitico/eventos_vistoria/` | Parquet zstd | `ocorrido_mes=AAAA-MM` | `processar-janelas` (não roda no `tudo`) |
@@ -301,8 +304,8 @@ vistorias de teste na origem: rode-os num ambiente de desenvolvimento.
 
 ### Ingestão em lote idempotente
 
-A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
-na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
+A versão vigente de uma fonte num ano é o SHA-256 do arquivo da última execução
+registrada na tabela `ingestao_execucao` (o manifesto) para aquela fonte. A Silver publicada guarda o hash do
 arquivo que a gerou em `origem.sha256`. A execução só é ignorada quando o
 arquivo de origem coincide com **as duas** versões vigentes; por isso a sequência
 A → B → A reprocessa a última execução em vez de ignorá-la.
@@ -328,8 +331,30 @@ Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parq
 
 ```bash
 docker compose exec banco psql -U eduinfra -d eduinfra \
-  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
+  -c "select id, fonte, ano, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos, linhas_publicadas from ingestao_execucao order by id;"
 ```
+
+### Ingestão do ENEM
+
+O ENEM 2024 entra pelo mesmo protocolo: manifesto por SHA-256, Silver trocada
+inteira depois do commit e reexecução ignorada. A migração `0008` acrescenta ao
+manifesto a coluna `fonte` (`censo` ou `enem`) e renomeia `ano_censo` para `ano`.
+Do pacote do INEP entra só `RESULTADOS_2024.csv`, o único arquivo com a escola e
+as notas. A Silver tem uma linha por escola, com participantes, notas válidas e
+médias por área e da redação.
+
+```bash
+docker compose run --rm carga migrar
+docker compose run --rm carga ingerir-enem          # na primeira vez, baixa cerca de 526 MB
+docker compose run --rm carga ingerir-enem          # repetir é ignorado pelo manifesto
+docker compose run --rm carga medir-cobertura-enem  # precisa também da Silver do Censo
+```
+
+O `CO_ESCOLA` do ENEM junta com o `CO_ENTIDADE` do Censo em 100% das escolas de
+código real. O INEP mascara o código das escolas com menos de 10 participantes,
+que somam 14,4% das escolas e 1,4% dos participantes com escola. A medição, o
+critério para ausentes, faltantes e nota zero e os limites estão em
+[docs/enem.md](docs/enem.md). O ENEM não roda no `tudo`.
 
 ### Captura de mudanças pelo slot lógico
 
@@ -426,13 +451,16 @@ select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by
 ## Estrutura do repositório
 
 ```
-alembic/versions/   migrações do esquema, em ordem (0001 a 0006)
+alembic/versions/   migrações do esquema, em ordem (0001 a 0008)
 src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   microdados.py     download retomável do pacote do INEP
   tls.py            completa a cadeia de certificados do INEP (ADR 0002)
   transformacao.py  valida o cabeçalho e gera a Silver em Parquet
   carga.py          staging, consolidação idempotente e resumo
   ingestao.py       ingestão em lote idempotente, com manifesto (E2)
+  enem.py           Silver do ENEM: resultados agregados por escola
+  ingestao_enem.py  ingestão idempotente do ENEM, no mesmo manifesto
+  cobertura_enem.py junção das escolas do ENEM com as do Censo
   cdc.py            leitura do slot de replicação lógica da origem
   pgoutput.py       decodificação das mensagens do plugin pgoutput
   fluxo_cdc.py      consumidor do CDC: do slot à tabela Delta de eventos
