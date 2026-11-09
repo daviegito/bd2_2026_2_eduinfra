@@ -45,15 +45,15 @@ flowchart LR
 
 *Deslize o diagrama horizontalmente para ver o fluxo completo.*
 
-As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, somente o
-Censo está integrado até a E2. O aplicativo representa o produtor previsto das
+As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, o Censo
+está integrado desde a E1 e o ENEM 2024 desde a E3 ([ENEM](enem.md)). O aplicativo representa o produtor previsto das
 vistorias; a origem PostgreSQL já pode receber esses registros.
 
 | Componente | Responsabilidade | Tecnologia ou formato |
 | --- | --- | --- |
 | Origem transacional | Armazenar escolas e preservar o histórico das vistorias | PostgreSQL 16; vistorias insert-only |
-| Bronze | Preservar os arquivos recebidos para rastreabilidade e reprocessamento | ZIP e CSV do Censo; demais fontes previstas |
-| Ingestão em lote | Validar, padronizar e controlar reexecuções por ano | Python, SHA-256 e manifesto no PostgreSQL |
+| Bronze | Preservar os arquivos recebidos para rastreabilidade e reprocessamento | ZIP e CSV do Censo e do ENEM; demais fontes previstas |
+| Ingestão em lote | Validar, padronizar e controlar reexecuções por fonte e ano | Python, SHA-256 e manifesto no PostgreSQL |
 | CDC | Capturar inserções pelo log do banco e confirmar a leitura após gravar no destino | WAL, slot lógico e consumidor Python |
 | Silver e destinos analíticos | Armazenar dados tratados para análise | Parquet com zstd e tabelas Delta |
 | Consulta e processamento | Executar SQL sobre os dados analíticos | DuckDB |
@@ -85,6 +85,7 @@ embeddings, cache e assistente ainda não estão implementados.
 | Caminho | Entrada | Destino | Garantia e limite |
 | --- | --- | --- | --- |
 | Lote do Censo | Arquivo anual identificado por SHA-256 | Origem PostgreSQL e Silver em Parquet | Reexecução idempotente; publicação dos arquivos ocorre após o commit no banco |
+| Lote do ENEM (E3) | `RESULTADOS_AAAA.csv` identificado por SHA-256 | `silver/enem/ano=AAAA/`, em Parquet, agregado por escola | Mesmo manifesto, com `fonte = 'enem'`; não grava no OLTP; junção com o Censo [medida](enem.md) |
 | CDC | Inserções em `vistoria` e `vistoria_item` | `warehouse/eventos_vistoria`, em Delta (fonte canônica); `warehouse/fila_de_erros_cdc` e `warehouse/telemetria_cdc` para o que não converte e para a [medição](metricas-cdc.md) | Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo |
 | Publicação analítica | Tabelas Parquet da Silver | `warehouse/vistoria_item`, em Delta | Substitui os dados do ano; não recebe automaticamente os eventos do CDC |
 | Janelas mensais | Vistorias da origem, pela marca d'água | `warehouse/eventos_vistoria`, a mesma fonte do CDC | Reconcilia o mês de ocorrência com a origem pelo mesmo merge do CDC; registra reaberturas ([dado atrasado](dado-atrasado.md)) |

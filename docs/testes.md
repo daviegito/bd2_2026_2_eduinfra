@@ -52,6 +52,7 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 | Funcionalidade | Arquivos principais |
 | --- | --- |
 | Ingestão e recuperação da Silver | `tests/test_ingestao.py` |
+| ENEM: agregação, cobertura e ingestão idempotente | `tests/test_enem.py`, `tests/test_ingestao_enem.py` |
 | CDC e reentrega | `tests/test_pgoutput.py`, `tests/test_fluxo_cdc.py`, `tests/test_fluxo_cdc_integracao.py` |
 | Métricas do CDC | `tests/test_telemetria_cdc.py`, `tests/test_auditoria_cdc.py`, `tests/test_comparacao_latencia.py`, `tests/test_comparacao_latencia_integracao.py` |
 | Fila de erros e desvio de esquema | `tests/test_contrato_cdc.py`, `tests/test_resiliencia_cdc_integracao.py` |

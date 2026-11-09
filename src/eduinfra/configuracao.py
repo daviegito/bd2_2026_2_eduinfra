@@ -4,6 +4,8 @@ from datetime import date
 from pathlib import Path
 
 URL_PADRAO_CENSO = "https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2024.zip"
+# Link da página de microdados do ENEM, conferido em 08/11/2026 (docs/enem.md).
+URL_PADRAO_ENEM = "https://download.inep.gov.br/microdados/microdados_enem_2024.zip"
 
 # Data de referência do Censo 2024, usada como carimbo do evento.
 DATA_REFERENCIA_CENSO_2024 = date(2024, 5, 29)
@@ -17,6 +19,8 @@ class Configuracao:
     data_referencia: date
     diretorio_dados: Path
     arquivo_alembic: Path
+    url_enem: str = URL_PADRAO_ENEM
+    ano_enem: int = 2024
 
 
 def carregar_configuracao() -> Configuracao:
@@ -35,4 +39,6 @@ def carregar_configuracao() -> Configuracao:
         data_referencia=DATA_REFERENCIA_CENSO_2024,
         diretorio_dados=Path(os.environ.get("DIRETORIO_DADOS", raiz / "dados")),
         arquivo_alembic=raiz / "alembic.ini",
+        url_enem=os.environ.get("URL_ENEM", URL_PADRAO_ENEM),
+        ano_enem=int(os.environ.get("ANO_ENEM", "2024")),
     )

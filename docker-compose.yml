@@ -33,6 +33,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
       DIRETORIO_DADOS: /dados
       ANO_CENSO: ${ANO_CENSO:-2024}
+      ANO_ENEM: ${ANO_ENEM:-2024}
     volumes:
       - dados_censo:/dados
     depends_on:

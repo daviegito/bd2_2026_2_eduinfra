@@ -353,6 +353,35 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   passou duas vezes seguidas com a vistoria sem item dentro da margem
 - **Quem revisou:** pendente (PR)
 
+### 2026-11-08 — Ingestão do ENEM 2024 e junção com o Censo
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
+  assistente de implementação e de escrita
+- **Onde:** `src/eduinfra/enem.py`, `ingestao_enem.py`, `cobertura_enem.py`, a
+  migração `0008`, a generalização da publicação da Silver (`transformacao.py`) e do
+  download (`microdados.py`), os comandos `ingerir-enem` e `medir-cobertura-enem`,
+  `tests/test_enem.py`, `tests/test_ingestao_enem.py`, `docs/enem.md` e README
+- **O que foi pedido:** implementar a issue de integração do ENEM: conferir o link
+  do pacote, verificar a chave `CO_ESCOLA` × `CO_ENTIDADE`, medir a cobertura,
+  agregar por escola com critério declarado e generalizar o manifesto
+- **O que foi aproveitado:** código, testes e a redação inicial de `docs/enem.md`,
+  a revisar. O link foi conferido com a cadeia TLS do ADR 0002 (o 403 era do portal
+  `gov.br`, não do servidor de download). A máscara do `CO_ESCOLA` (prefixo `60`,
+  escolas com menos de 10 participantes) foi encontrada pela nota 2 do dicionário
+  oficial e conferida no arquivo real
+- **Como foi verificado:** transformação e cobertura rodadas sobre o ENEM 2024 e o
+  Censo 2024 reais (números em `docs/enem.md`, conferidos contra contagens diretas
+  no CSV bruto); testes sem banco passando; `mkdocs build --strict` sem erro. No
+  Docker: `tests/test_ingestao_enem.py` e `tests/test_ingestao.py` passando (16
+  testes), a migração `0008` testada na ida e na volta em banco descartável, e
+  `migrar`, `ingerir`, `ingerir-enem` (a segunda execução foi ignorada pelo
+  manifesto) e `medir-cobertura-enem` rodados no Compose, com a mesma cobertura da
+  evidência; a cadeia TLS do download foi conferida de dentro do contêiner
+- **Quem revisou:** Pedro Vargas, no PR #69, que apontou o teste de migração do CDC
+  quebrado pelo rename da 0008 e a colisão da revisão 0008 com o #67. O teste foi
+  corrigido com a IA (volta à 0007 antes do stamp, mesma linha do #67) e a suíte
+  completa passou com a main integrada
+
 ### 2026-11-08 — Fonte única de eventos de vistoria (ADR 0008)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
