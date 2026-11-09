@@ -850,6 +850,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../enem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../serializacao-compressao/" class="md-nav__link">
         
   
@@ -1456,8 +1484,8 @@ mostra a arquitetura geral proposta, incluindo integrações e componentes futur
     AGENTE -.-&gt; USER</code></pre>
 </div>
 <p><em>Deslize o diagrama horizontalmente para ver o fluxo completo.</em></p>
-<p>As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, somente o
-Censo está integrado até a E2. O aplicativo representa o produtor previsto das
+<p>As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, o Censo
+está integrado desde a E1 e o ENEM 2024 desde a E3 (<a href="../enem/">ENEM</a>). O aplicativo representa o produtor previsto das
 vistorias; a origem PostgreSQL já pode receber esses registros.</p>
 <table>
 <thead>
@@ -1476,11 +1504,11 @@ vistorias; a origem PostgreSQL já pode receber esses registros.</p>
 <tr>
 <td>Bronze</td>
 <td>Preservar os arquivos recebidos para rastreabilidade e reprocessamento</td>
-<td>ZIP e CSV do Censo; demais fontes previstas</td>
+<td>ZIP e CSV do Censo e do ENEM; demais fontes previstas</td>
 </tr>
 <tr>
 <td>Ingestão em lote</td>
-<td>Validar, padronizar e controlar reexecuções por ano</td>
+<td>Validar, padronizar e controlar reexecuções por fonte e ano</td>
 <td>Python, SHA-256 e manifesto no PostgreSQL</td>
 </tr>
 <tr>
@@ -1544,6 +1572,12 @@ embeddings, cache e assistente ainda não estão implementados.</p>
 <td>Arquivo anual identificado por SHA-256</td>
 <td>Origem PostgreSQL e Silver em Parquet</td>
 <td>Reexecução idempotente; publicação dos arquivos ocorre após o commit no banco</td>
+</tr>
+<tr>
+<td>Lote do ENEM (E3)</td>
+<td><code>RESULTADOS_AAAA.csv</code> identificado por SHA-256</td>
+<td><code>silver/enem/ano=AAAA/</code>, em Parquet, agregado por escola</td>
+<td>Mesmo manifesto, com <code>fonte = 'enem'</code>; não grava no OLTP; junção com o Censo <a href="../enem/">medida</a></td>
 </tr>
 <tr>
 <td>CDC</td>

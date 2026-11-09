@@ -872,6 +872,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../enem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../serializacao-compressao/" class="md-nav__link">
         
   
@@ -1520,6 +1548,14 @@ esses dados e reconstruir o ambiente.</p>
 <tr>
 <td><code>docker compose run --rm carga ingerir</code></td>
 <td>Ingere o Censo com manifesto e publicação da Silver</td>
+</tr>
+<tr>
+<td><code>docker compose run --rm carga ingerir-enem</code></td>
+<td>Ingere o ENEM 2024 no mesmo manifesto e publica a Silver por escola (<a href="../enem/">ENEM</a>)</td>
+</tr>
+<tr>
+<td><code>docker compose run --rm carga medir-cobertura-enem</code></td>
+<td>Mede a junção das escolas do ENEM com as do Censo</td>
 </tr>
 <tr>
 <td><code>docker compose run --rm carga caracterizar</code></td>

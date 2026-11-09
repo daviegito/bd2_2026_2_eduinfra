@@ -1,0 +1,2033 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/enem/">
+      
+      
+        <link rel="prev" href="../caracterizacao/">
+      
+      
+        <link rel="next" href="../serializacao-compressao/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>ENEM e junção com o Censo - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#enem-2024-e-juncao-com-o-censo" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href=".." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ENEM e junção com o Censo
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-analitico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fonte-e-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fonte e download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chave-de-juncao-co_escola-co_entidade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chave de junção: CO_ESCOLA × CO_ENTIDADE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cobertura-medida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cobertura medida
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#silver-do-enem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Silver do ENEM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Silver do ENEM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#criterio-para-ausentes-faltantes-e-nota-zero" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critério para ausentes, faltantes e nota zero
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manifesto-e-reexecucao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manifesto e reexecução
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-rodar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como rodar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../frescor-e-sla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frescor e SLA da Gold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0005-ferramenta-de-transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0005 — Transformação
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#fonte-e-download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fonte e download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chave-de-juncao-co_escola-co_entidade" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chave de junção: CO_ESCOLA × CO_ENTIDADE
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cobertura-medida" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cobertura medida
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#silver-do-enem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Silver do ENEM
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Silver do ENEM">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#criterio-para-ausentes-faltantes-e-nota-zero" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critério para ausentes, faltantes e nota zero
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#manifesto-e-reexecucao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Manifesto e reexecução
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-rodar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como rodar
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="enem-2024-e-juncao-com-o-censo">ENEM 2024 e junção com o Censo<a class="headerlink" href="#enem-2024-e-juncao-com-o-censo" title="Permanent link">&para;</a></h1>
+<p>O ENEM é a variável dependente da pergunta de gestão. Esta página registra de
+onde vem o arquivo, como as escolas do ENEM se ligam às do Censo, quanto dessa
+ligação funciona e quais critérios a Silver usa para agregar as notas por escola.</p>
+<h2 id="fonte-e-download">Fonte e download<a class="headerlink" href="#fonte-e-download" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Página</td>
+<td><a href="https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/enem">Microdados do ENEM — INEP</a></td>
+</tr>
+<tr>
+<td>Pacote</td>
+<td><code>https://download.inep.gov.br/microdados/microdados_enem_2024.zip</code></td>
+</tr>
+<tr>
+<td>Conferido em</td>
+<td>08/11/2026: HTTP 200, 526.073.856 bytes, <code>Last-Modified</code> 09/07/2026</td>
+</tr>
+<tr>
+<td>Arquivo ingerido</td>
+<td><code>DADOS/RESULTADOS_2024.csv</code>: 1.683.449.589 bytes, separador <code>;</code>, latin-1</td>
+</tr>
+</tbody>
+</table>
+<p>O 403 do teste automatizado vinha do portal <code>www.gov.br</code>, que recusa clientes
+automatizados. O pipeline não passa por essa página: ele baixa direto de
+<code>download.inep.gov.br</code>. Esse servidor tem o mesmo problema de cadeia TLS do Censo.
+O <code>curl</code> direto teve a conexão encerrada no handshake, e com o contexto do
+<a href="../adr/0002-cadeia-tls-incompleta-do-inep/">ADR 0002</a> (<code>tls.contexto_para</code>) a
+resposta foi 200. O download reaproveita a retomada por <code>Range</code> do Censo.</p>
+<p>A partir de 2024, o pacote separa os microdados em dois arquivos:</p>
+<ul>
+<li><code>PARTICIPANTES_2024.csv</code>: perfil e questionário socioeconômico, <strong>sem</strong> escola;</li>
+<li><code>RESULTADOS_2024.csv</code>: escola de conclusão, presença e notas.</li>
+</ul>
+<p>Os dois arquivos não têm chave em comum (<code>NU_SEQUENCIAL</code> não é <code>NU_INSCRICAO</code>,
+nota 1 do dicionário). Só o de resultados entra no pipeline. Por isso, o
+questionário socioeconômico do aluno não pode ser ligado à escola; o controle
+socioeconômico previsto é o INSE, no grão escola.</p>
+<h2 id="chave-de-juncao-co_escola-co_entidade">Chave de junção: <code>CO_ESCOLA</code> × <code>CO_ENTIDADE</code><a class="headerlink" href="#chave-de-juncao-co_escola-co_entidade" title="Permanent link">&para;</a></h2>
+<p>Pela nota 2 do dicionário de <code>RESULTADOS_2024</code>, o <code>CO_ESCOLA</code> vem da base de
+matrículas do <strong>Censo Escolar 2024</strong>. O INEP faz o cruzamento pelo CPF e
+considera só as etapas de prováveis concluintes do ensino médio (27, 28, 29, 37,
+38, 71, 32, 33 e 34). Portanto, o código já é o <code>CO_ENTIDADE</code> do Censo do mesmo
+ano. A exceção é deliberada: quando a escola tem menos de 10 participantes, o
+INEP troca o código real por uma máscara.</p>
+<p>No arquivo de 2024, observou-se o seguinte:</p>
+<ul>
+<li>todos os códigos têm 8 dígitos e são numéricos;</li>
+<li>os 4.221 códigos de escolas com menos de 10 participantes começam com <code>60</code>,
+  que não corresponde a nenhuma UF; nenhum código de escola com 10 ou mais
+  participantes começa assim;</li>
+<li>a máscara esconde só a identidade. UF, município, rede e localização da escola
+  continuam preenchidos;</li>
+<li>nas 25.179 escolas de código real, os dois primeiros dígitos coincidem com a UF
+  do município da escola;</li>
+<li>os atributos da escola (município, UF, rede, localização e situação) são os
+  mesmos em todas as linhas de um código (zero divergências);</li>
+<li>todas as escolas informadas estão em atividade (<code>TP_SIT_FUNC_ESC = 1</code>).</li>
+</ul>
+<p>Do lado do Censo, a junção usa a Silver publicada por <code>ingerir</code>. Ela guarda as
+escolas em atividade com rede e localização informadas.</p>
+<h2 id="cobertura-medida">Cobertura medida<a class="headerlink" href="#cobertura-medida" title="Permanent link">&para;</a></h2>
+<p>Saída de <code>medir-cobertura-enem</code> sobre o ENEM 2024 e o Censo 2024 reais, guardada
+em <a href="../evidencias/cobertura-enem/cobertura_2024/">evidencias/cobertura-enem/cobertura_2024.md</a>:</p>
+<table>
+<thead>
+<tr>
+<th>Medida</th>
+<th style="text-align: right;">Valor</th>
+<th style="text-align: right;">%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Participantes no arquivo de resultados</td>
+<td style="text-align: right;">4.332.944</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>Participantes com escola informada</td>
+<td style="text-align: right;">1.565.797</td>
+<td style="text-align: right;">36,1%</td>
+</tr>
+<tr>
+<td>Escolas distintas no ENEM</td>
+<td style="text-align: right;">29.400</td>
+<td style="text-align: right;">100%</td>
+</tr>
+<tr>
+<td>Escolas com código mascarado (menos de 10 participantes)</td>
+<td style="text-align: right;">4.221</td>
+<td style="text-align: right;">14,4%</td>
+</tr>
+<tr>
+<td>Escolas encontradas no Censo, sobre todas as do ENEM</td>
+<td style="text-align: right;">25.179</td>
+<td style="text-align: right;">85,6%</td>
+</tr>
+<tr>
+<td>Escolas encontradas no Censo, sobre as de código real</td>
+<td style="text-align: right;">25.179</td>
+<td style="text-align: right;">100,0%</td>
+</tr>
+<tr>
+<td>Participantes com escola cuja escola junta com o Censo</td>
+<td style="text-align: right;">1.543.488</td>
+<td style="text-align: right;">98,6%</td>
+</tr>
+<tr>
+<td>Participantes de escola com código real cuja escola junta</td>
+<td style="text-align: right;">1.543.488</td>
+<td style="text-align: right;">100,0%</td>
+</tr>
+<tr>
+<td>Escolas de código real que não juntam, mas existem no CSV do Censo</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0,0%</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Participantes por escola</th>
+<th style="text-align: right;">Escolas</th>
+<th style="text-align: right;">Participantes</th>
+<th style="text-align: right;">Encontradas no Censo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td style="text-align: right;">439</td>
+<td style="text-align: right;">439</td>
+<td style="text-align: right;">0 (0,0%)</td>
+</tr>
+<tr>
+<td>2 a 4</td>
+<td style="text-align: right;">1.218</td>
+<td style="text-align: right;">3.729</td>
+<td style="text-align: right;">0 (0,0%)</td>
+</tr>
+<tr>
+<td>5 a 9</td>
+<td style="text-align: right;">2.564</td>
+<td style="text-align: right;">18.141</td>
+<td style="text-align: right;">0 (0,0%)</td>
+</tr>
+<tr>
+<td>10 a 29</td>
+<td style="text-align: right;">9.266</td>
+<td style="text-align: right;">172.061</td>
+<td style="text-align: right;">9.266 (100,0%)</td>
+</tr>
+<tr>
+<td>30 a 99</td>
+<td style="text-align: right;">11.453</td>
+<td style="text-align: right;">640.097</td>
+<td style="text-align: right;">11.453 (100,0%)</td>
+</tr>
+<tr>
+<td>100 ou mais</td>
+<td style="text-align: right;">4.460</td>
+<td style="text-align: right;">731.330</td>
+<td style="text-align: right;">4.460 (100,0%)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>A taxa de junção é de 100% das escolas com código real e 85,6% de todas as
+escolas do ENEM.</strong> Todas as escolas que não juntam são as mascaradas. A perda é
+pequena em participantes: 22.309, ou 1,4% dos que têm escola.</p>
+<p><strong>Só 36,1% dos participantes têm escola.</strong> É o esperado, porque o INEP só informa
+a escola de prováveis concluintes. Pelo arquivo de participantes, 1.617.602
+declararam que concluiriam o ensino médio em 2024 (<code>TP_ST_CONCLUSAO = 2</code>). Os
+1.565.797 com escola equivalem a 96,8% desse total. A comparação é só entre
+totais, porque as linhas dos dois arquivos não se ligam. Os demais inscritos já
+tinham concluído o ensino médio (1.846.311), são treineiros (844.259) ou não
+concluíram nem estão cursando (24.772).</p>
+<p><strong>Escolas com poucos participantes.</strong> Abaixo de 10 participantes, o código é
+mascarado e a escola não entra na análise com a infraestrutura. Entre 10 e 29
+participantes, estão 9.266 escolas (36,8% das que juntam), com médias mais
+sensíveis a poucos alunos. A Silver guarda o número de participantes e de notas
+válidas por área para que a Gold possa ponderar ou aplicar um corte; o corte não
+é decidido aqui.</p>
+<h2 id="silver-do-enem">Silver do ENEM<a class="headerlink" href="#silver-do-enem" title="Permanent link">&para;</a></h2>
+<p>A partição de cada ano fica em <code>silver/enem/ano=AAAA/</code> e contém três arquivos:</p>
+<table>
+<thead>
+<tr>
+<th>Arquivo</th>
+<th>Grão</th>
+<th>Conteúdo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>desempenho_escola.parquet</code></td>
+<td>uma linha por <code>co_escola</code></td>
+<td>atributos da escola, contagens e médias</td>
+</tr>
+<tr>
+<td><code>resumo.parquet</code></td>
+<td>uma linha por ano</td>
+<td>totais do arquivo de origem, inclusive de quem não tem escola</td>
+</tr>
+<tr>
+<td><code>origem.sha256</code></td>
+<td>—</td>
+<td>hash do <code>RESULTADOS_AAAA.csv</code> que gerou a partição</td>
+</tr>
+</tbody>
+</table>
+<p>Os nomes não repetem os da Silver do Censo (<code>escola.parquet</code>,
+<code>vistoria_item.parquet</code>), porque os leitores dela procuram esses nomes com
+<code>rglob</code> dentro de <code>silver/</code>.</p>
+<p>Colunas de <code>desempenho_escola.parquet</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Coluna</th>
+<th>Significado</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ano</code>, <code>co_escola</code></td>
+<td>ano do ENEM e código da escola, a chave</td>
+</tr>
+<tr>
+<td><code>co_municipio_esc</code>, <code>sg_uf_esc</code>, <code>tp_dependencia_adm_esc</code>, <code>tp_localizacao_esc</code>, <code>tp_sit_func_esc</code></td>
+<td>atributos da escola, como vêm do ENEM</td>
+</tr>
+<tr>
+<td><code>participantes</code></td>
+<td>inscritos com essa escola, presentes ou não</td>
+</tr>
+<tr>
+<td><code>participantes_com_todas_as_notas</code></td>
+<td>com nota válida nas quatro provas objetivas e na redação</td>
+</tr>
+<tr>
+<td><code>participantes_sem_nota_valida</code></td>
+<td>sem nota válida em nenhuma das cinco</td>
+</tr>
+<tr>
+<td><code>notas_validas_{cn,ch,lc,mt,redacao}</code> e <code>media_{...}</code></td>
+<td>quantidade de notas válidas e média por área</td>
+</tr>
+<tr>
+<td><code>redacoes_nota_zero</code></td>
+<td>redações válidas com nota zero</td>
+</tr>
+<tr>
+<td><code>media_geral</code></td>
+<td>média das cinco notas, só entre quem tem as cinco</td>
+</tr>
+<tr>
+<td><code>poucos_participantes</code></td>
+<td>menos de 10 participantes, ou seja, código mascarado pelo INEP</td>
+</tr>
+</tbody>
+</table>
+<h3 id="criterio-para-ausentes-faltantes-e-nota-zero">Critério para ausentes, faltantes e nota zero<a class="headerlink" href="#criterio-para-ausentes-faltantes-e-nota-zero" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Situação no arquivo</th>
+<th>Tratamento</th>
+<th style="text-align: right;">Casos em 2024</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Faltou à prova (<code>TP_PRESENCA = 0</code>)</td>
+<td>sem nota válida; fora da média, nunca como zero</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr>
+<td>Eliminado (<code>TP_PRESENCA = 2</code>)</td>
+<td>sem nota válida; fora da média</td>
+<td style="text-align: right;">—</td>
+</tr>
+<tr>
+<td>Presente sem nota (dado faltante)</td>
+<td>sem nota válida; contado em <code>notas_objetivas_faltantes</code></td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Presente com nota zero em prova objetiva</td>
+<td>nota válida; entra na média; contado em <code>notas_objetivas_zero</code></td>
+<td style="text-align: right;">9.798 notas</td>
+</tr>
+<tr>
+<td>Redação com problema (<code>TP_STATUS_REDACAO</code> de 2 a 9)</td>
+<td>nota zero oficial; entra na média; contada em <code>redacoes_nota_zero</code></td>
+<td style="text-align: right;">165.245</td>
+</tr>
+<tr>
+<td>Faltou ou foi eliminado no primeiro dia</td>
+<td>sem redação (status vazio)</td>
+<td style="text-align: right;">—</td>
+</tr>
+</tbody>
+</table>
+<p>O zero é o resultado oficial atribuído pelo INEP, e por isso entra na média. Quem
+preferir excluí-lo consegue recalcular sem voltar ao microdado, porque os zeros
+não somam:
+<code>media_redacao * notas_validas_redacao / (notas_validas_redacao - redacoes_nota_zero)</code>.</p>
+<p>No arquivo inteiro, 2.990.093 inscritos têm as cinco notas e 1.150.101 não têm
+nenhuma nota válida.</p>
+<p><code>IN_TREINEIRO</code> existe apenas no arquivo de participantes, então os treineiros
+não podem ser filtrados no de resultados. Como o código da escola só é atribuído
+a prováveis concluintes, e os treineiros de 2024 são todos <code>TP_ST_CONCLUSAO = 3</code>,
+espera-se que eles não tenham escola. Isso não é verificável linha a linha.</p>
+<h2 id="manifesto-e-reexecucao">Manifesto e reexecução<a class="headerlink" href="#manifesto-e-reexecucao" title="Permanent link">&para;</a></h2>
+<p>A ingestão segue o protocolo do Censo (<a href="../adr/0004-ingestao/">ADR 0004</a>), com o
+manifesto generalizado pela migração <code>0008</code>:</p>
+<ul>
+<li><code>ingestao_execucao.ano_censo</code> passa a se chamar <code>ano</code>, e a coluna nova <code>fonte</code>
+  (<code>censo</code> ou <code>enem</code>) identifica a origem da execução. A versão vigente é a última
+  execução de <code>(fonte, ano)</code>, então uma execução do Censo nunca faz a do ENEM ser
+  ignorada;</li>
+<li>as contagens de inserção no OLTP continuam obrigatórias para o Censo e ficam
+  nulas no ENEM, que não grava no OLTP. O ENEM registra em <code>linhas_publicadas</code>
+  quantas escolas a Silver publicou.</li>
+</ul>
+<p>Ordem de uma ingestão: a Silver é montada em <code>_publicacao/</code> e a linha do manifesto
+é confirmada. Só depois disso a partição <code>silver/enem/ano=AAAA/</code> é trocada inteira,
+por rename de diretório. Se o arquivo e a Silver publicada coincidem com o
+manifesto, a execução é ignorada. Se o manifesto está na versão do arquivo mas a
+Silver não, só a Silver é republicada.</p>
+<p>Fora do Docker, em WSL2, o hash do CSV levou de 1,3 s a 1,6 s e a montagem da
+Silver levou de 6,6 s a 12,3 s.</p>
+<h2 id="como-rodar">Como rodar<a class="headerlink" href="#como-rodar" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>migrar<span class="w">               </span><span class="c1"># aplica a 0008</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>ingerir-enem<span class="w">         </span><span class="c1"># baixa cerca de 526 MB na primeira vez</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>ingerir-enem<span class="w">         </span><span class="c1"># de novo: ignorada pelo manifesto</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-cobertura-enem<span class="w"> </span><span class="c1"># exige também a Silver do Censo (ingerir)</span>
+</span></code></pre></div>
+<p>O pacote fica em <code>bruto/enem/</code> no volume de dados. Na primeira execução,
+<code>RESULTADOS_2024.csv</code> é extraído ao lado dele. O ENEM não faz parte do comando
+<code>tudo</code>, para não acrescentar 526 MB de download ao <code>docker compose up</code>.</p>
+<h2 id="limites">Limites<a class="headerlink" href="#limites" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Só o layout de 2024 em diante é aceito; o cabeçalho é validado, e um arquivo
+  de outro layout é recusado com mensagem.</li>
+<li>O fato <code>fato_desempenho_escola_ano</code> da Gold (<a href="../modelo-analitico/">modelo analítico</a>)
+  ainda precisa ser construído a partir desta Silver.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
