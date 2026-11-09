@@ -328,4 +328,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `migrar`, `ingerir`, `ingerir-enem` (a segunda execução foi ignorada pelo
   manifesto) e `medir-cobertura-enem` rodados no Compose, com a mesma cobertura da
   evidência; a cadeia TLS do download foi conferida de dentro do contêiner
-- **Quem revisou:** pendente (PR)
+- **Quem revisou:** Pedro Vargas, no PR #69, que apontou o teste de migração do CDC
+  quebrado pelo rename da 0008 e a colisão da revisão 0008 com o #67. O teste foi
+  corrigido com a IA (volta à 0007 antes do stamp, mesma linha do #67) e a suíte
+  completa passou com a main integrada
