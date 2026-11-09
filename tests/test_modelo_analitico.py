@@ -1,11 +1,13 @@
 """Modelo dimensional da Gold (E3): grão declarado, SCD tipo 2 e consistência com a origem.
 
-Cada teste cria o próprio banco, porque a origem é insert-only e não há como limpar linhas.
+Cada teste cria o próprio banco, porque a origem é insert-only e não há como limpar linhas,
+e a própria fonte canônica de eventos (ADR 0008), num diretório temporário.
 """
 
 import hashlib
 import os
 import uuid
+from datetime import date
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -14,16 +16,20 @@ import pytest
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import modelo_analitico
+import pyarrow as pa
+
+from eduinfra import eventos, janelas, modelo_analitico
+from eduinfra.configuracao import Configuracao
 
 pytestmark = pytest.mark.integracao
 
 DSN_ADMIN = os.environ.get("DATABASE_URL")
 RAIZ = Path(__file__).resolve().parents[1]
+DIRETORIOS: dict[str, Path] = {}
 
 
 @pytest.fixture
-def dsn():
+def dsn(tmp_path):
     if not DSN_ADMIN:
         pytest.skip("DATABASE_URL não definida")
 
@@ -33,11 +39,13 @@ def dsn():
 
     destino = urlsplit(DSN_ADMIN)._replace(path=f"/{nome}").geturl()
     os.environ["DATABASE_URL"] = destino
+    DIRETORIOS[destino] = tmp_path
     try:
         command.upgrade(Config(str(RAIZ / "alembic.ini")), "head")
         _semear_cadastro(destino)
         yield destino
     finally:
+        DIRETORIOS.pop(destino, None)
         os.environ["DATABASE_URL"] = DSN_ADMIN
         with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
             admin.execute(f'drop database if exists "{nome}" with (force)')
@@ -55,6 +63,25 @@ def _semear_cadastro(dsn: str) -> None:
                    (3, 'ESCOLA TRES', 5208707, 3, 2, 2024)
             """
         )
+
+
+def configuracao_de(dsn: str) -> Configuracao:
+    return Configuracao(
+        dsn=dsn,
+        url_censo="https://exemplo.invalido/censo.zip",
+        ano_censo=2024,
+        data_referencia=date(2024, 5, 29),
+        diretorio_dados=DIRETORIOS[dsn],
+        arquivo_alembic=RAIZ / "alembic.ini",
+    )
+
+
+def construir(dsn: str) -> modelo_analitico.ResumoGold:
+    """Leva à fonte canônica, pelo caminho das janelas, o que a origem tem, e constrói a Gold."""
+    configuracao = configuracao_de(dsn)
+    janelas.processar(configuracao)
+
+    return modelo_analitico.construir(configuracao)
 
 
 def vistoria(dsn: str, escola: int, ocorrido: str, itens: dict, origem: str = "vistoria_presencial") -> int:
@@ -99,7 +126,7 @@ def historia_da_escola_um(dsn: str) -> None:
 
 def test_cada_mudanca_cria_uma_versao_e_a_anterior_continua_la(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     versoes = consultar(
         dsn,
@@ -118,7 +145,7 @@ def test_cada_mudanca_cria_uma_versao_e_a_anterior_continua_la(dsn):
 
 def test_consulta_por_data_devolve_o_perfil_que_valia_naquele_dia(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     sql = (
         "select itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
@@ -134,7 +161,7 @@ def test_as_versoes_de_uma_escola_nao_se_sobrepoem_e_ha_uma_so_vigente(dsn):
     historia_da_escola_um(dsn)
     vistoria(dsn, 1, "2025-09-01", {"biblioteca": "inexistente"})
     vistoria(dsn, 2, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     sobrepostas = consultar(
         dsn,
@@ -155,7 +182,7 @@ def test_as_versoes_de_uma_escola_nao_se_sobrepoem_e_ha_uma_so_vigente(dsn):
 def test_nao_informado_nao_apaga_o_que_ja_se_sabia(dsn):
     vistoria(dsn, 1, "2024-05-29", {"internet": "existente", "biblioteca": "existente"}, origem="censo_escolar")
     vistoria(dsn, 1, "2025-02-01", {"internet": "nao_informado", "biblioteca": "inexistente"})
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     versoes = consultar(
         dsn, "select itens ->> 'internet', itens ->> 'biblioteca' from gold.dim_escola_infraestrutura "
@@ -167,12 +194,12 @@ def test_nao_informado_nao_apaga_o_que_ja_se_sabia(dsn):
 
 def test_evento_atrasado_refaz_o_historico_sem_trocar_as_chaves_das_versoes_antigas(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     chaves_antes = dict(consultar(dsn, "select escola_infra_sk, co_entidade::text || '@' || valid_from::text from gold.dim_escola_infraestrutura"))
 
     # Vistoria feita em janeiro de 2024 e digitada só agora: chega depois, ocorre antes.
     vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "existente"})
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     versoes = consultar(
         dsn, "select valid_from::date, itens ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
@@ -191,7 +218,7 @@ def test_evento_atrasado_refaz_o_historico_sem_trocar_as_chaves_das_versoes_anti
 
 def test_fato_fino_tem_uma_linha_por_vistoria_e_item(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     na_origem = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
     no_fato = consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0]
@@ -204,7 +231,7 @@ def test_fato_fino_tem_uma_linha_por_vistoria_e_item(dsn):
 
 def test_fato_largo_tem_uma_linha_por_escola_e_ano_e_aponta_para_a_versao_vigente_no_fim_do_ano(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     linhas = consultar(
         dsn,
@@ -227,7 +254,7 @@ def test_fato_largo_bate_com_a_view_de_estado_atual_da_origem(dsn):
     for escola in (1, 2, 3):
         vistoria(dsn, escola, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente", "quadra_esportes": "existente"},
                  origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     divergencias = consultar(
         dsn,
@@ -249,16 +276,16 @@ def test_construir_duas_vezes_da_exatamente_o_mesmo_resultado(dsn):
     historia_da_escola_um(dsn)
     vistoria(dsn, 3, "2024-05-29", {"biblioteca": "existente"}, origem="censo_escolar")
 
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     primeira = impressao_da_gold(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     assert impressao_da_gold(dsn) == primeira
 
 
 def test_falha_na_construcao_preserva_a_gold_anterior(dsn, monkeypatch):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     antes = impressao_da_gold(dsn)
 
     vistoria(dsn, 2, "2025-02-01", {"biblioteca": "existente"})
@@ -272,7 +299,7 @@ def test_falha_na_construcao_preserva_a_gold_anterior(dsn, monkeypatch):
     monkeypatch.setattr(modelo_analitico, "_etapas", etapas_que_falham_no_fim)
 
     with pytest.raises(RuntimeError, match="falha simulada"):
-        modelo_analitico.construir(dsn)
+        construir(dsn)
 
     assert impressao_da_gold(dsn) == antes
 
@@ -280,7 +307,7 @@ def test_falha_na_construcao_preserva_a_gold_anterior(dsn, monkeypatch):
 def test_comparacao_de_granularidades_responde_igual_nos_dois_graos(dsn):
     for escola, rede_com_lab in ((1, "existente"), (2, "inexistente"), (3, "existente")):
         vistoria(dsn, escola, "2024-05-29", {"lab_ciencias": rede_com_lab, "biblioteca": "existente"}, origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     comparacao = modelo_analitico.comparar(dsn, repeticoes=2)
     texto = modelo_analitico.formatar_markdown(comparacao)
@@ -295,7 +322,7 @@ def test_comparacao_de_granularidades_responde_igual_nos_dois_graos(dsn):
 
 def test_serie_historica_nao_muda_quando_a_dimensao_ganha_uma_versao_nova(dsn):
     vistoria(dsn, 1, "2024-05-29", {"biblioteca": "existente", "lab_ciencias": "inexistente"}, origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     consulta = (
         "select ano, escola_infra_sk, n_existentes, lab_ciencias "
         "from gold.fato_infra_escola_ano where co_entidade = 1 and ano = %s"
@@ -304,7 +331,7 @@ def test_serie_historica_nao_muda_quando_a_dimensao_ganha_uma_versao_nova(dsn):
 
     # A escola passa a ter laboratório em 2025: a dimensão ganha uma versão e fecha a anterior.
     vistoria(dsn, 1, "2025-03-10", {"lab_ciencias": "existente"})
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     # O que já tinha sido dito sobre 2024 continua igual; 2025 nasce com o perfil novo.
     assert consultar(dsn, consulta, (2024,)) == de_2024_antes
@@ -325,7 +352,7 @@ def chaves_por_versao(dsn: str) -> dict[int, str]:
 def test_revisita_sem_quantidade_nao_cria_versao_nem_apaga_a_quantidade_conhecida(dsn):
     vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": ("existente", 2)}, origem="censo_escolar")
     vistoria(dsn, 1, "2025-02-01", {"lab_ciencias": "existente"})  # não informa a quantidade
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     versoes = consultar(
         dsn, "select valid_from::date::text, quantidades ->> 'lab_ciencias' from gold.dim_escola_infraestrutura "
@@ -337,7 +364,7 @@ def test_revisita_sem_quantidade_nao_cria_versao_nem_apaga_a_quantidade_conhecid
     vistoria(dsn, 1, "2025-03-01", {"lab_ciencias": ("existente", 3)})
     vistoria(dsn, 1, "2025-04-01", {"lab_ciencias": "inexistente"})
     vistoria(dsn, 1, "2025-05-01", {"lab_ciencias": "existente"})
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     versoes = consultar(
         dsn, "select valid_from::date::text, itens ->> 'lab_ciencias', quantidades ->> 'lab_ciencias' "
@@ -353,7 +380,7 @@ def test_revisita_sem_quantidade_nao_cria_versao_nem_apaga_a_quantidade_conhecid
 
 def test_chave_substituta_nao_depende_do_fuso_horario_da_sessao(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     em_utc = chaves_por_versao(dsn)
 
     banco = urlsplit(dsn).path.lstrip("/")
@@ -361,18 +388,18 @@ def test_chave_substituta_nao_depende_do_fuso_horario_da_sessao(dsn):
         admin.execute(f"alter database \"{banco}\" set timezone to 'Asia/Tokyo'")
     assert consultar(dsn, "show timezone") == [("Asia/Tokyo",)]
 
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     assert chaves_por_versao(dsn) == em_utc
 
 
 def test_evento_atrasado_que_repete_o_estado_antecipa_a_versao_e_a_chave_antiga_some(dsn):
     vistoria(dsn, 1, "2024-05-29", {"lab_ciencias": "inexistente"}, origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     antes = chaves_por_versao(dsn)
 
     vistoria(dsn, 1, "2024-01-15", {"lab_ciencias": "inexistente"})  # mesmo estado, data anterior
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     depois = chaves_por_versao(dsn)
 
     # As duas versões se fundem numa só, que começa em 15/01. A chave de 29/05 deixa de existir...
@@ -387,7 +414,7 @@ def test_duas_vistorias_no_mesmo_dia_desempatam_igual_nos_dois_graos(dsn):
     vistoria(dsn, 1, "2024-05-29 15:00:00+00", {"lab_ciencias": "inexistente"})
     vistoria(dsn, 1, "2024-05-29 09:00:00+00", {"lab_ciencias": "existente"})
     vistoria(dsn, 2, "2024-05-29 10:00:00+00", {"lab_ciencias": "existente"}, origem="censo_escolar")
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     parametros = {"ano": 2024}
     with psycopg.connect(dsn) as conexao:
@@ -404,7 +431,7 @@ def test_duas_vistorias_no_mesmo_dia_desempatam_igual_nos_dois_graos(dsn):
 
 def test_fato_fino_aponta_para_a_versao_vigente_no_instante_da_vistoria(dsn):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     linhas = consultar(
         dsn,
@@ -431,7 +458,7 @@ def test_fato_fino_aponta_para_a_versao_vigente_no_instante_da_vistoria(dsn):
 
 def test_a_construcao_enxerga_um_unico_retrato_da_origem(dsn, monkeypatch):
     historia_da_escola_um(dsn)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     itens_antes = consultar(dsn, "select count(*) from public.vistoria_item")[0][0]
 
     etapas_reais = modelo_analitico._etapas
@@ -443,7 +470,7 @@ def test_a_construcao_enxerga_um_unico_retrato_da_origem(dsn, monkeypatch):
         return etapas
 
     monkeypatch.setattr(modelo_analitico, "_etapas", etapas_com_vistoria_no_meio)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     # A vistoria entrou na origem, mas a Gold desta construção não a viu em tabela nenhuma.
     assert consultar(dsn, "select count(*) from public.vistoria_item")[0][0] == itens_antes + 1
@@ -451,12 +478,52 @@ def test_a_construcao_enxerga_um_unico_retrato_da_origem(dsn, monkeypatch):
     assert consultar(dsn, "select count(*) from gold.fato_infra_escola_ano where co_entidade = 2")[0][0] == 0
 
     monkeypatch.setattr(modelo_analitico, "_etapas", etapas_reais)
-    modelo_analitico.construir(dsn)
+    construir(dsn)
     assert consultar(dsn, "select count(*) from gold.fato_vistoria_item")[0][0] == itens_antes + 1
 
 
 def test_comparar_com_a_gold_vazia_explica_o_que_fazer(dsn):
-    modelo_analitico.construir(dsn)
+    construir(dsn)
 
     with pytest.raises(RuntimeError, match="Gold está vazia"):
         modelo_analitico.comparar(dsn, repeticoes=1)
+
+
+def test_gold_le_so_a_fonte_de_eventos_e_confere_com_a_origem(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    configuracao = configuracao_de(dsn)
+
+    # Na origem, mas ainda não na fonte canônica: a Gold não enxerga e a conferência aponta.
+    fora = vistoria(dsn, 2, "2025-02-01", {"biblioteca": "existente", "quadra_esportes": "inexistente"})
+    pendente = modelo_analitico.construir(configuracao)
+
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item where vistoria_id = %s", (fora,)) == [(0,)]
+    assert (pendente.fonte.so_na_origem, pendente.fonte.so_na_fonte) == (2, 0)
+    assert not pendente.fonte.confere
+
+    em_dia = construir(dsn)
+
+    assert consultar(dsn, "select count(*) from gold.fato_vistoria_item where vistoria_id = %s", (fora,)) == [(2,)]
+    assert em_dia.fonte.confere
+    assert em_dia.fonte.na_fonte == em_dia.fonte.na_origem == consultar(dsn, "select count(*) from vistoria_item")[0][0]
+    assert em_dia.fonte.na_fonte == em_dia.linhas["fato_vistoria_item"]
+    assert em_dia.fonte.versao_delta > pendente.fonte.versao_delta
+    comentario = consultar(dsn, "select obj_description('fonte.eventos_vistoria'::regclass)")[0][0]
+    assert f"Versão {em_dia.fonte.versao_delta} de warehouse/eventos_vistoria" in comentario
+
+
+def test_evento_na_fonte_que_a_origem_nao_tem_e_recusado_sem_tocar_a_gold(dsn):
+    historia_da_escola_um(dsn)
+    construir(dsn)
+    antes = impressao_da_gold(dsn)
+    configuracao = configuracao_de(dsn)
+
+    intruso, _ = eventos.ler(configuracao, "2025-03")
+    linha = intruso.slice(0, 1).to_pylist()[0] | {"vistoria_id": 999_999}
+    eventos.gravar_sem_duplicar(configuracao, pa.Table.from_pylist([linha], schema=eventos.ESQUEMA))
+
+    with pytest.raises(RuntimeError, match="1 eventos que a origem não tem"):
+        modelo_analitico.construir(configuracao)
+
+    assert impressao_da_gold(dsn) == antes

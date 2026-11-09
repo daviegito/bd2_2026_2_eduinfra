@@ -45,15 +45,15 @@ flowchart LR
 
 *Deslize o diagrama horizontalmente para ver o fluxo completo.*
 
-As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, somente o
-Censo está integrado até a E2. O aplicativo representa o produtor previsto das
+As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, o Censo
+está integrado desde a E1 e o ENEM 2024 desde a E3 ([ENEM](enem.md)). O aplicativo representa o produtor previsto das
 vistorias; a origem PostgreSQL já pode receber esses registros.
 
 | Componente | Responsabilidade | Tecnologia ou formato |
 | --- | --- | --- |
 | Origem transacional | Armazenar escolas e preservar o histórico das vistorias | PostgreSQL 16; vistorias insert-only |
-| Bronze | Preservar os arquivos recebidos para rastreabilidade e reprocessamento | ZIP e CSV do Censo; demais fontes previstas |
-| Ingestão em lote | Validar, padronizar e controlar reexecuções por ano | Python, SHA-256 e manifesto no PostgreSQL |
+| Bronze | Preservar os arquivos recebidos para rastreabilidade e reprocessamento | ZIP e CSV do Censo e do ENEM; demais fontes previstas |
+| Ingestão em lote | Validar, padronizar e controlar reexecuções por fonte e ano | Python, SHA-256 e manifesto no PostgreSQL |
 | CDC | Capturar inserções pelo log do banco e confirmar a leitura após gravar no destino | WAL, slot lógico e consumidor Python |
 | Silver e destinos analíticos | Armazenar dados tratados para análise | Parquet com zstd e tabelas Delta |
 | Consulta e processamento | Executar SQL sobre os dados analíticos | DuckDB |
@@ -66,10 +66,13 @@ arquivo; Delta acrescenta um log de transações aos arquivos Parquet. DuckDB é
 um mecanismo de consulta e processamento, não o armazenamento do Data Lake.
 Na E2, os arquivos ficam em um volume local compartilhado pelos serviços Docker.
 
-O bloco analítico resume destinos que **coexistem**, sem integração automática:
-a Silver do Censo em Parquet, os eventos do CDC em Delta, a tabela analítica
-particionada derivada da Silver e as janelas mensais em Parquet. A publicação da
-tabela derivada da Silver não significa que ela recebe automaticamente o CDC.
+O bloco analítico tem três destinos: a Silver do Censo em Parquet, a tabela
+analítica particionada derivada da Silver e a **fonte canônica de eventos** em
+Delta, `warehouse/eventos_vistoria`. Os eventos de vistoria têm uma fonte só
+([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)). A linha de base, o CDC e as
+janelas de dado atrasado gravam nela, pela chave `(vistoria_id, item_codigo)`, e
+a transformação da Gold lê só ela. A tabela derivada da Silver é um retrato do
+Censo e não recebe o CDC.
 Os detalhes estão em [camada analítica](camada-analitica.md),
 [CDC](cdc-e-semantica-de-entrega.md) e [ADR 0004](adr/0004-ingestao.md).
 
@@ -82,11 +85,14 @@ embeddings, cache e assistente ainda não estão implementados.
 | Caminho | Entrada | Destino | Garantia e limite |
 | --- | --- | --- | --- |
 | Lote do Censo | Arquivo anual identificado por SHA-256 | Origem PostgreSQL e Silver em Parquet | Reexecução idempotente; publicação dos arquivos ocorre após o commit no banco |
-| CDC | Inserções em `vistoria` e `vistoria_item` | `warehouse/eventos_vistoria`, em Delta; `warehouse/fila_de_erros_cdc` e `warehouse/telemetria_cdc` para o que não converte e para a [medição](metricas-cdc.md) | Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo |
+| Lote do ENEM (E3) | `RESULTADOS_AAAA.csv` identificado por SHA-256 | `silver/enem/ano=AAAA/`, em Parquet, agregado por escola | Mesmo manifesto, com `fonte = 'enem'`; não grava no OLTP; junção com o Censo [medida](enem.md) |
+| CDC | Inserções em `vistoria` e `vistoria_item` | `warehouse/eventos_vistoria`, em Delta (fonte canônica); `warehouse/fila_de_erros_cdc` e `warehouse/telemetria_cdc` para o que não converte e para a [medição](metricas-cdc.md) | Confirma o LSN após gravar; reentrega com efeito idempotente; linha que não converte vai para a fila e não para o fluxo |
 | Publicação analítica | Tabelas Parquet da Silver | `warehouse/vistoria_item`, em Delta | Substitui os dados do ano; não recebe automaticamente os eventos do CDC |
-| Janelas mensais | Vistorias da origem | `analitico/eventos_vistoria`, em Parquet | Organiza por mês de ocorrência e permite reprocessamento |
+| Janelas mensais | Vistorias da origem, pela marca d'água | `warehouse/eventos_vistoria`, a mesma fonte do CDC | Reconcilia o mês de ocorrência com a origem pelo mesmo merge do CDC; registra reaberturas ([dado atrasado](dado-atrasado.md)) |
+| Transformação (E3) | `warehouse/eventos_vistoria`, numa versão | `fonte.eventos_vistoria` e schema `gold`, no PostgreSQL | Copia e confere a fonte com a origem na transação da Gold; recusa evento que a origem não tem |
 
 Os caminhos são relativos ao diretório de dados, montado como `/dados` nos
 contêineres. As [limitações da ingestão](adr/0004-ingestao.md) fazem parte da
-arquitetura: não há commit conjunto entre PostgreSQL e arquivos nem unificação
-automática dos destinos analíticos.
+arquitetura: não há commit conjunto entre PostgreSQL e arquivos. A Gold enxerga o
+que já chegou à fonte canônica; o que ainda está só na origem aparece como
+pendente no [frescor](frescor-e-sla.md).
