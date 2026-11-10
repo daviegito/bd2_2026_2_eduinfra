@@ -1380,6 +1380,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#revisao-da-validacao-de-datas-issue-57" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão da validação de datas — issue #57
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gatilho-de-revisao" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1703,6 +1714,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#revisao-da-validacao-de-datas-issue-57" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão da validação de datas — issue #57
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gatilho-de-revisao" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1893,12 +1915,27 @@
 <p><strong>O que perdemos:</strong></p>
 <ul>
 <li>Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar <code>auditar-cdc</code>, porque além dela só o log avisa.</li>
-<li>Não há reprocessamento automático. <code>publicar-analitico --forcar</code> relê a origem inteira, aceita <code>-infinity</code> e cria uma partição com esse nome.</li>
+<li>Não há reprocessamento automático. Após a #57, <code>publicar-analitico --forcar</code> rejeita datas inválidas no histórico antes de escrever no Delta; a recuperação da fila continua pendente na #58.</li>
 <li><code>contrato_cdc.py</code> precisa mudar junto com toda migração de <code>vistoria</code> ou <code>vistoria_item</code>. Se o autor esquecer, a auditoria acusa desvio.</li>
 <li>Um desvio do insert-only fica como violação para sempre, porque a auditoria não o marca como tratado.</li>
 </ul>
-<p><strong>Riscos assumidos:</strong> a validação da origem continua aberta. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.</p>
+<p><strong>Riscos assumidos:</strong> a validação de datas foi tratada pela #57, conforme a revisão abaixo; outros erros de origem ainda podem chegar à fila. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.</p>
 <p><strong>O que se torna irreversível:</strong> avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre <code>eventos_vistoria</code>.</p>
+<h2 id="revisao-da-validacao-de-datas-issue-57">Revisão da validação de datas — issue #57<a class="headerlink" href="#revisao-da-validacao-de-datas-issue-57" title="Permanent link">&para;</a></h2>
+<p>A migração 0009 limita <code>ocorrido_em</code> a valores finitos nos anos 1 a 9999 em UTC:
+<code>[0001-01-01 00:00:00+00, 10000-01-01 00:00:00+00)</code>. O motivo é a
+representação de datas pelo Python, não o ano do Censo Escolar ou do ENEM.
+O check anterior de evento anterior ou igual ao registro continua vigente.</p>
+<p>O histórico é verificado sob bloqueio antes da criação do check. Se houver
+violações, a migração aborta com diagnóstico (quantidade e até dez IDs/datas),
+sem <code>UPDATE</code>, remoção ou correção automática. Isso exige uma decisão explícita
+sobre o histórico antes de migrar uma origem legada inválida.</p>
+<p>A publicação completa valida todas as vistorias e exporta no mesmo snapshot,
+com leitura em UTC. Ao encontrar data inválida, falha antes de gravar no Delta;
+a versão e os arquivos existentes permanecem intactos. Os testes da fila ainda
+simulam datas legadas em bancos descartáveis, removendo explicitamente apenas
+o novo check nesses cenários. Isso não implementa a recuperação da fila da #58.</p>
+<p><a href="../../evidencias/issue-57/validacao-datas/">Evidências e checklist da #57</a>.</p>
 <h2 id="gatilho-de-revisao">Gatilho de revisão<a class="headerlink" href="#gatilho-de-revisao" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Rever a fila se ela receber mais de <strong>0,1% dos itens em um mês</strong>: aí o problema é a validação da origem.</li>
@@ -1940,6 +1977,7 @@
 </tr>
 </tbody>
 </table>
+<p>| 1.2 | Validação das datas na origem e na publicação completa (#57) | <a href="https://github.com/Pedrovargas10">Pedro Vargas</a> | Pendente de PR | 8 de novembro de 2026 |</p>
 
 
 

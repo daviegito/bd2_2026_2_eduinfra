@@ -2327,11 +2327,20 @@ depende de <code>vistoria_item.quantidade</code>, então <code>ALTER COLUMN ... 
 antes.</p>
 <h2 id="limites">Limites<a class="headerlink" href="#limites" title="Permanent link">&para;</a></h2>
 <ul>
-<li>A origem aceita <code>-infinity</code> e datas antes de Cristo, porque o check só exige
-  <code>ocorrido_em &lt;= registrado_em</code>. A fila contém o dano, mas a validação na origem continua
-  aberta.</li>
-<li>Não há reprocessamento automático da fila. <code>publicar-analitico --forcar</code> relê a origem,
-  mas aceita essas datas e cria partições como <code>-infinity</code>.</li>
+<li>A migração 0009 exige <code>ocorrido_em</code> finito entre <code>0001-01-01 00:00:00+00</code>
+  (inclusive) e <code>10000-01-01 00:00:00+00</code> (exclusive), mantendo
+  <code>ocorrido_em &lt;= registrado_em</code>. É o intervalo técnico dos anos 1 a 9999 do Python
+  em UTC, sem recorte de negócio em 2007 ou 2024. Antes de criar o check, a migração
+  verifica o histórico e aborta com quantidade, IDs e datas de até dez exemplos se
+  houver violações; não corrige nem remove linhas insert-only.</li>
+<li>Não há reprocessamento automático da fila. <code>publicar-analitico --forcar</code> valida
+  toda a origem no mesmo snapshot usado pela exportação, inclusive vistorias sem
+  itens. Em uma origem legada com datas inválidas, aborta antes da escrita e preserva
+  o Delta existente, sem criar partições inválidas. A recuperação da fila permanece
+  no escopo da <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/issues/58">issue #58</a>.
+  Os cenários históricos de falha acima continuam reproduzíveis apenas simulando uma
+  origem sem o check em banco descartável. Veja as
+  <a href="../evidencias/issue-57/validacao-datas/">evidências da #57</a>.</li>
 <li>Um desvio do insert-only segue como violação para sempre, porque a auditoria não tem como
   marcá-lo como tratado.</li>
 <li>A taxa de entrega sob carga sustentada e o crescimento de arquivos ao longo de meses não
