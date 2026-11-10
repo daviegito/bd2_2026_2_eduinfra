@@ -1,0 +1,219 @@
+### banco parado antes de materializar migrar [2026-11-09 22:56:20]
+docker stop eduinfra_orq74
+C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\click\core.py:910: SupersessionWarning: Function `asset_materialize_command` is superseded and its usage is discouraged. Use 'dg launch --assets <selection>' instead.
+  return callback(*args, **kwargs)
+
+  Telemetry:
+
+  As an open-source project, we collect usage statistics to inform development priorities. For more
+  information, read https://docs.dagster.io/about/telemetry.
+
+  We will not see or store any data that is processed by your code.
+
+  To opt-out, add the following to $DAGSTER_HOME/dagster.yaml, creating that file if necessary:
+
+    telemetry:
+      enabled: false
+
+
+  Welcome to Dagster!
+
+  If you have any questions or would like to engage with the Dagster team, please join us on Slack
+  (https://bit.ly/39dvSsF).
+
+2026-11-09 22:56:32 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - RUN_START - Started execution of run for "__ASSET_JOB".
+2026-11-09 22:56:32 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - ENGINE_EVENT - Executing steps using multiprocess executor: parent process (pid: 29232)
+2026-11-09 22:56:32 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - migrar - STEP_WORKER_STARTING - Launching subprocess for "migrar".
+2026-11-09 22:56:37 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - migrar - STEP_WORKER_STARTED - Executing step "migrar" in subprocess.
+2026-11-09 22:56:37 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - migrar - RESOURCE_INIT_STARTED - Starting initialization of resources [io_manager].
+2026-11-09 22:56:37 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - migrar - RESOURCE_INIT_SUCCESS - Finished initialization of resources [io_manager].
+2026-11-09 22:56:39 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - LOGS_CAPTURED - Capturing logs for process (pid: 13068).
+2026-11-09 22:56:39 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - migrar - STEP_START - Started execution of step "migrar".
+### banco religado [2026-11-09 22:56:46]
+Traceback (most recent call last):
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1290, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 307, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+    self.__connect()
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\psycopg\connection.py", line 126, in connect
+    raise last_ex.with_traceback(None)
+psycopg.OperationalError: connection failed: connection to server at "127.0.0.1", port 55441 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\artur\AppData\Local\Temp\w74\src\eduinfra\cli.py", line 271, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\src\eduinfra\cli.py", line 175, in main
+    command.upgrade(_alembic(configuracao), opcoes.revisao)
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\alembic\command.py", line 487, in upgrade
+    script.run_env()
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\alembic\script\base.py", line 550, in run_env
+    util.load_python_file(self.dir, "env.py")
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\alembic\util\pyfiles.py", line 114, in load_python_file
+    module = load_module_py(module_id, path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\alembic\util\pyfiles.py", line 132, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\artur\AppData\Local\Temp\w74\alembic\env.py", line 57, in <module>
+    migrar_com_conexao()
+  File "C:\Users\artur\AppData\Local\Temp\w74\alembic\env.py", line 47, in migrar_com_conexao
+    with conectavel.connect() as conexao:
+         ^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 146, in __init__
+    Connection._handle_dbapi_exception_noconnection(
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 2450, in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 1290, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 712, in checkout
+    rec = pool._do_get()
+          ^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\impl.py", line 307, in _do_get
+    return self._create_connection()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 674, in __init__
+    self.__connect()
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 900, in __connect
+    with util.safe_reraise():
+         ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\util\langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\pool\base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\sqlalchemy\engine\default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\psycopg\connection.py", line 126, in connect
+    raise last_ex.with_traceback(None)
+sqlalchemy.exc.OperationalError: (psycopg.OperationalError) connection failed: connection to server at "127.0.0.1", port 55441 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-11-09 22:56:46 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 13068 - migrar - STEP_UP_FOR_RETRY - Execution of step "migrar" failed and has requested a retry in 30 seconds.
+
+dagster._core.execution.plan.utils.RetryRequestedFromPolicy
+
+Stack Trace:
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\execute_plan.py", line 243, in dagster_event_sequence_for_step
+    yield from check.generator(step_events)
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\execute_step.py", line 505, in core_dagster_event_sequence_for_step
+    for user_event in _step_output_error_checked_user_event_sequence(
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\execute_step.py", line 184, in _step_output_error_checked_user_event_sequence
+    for user_event in user_event_sequence:
+                      ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\execute_step.py", line 88, in _process_asset_results_to_events
+    for user_event in user_event_sequence:
+                      ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\compute.py", line 188, in execute_core_compute
+    for step_output in _yield_compute_results(step_context, inputs, compute_fn, compute_context):
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\compute.py", line 157, in _yield_compute_results
+    for event in iterate_with_context(
+                 ^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_utils\__init__.py", line 392, in iterate_with_context
+    with context_fn():
+         ^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Programs\Python\Python312\Lib\contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\utils.py", line 75, in op_execution_error_boundary
+    raise RetryRequestedFromPolicy(
+
+The above exception was caused by the following exception:
+dagster._core.definitions.events.Failure: eduinfra migrar saiu com código 1
+
+Stack Trace:
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\utils.py", line 57, in op_execution_error_boundary
+    yield
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_utils\__init__.py", line 394, in iterate_with_context
+    next_output = next(iterator)
+                  ^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\compute_generator.py", line 136, in _coerce_op_compute_fn_to_iterator
+    result = invoke_compute_fn(
+             ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\dagster\_core\execution\plan\compute_generator.py", line 116, in invoke_compute_fn
+    return fn(context, **args_to_pass) if context_arg_provided else fn(**args_to_pass)
+                                                                    ^^^^^^^^^^^^^^^^^^
+  File "C:\Users\artur\AppData\Local\Temp\w74\src\eduinfra\orquestrador.py", line 40, in migrar
+    rodar("migrar")
+  File "C:\Users\artur\AppData\Local\Temp\w74\src\eduinfra\orquestrador.py", line 35, in rodar
+    _executar([sys.executable, "-m", "eduinfra.cli", *argumentos], f"eduinfra {' '.join(argumentos)}")
+  File "C:\Users\artur\AppData\Local\Temp\w74\src\eduinfra\orquestrador.py", line 31, in _executar
+    raise Failure(f"{descricao} saiu com código {resultado.returncode}")
+
+2026-11-09 22:57:16 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - migrar - STEP_WORKER_STARTING - Launching subprocess for "migrar".
+2026-11-09 22:57:18 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - STEP_WORKER_STARTED - Executing step "migrar" in subprocess.
+2026-11-09 22:57:18 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - RESOURCE_INIT_STARTED - Starting initialization of resources [io_manager].
+2026-11-09 22:57:18 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - RESOURCE_INIT_SUCCESS - Finished initialization of resources [io_manager].
+2026-11-09 22:57:19 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - LOGS_CAPTURED - Capturing logs for process (pid: 27096).
+2026-11-09 22:57:19 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - STEP_RESTARTED - Started re-execution (attempt # 2) of step "migrar".
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+2026-11-09 22:57:21 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - STEP_OUTPUT - Yielded output "result" of type "Nothing". (Type check passed).
+2026-11-09 22:57:21 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - ASSET_MATERIALIZATION - Materialized value migrar.
+2026-11-09 22:57:21 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 27096 - migrar - STEP_SUCCESS - Finished execution of step "migrar" in 2.1s.
+2026-11-09 22:57:21 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - ENGINE_EVENT - Multiprocess executor: parent process exiting after 49.14s (pid: 29232)
+2026-11-09 22:57:22 -0300 - dagster - DEBUG - __ASSET_JOB - 7525e08f-bcea-47d3-a774-62654a0894ba - 29232 - RUN_SUCCESS - Finished execution of run for "__ASSET_JOB".
+### saída do dagster: 0 [2026-11-09 22:57:22]

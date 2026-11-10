@@ -65,6 +65,7 @@ nav:
       - Como executar e demonstrar: execucao.md
       - Transformação declarativa: transformacao.md
       - Testes: testes.md
+      - Orquestração: orquestracao.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
       - ENEM e junção com o Censo: enem.md
