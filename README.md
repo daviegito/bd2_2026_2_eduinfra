@@ -24,7 +24,6 @@ O fluxo separa a origem transacional, as camadas de dados e os componentes de co
 flowchart LR
     INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
     IBGE["API do IBGE"]
-    APP["Aplicativo<br/>de vistorias"]
 
     BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
     LOTE["Ingestão em lote<br/>Validação e padronização"]
@@ -33,6 +32,7 @@ flowchart LR
     OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
     CDC["CDC<br/>Captura pelo WAL"]
     DUCK["DuckDB<br/>Consulta e processamento"]
+    DBT["dbt<br/>Transformação em camadas"]
     GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
 
     EMB["Geração de<br/>embeddings"]
@@ -46,12 +46,12 @@ flowchart LR
     BRONZE --> LOTE
     LOTE --> SILVER
 
-    APP --> OLTP
     OLTP --> CDC
     CDC --> SILVER
 
     SILVER --> DUCK
-    DUCK -->|transformação| GOLD
+    SILVER --> DBT
+    DBT -->|transformação| GOLD
     SILVER -->|conteúdo selecionado| EMB
     EMB --> VET
 
@@ -61,7 +61,7 @@ flowchart LR
     AGENTE --> USER
 ```
 
-Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. Na E3, o ENEM 2024 passou a ser ingerido na Silver, agregado por escola. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
+Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. Na E3, o ENEM 2024 passou a ser ingerido na Silver, agregado por escola, e a Gold é construída pelo dbt ([transformação declarativa](docs/transformacao.md)). A integração das demais fontes, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
 
 | Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |

@@ -10,13 +10,13 @@ mostra a arquitetura geral proposta, incluindo integrações e componentes futur
 flowchart LR
     INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
     IBGE["API do IBGE"]
-    APP["Aplicativo<br/>de vistorias"]
     BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
     LOTE["Ingestão em lote<br/>Validação e padronização"]
     SILVER["Silver e destinos analíticos<br/>Dados tratados<br/>Parquet / Delta"]
     OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
     CDC["CDC<br/>Captura pelo WAL"]
     DUCK["DuckDB<br/>Consulta e processamento"]
+    DBT["dbt<br/>Transformação em camadas"]
     GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
     EMB["Geração de<br/>embeddings"]
     VET[("Banco vetorial<br/>pgvector")]
@@ -28,11 +28,11 @@ flowchart LR
     BRONZE --> LOTE
     LOTE --> SILVER
     LOTE -->|carga da origem| OLTP
-    APP --> OLTP
     OLTP --> CDC
     CDC --> SILVER
     SILVER --> DUCK
-    DUCK -.->|transformação| GOLD
+    SILVER --> DBT
+    DBT -->|transformação| GOLD
     SILVER -.->|conteúdo selecionado| EMB
     EMB -.-> VET
     GOLD -.-> AGENTE
@@ -46,8 +46,8 @@ flowchart LR
 *Deslize o diagrama horizontalmente para ver o fluxo completo.*
 
 As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, o Censo
-está integrado desde a E1 e o ENEM 2024 desde a E3 ([ENEM](enem.md)). O aplicativo representa o produtor previsto das
-vistorias; a origem PostgreSQL já pode receber esses registros.
+está integrado desde a E1 e o ENEM 2024 desde a E3 ([ENEM](enem.md)). A Gold é construída pelo dbt
+([transformação declarativa](transformacao.md)).
 
 | Componente | Responsabilidade | Tecnologia ou formato |
 | --- | --- | --- |
@@ -57,7 +57,7 @@ vistorias; a origem PostgreSQL já pode receber esses registros.
 | CDC | Capturar inserções pelo log do banco e confirmar a leitura após gravar no destino | WAL, slot lógico e consumidor Python |
 | Silver e destinos analíticos | Armazenar dados tratados para análise | Parquet com zstd e tabelas Delta |
 | Consulta e processamento | Executar SQL sobre os dados analíticos | DuckDB |
-| Gold — prevista | Disponibilizar dados modelados e indicadores | PostgreSQL |
+| Gold | Disponibilizar dados modelados e indicadores | PostgreSQL, construída pelo dbt |
 | Banco vetorial — previsto | Armazenar embeddings para busca por similaridade | pgvector |
 | Cache — previsto | Reutilizar resultados conforme regras de validade | Redis |
 
@@ -77,10 +77,10 @@ Os detalhes estão em [camada analítica](camada-analitica.md),
 [CDC](cdc-e-semantica-de-entrega.md) e [ADR 0004](adr/0004-ingestao.md).
 
 Na arquitetura prevista, o assistente usará ferramentas MCP para consultar a
-Gold por SQL e buscar conteúdos semelhantes no pgvector. Gold, geração de
+Gold por SQL e buscar conteúdos semelhantes no pgvector. Geração de
 embeddings, cache e assistente ainda não estão implementados.
 
-## Caminhos implementados na E2
+## Caminhos implementados na E2 e na E3
 
 | Caminho | Entrada | Destino | Garantia e limite |
 | --- | --- | --- | --- |

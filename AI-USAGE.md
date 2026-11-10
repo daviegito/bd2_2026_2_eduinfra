@@ -548,3 +548,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   exige política de execução única, e foi feito com uma execução por mês. O pipeline completo, com o
   dbt sobre o Censo, não foi executado nesta etapa
 - **Quem revisou:** pendente, no PR #74
+
+### 2026-11-09 — Contradições da documentação da E3 e teste do construir-gold
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório)
+- **Onde:** os diagramas do `README.md` e de `docs/arquitetura.md`, `docs/index.md`,
+  `docs/projeto.md`, `docs/frescor-e-sla.md`, `src/eduinfra/cli.py` e `tests/test_frescor.py`
+- **O que foi pedido:** procurar o que a documentação dizia em contradição com o que está na main
+  e com o plano da disciplina, e corrigir só o que fosse comprovável. O monitor tinha pedido para
+  tirar o aplicativo dos diagramas
+- **O que foi aproveitado:** a remoção do aplicativo dos dois diagramas; o dbt no lugar do DuckDB
+  como quem transforma a Gold; a Gold e a E3 deixando de aparecer como previstas; o aviso de que
+  `construir-gold` apaga o fato de desempenho do dbt; e a auditoria do `construir-gold` numa
+  função, para o teste de unidade não tentar abrir um banco falso
+- **Como foi verificado:** cada mudança foi conferida contra a main (#55, #63, #69, #72) e o ADR
+  0005. O teste de frescor falhava na main com o comando de `docs/testes.md` e passou depois da
+  mudança, com um teste novo para a auditoria que falha. O status dos ADRs 0005 e 0008 não foi
+  mudado, porque bate com os próprios arquivos
+- **Quem revisou:** pendente (PR)
