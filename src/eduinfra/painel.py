@@ -31,7 +31,7 @@ def gerar_painel():
     conexao.execute(f"ATTACH '{config.dsn}' AS pg (TYPE POSTGRES);")
 
     # 1. Base da Infraestrutura (Usando a Fato direta)
-    conexao.execute("CREATE VIEW infra AS SELECT * FROM pg.gold.fato_infra_escola_ano;")
+    conexao.execute("CREATE VIEW infra AS SELECT * FROM pg.gold.dim_escola_infraestrutura;")
     conexao.execute("CREATE VIEW escola AS SELECT * FROM pg.gold.dim_escola;")
 
     colunas_infra = [row[0] for row in conexao.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'infra'").fetchall()]
@@ -45,24 +45,23 @@ def gerar_painel():
 
     # 2. Prepara a Tabela do ENEM
     tabelas_gold = [row[0] for row in conexao.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'").fetchall()]
-    tem_enem = "fato_enem" in tabelas_gold
+    tem_enem = "fato_desempenho_escola_ano" in tabelas_gold
 
     if not tem_enem:
-        # Aborta a execução em vez de gerar dados falsos (Ponto Crítico do Review)
-        print("⚠️ Tabela gold.fato_enem não detectada. Execução abortada para evitar publicação de dados falsos em produção.")
-        return
+        print("⚠️ Tabela gold.fato_desempenho_escola_ano não detectada. Execução abortada.")
+        import sys
+        sys.exit(1) # Propaga o erro (código 1) para a CLI reprovar o CI
 
-    conexao.execute("CREATE VIEW enem AS SELECT * FROM pg.gold.fato_enem;")
-    alerta_dados = ""
+    conexao.execute("CREATE VIEW enem AS SELECT * FROM pg.gold.fato_desempenho_escola_ano;")
 
     # 3. Métricas Principais (Agrupando pela chave substituta temporal)
     cobertura = conexao.execute("""
         SELECT
-            COUNT(DISTINCT e.escola_infra_sk) AS total_enem,
-            (SELECT COUNT(DISTINCT escola_infra_sk) FROM infra) AS total_censo,
-            COUNT(DISTINCT CASE WHEN i.escola_infra_sk IS NOT NULL THEN e.escola_infra_sk END) AS juncao_sucesso
+            COUNT(DISTINCT e.co_entidade) AS total_enem,
+            (SELECT COUNT(DISTINCT co_entidade) FROM infra) AS total_censo,
+            COUNT(DISTINCT CASE WHEN i.co_entidade IS NOT NULL THEN e.co_entidade END) AS juncao_sucesso
         FROM enem e
-        LEFT JOIN infra i ON e.escola_infra_sk = i.escola_infra_sk
+        LEFT JOIN infra i ON e.co_entidade = i.co_entidade
     """).fetchone()
 
     total_enem, total_censo, juncao_sucesso = cobertura
@@ -84,7 +83,7 @@ def gerar_painel():
             END AS rede,
             COUNT(DISTINCT inf.co_entidade) AS qtd_escolas
         FROM enem en
-        JOIN infra inf ON en.escola_infra_sk = inf.escola_infra_sk
+        JOIN infra inf ON en.co_entidade = inf.co_entidade
         JOIN escola e ON inf.co_entidade = e.co_entidade
         GROUP BY 1
         ORDER BY qtd_escolas DESC
@@ -119,14 +118,14 @@ def gerar_painel():
                     WHEN CAST(inf.{item_col} AS DOUBLE) > 0 THEN 'Possui o item'
                     ELSE 'Não possui'
                 END AS infra_status,
-                COUNT(en.escola_infra_sk) AS amostra_n,
-                ROUND(AVG(en.nota_media), 1) AS media_enem,
-                ROUND(STDDEV(en.nota_media), 1) AS desvio_padrao
+                COUNT(en.co_entidade) AS amostra_n,
+                ROUND(AVG(en.media_geral), 1) AS media_enem,
+                ROUND(STDDEV(en.media_geral), 1) AS desvio_padrao
             FROM enem en
-            JOIN infra inf ON en.escola_infra_sk = inf.escola_infra_sk
+            JOIN infra inf ON en.co_entidade = inf.co_entidade
             JOIN escola e ON inf.co_entidade = e.co_entidade
             GROUP BY 1, 2
-            HAVING COUNT(en.escola_infra_sk) >= 10
+            HAVING COUNT(en.co_entidade) >= 10
             ORDER BY rede, infra_status
         """).df()
 

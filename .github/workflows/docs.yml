@@ -119,10 +119,13 @@ jobs:
           # 5. Garante a existência do município 11 com todos os campos NOT NULL para que a view não quebre
           docker compose exec -T banco psql -U eduinfra -d eduinfra -c "INSERT INTO public.municipio (co_municipio, no_municipio, sg_uf, co_uf) VALUES (11, 'Município Fictício', 'RO', 11) ON CONFLICT DO NOTHING;" || true
 
-          # 6. Publica a amostra do OLTP para a fonte canônica analítica (Delta)
+          # 6. Executa a ingestão real/mockada do ENEM
+          docker compose run --rm carga ingerir-enem
+
+          # 7. Publica a amostra do OLTP para a fonte canônica analítica (Delta)
           docker compose run --rm carga publicar-analitico
 
-          # 7. Constrói a Gold, roda testes de auditoria E3 e gera o painel HTML
+          # 8. Constrói a Gold, roda testes de auditoria E3 e gera o painel HTML
           docker compose run --rm carga construir-gold
           docker compose run --rm -v ./docs:/app/docs carga gerar-painel
 

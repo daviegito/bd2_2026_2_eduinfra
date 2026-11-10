@@ -32,13 +32,15 @@ class TestE3Gold(unittest.TestCase):
 
     # 2. VOLUME (Dinâmico contra a origem)
     def test_02_volume(self):
-        total_gold = self.auditor.query_count("SELECT COUNT(*) FROM gold.fato_vistoria_item")
-        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM public.vistoria_item")
+        total_gold = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
+
+        # Consulta diretamente o schema 'public' do PostgreSQL anexado via DuckDB
+        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM pg.public.vistoria_item")
 
         self.assertEqual(
             total_gold,
             total_origem,
-            f"Volume inesperado: A Gold tem {total_gold} linhas, mas a Origem tem {total_origem}."
+            f"Falha de volume: A Gold tem {total_gold} linhas, mas a origem possui {total_origem}."
         )
 
     # 3. UNICIDADE (Grão da fato ajustado)
