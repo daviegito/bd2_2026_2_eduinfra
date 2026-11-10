@@ -1,0 +1,17 @@
+name: eduinfra_gold
+version: '1.0'
+config-version: 2
+profile: eduinfra
+model-paths: [models]
+test-paths: [tests]
+models:
+  eduinfra_gold:
+    +persist_docs: {relation: true, columns: true}
+    +post-hook: "analyze {{ this }}"
+    staging:
+      +materialized: view
+      +post-hook: []
+    intermediate:
+      +materialized: table
+    marts:
+      +materialized: table

@@ -35,6 +35,27 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   falha de janelas, reproduzida também sem o patch da #60 e registrada nas evidências.
 - **Quem revisou:** revisão humana pendente; Pedro Vargas aprovou o escopo.
 
+### 2026-11-08 — Transformações declarativas da Gold (issue #48)
+
+- **Ferramenta:** Codex
+- **Onde:** projeto `transformacao/`, ponte de fontes, testes, Compose,
+  dependências e documentação da transformação.
+- **O que foi pedido:** implementar a issue #48 seguindo seu checklist e os
+  critérios de aceite, reaproveitando o protótipo dbt da PR #64.
+- **O que foi aproveitado:** separação staging/intermediate/marts, snapshot das
+  entradas Silver/Delta/Parquet em PostgreSQL, consumidor opcional do contrato
+  ENEM, execução dbt com testes e docs e comparação reproduzível com SQL direto.
+- **Como foi verificado:** execução dos testes de integração num PostgreSQL
+  separado, incluindo igualdade das seis tabelas com a opção nula, reexecução,
+  SCD2, rejeição de duplicatas, atomicidade das entradas e contrato de ENEM com
+  fixture sintética. Medições reais e condições ficam em
+  `docs/evidencias/issue-48/comparacao.md`. A matriz em `docs/transformacao.md`
+  distingue essas evidências das integrações reais pendentes das issues #44/#45.
+  O teste nacional também confirmou a invalidação do slot da #60; foi acrescentado
+  preflight que recusa cluster com slot lógico e registra a pendência de aceite.
+- **Quem revisou:** revisão humana do código ainda pendente; Pedro Vargas
+  autorizou o escopo e os arquivos antes da implementação.
+
 ### 2026-08-25 — Geração da proposta de domínio (ENEM × Infraestrutura Escolar)
 
 - **Ferramenta:** Claude (assistente conversacional)
@@ -338,14 +359,15 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   As correções de `docs/consulta-otimizada.md` pedidas na revisão do Lucas foram redigidas com a IA,
   com cada número e cada explicação de termo conferidos nos planos de `docs/explain/` e no código de
   `comparar-consulta`. Os conflitos ao trazer a branch do #59 (2 de novembro, no `cli.py`) e a main
-  (9 de novembro, no `cli.py` e neste arquivo) foram resolvidos com a IA, mantendo os comandos dos
-  dois lados. Na primeira vez, 206 de 208 testes passaram numa cópia com o Censo 2024, e as duas
+  (9 de novembro, no `cli.py` e neste arquivo, e de novo depois do #67, no histórico do ADR 0007)
+  foram resolvidos com a IA, mantendo o que os dois lados acrescentaram. Na primeira vez, 206 de 208 testes passaram numa cópia com o Censo 2024, e as duas
   falhas já existiam antes (o limite de 0,2 s de `test_transacao_longa_inverte...` e o prazo do
   Hypothesis em `test_transformacao_property`). Na segunda, a main e a branch rodaram cada uma num
   clone do mesmo banco com o Censo 2024: 244 testes passaram na main e 256 na branch, os mesmos 244
   mais os 12 da consulta, com os mesmos 5 pulados por falta da Gold. Com a Gold construída pelo código
   novo, que lê a fonte de eventos do ADR 0008, `comparar-consulta` devolveu as mesmas linhas na view e
-  na Gold, e o passo de publicar essa fonte entrou na reprodução
+  na Gold, e o passo de publicar essa fonte entrou na reprodução. Depois do #67, os 12 testes da
+  consulta passaram sobre a migração 0009 e a suíte sem banco passou com 165 testes
 - **Quem revisou:** Lucas, no PR #61
 
 ### 2026-11-02 — Frescor e SLA da Gold (issue #52)
@@ -387,6 +409,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
 
+
+### 2026-11-08 — Validação de datas de vistoria (issue #57)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** migração 0008, leitura da origem em `eventos.py`, testes de datas e
+  de resiliência, métricas do CDC, ADR 0007 e evidências da issue #57.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite, com aprovação
+  prévia dos oito arquivos e das regras de datas.
+- **O que foi aproveitado:** validação técnica de datas finitas nos anos 1 a 9999
+  em UTC, sem corte arbitrário por ano do Censo; diagnóstico do legado sem alterar
+  o histórico e rejeição da publicação completa antes de escrever no Delta.
+- **Como foi verificado:** testes de integração em PostgreSQL descartável, migração
+  sobre cópia populada e comparação integral do histórico; resultados registrados
+  em `docs/evidencias/issue-57/validacao-datas.md`.
+- **Quem revisou:** Pedro aprovou o escopo e as regras; revisão do código pendente.
 ### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
@@ -462,3 +499,34 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   sem item pendentes nas janelas e fonte `UNLOGGED` (1.348 MB → 940 MB de WAL por
   construção, medido no Docker), com testes de integração que falham no código
   anterior
+
+### 2026-11-09 — Integração final da validação de datas (issue #57)
+
+- **Ferramenta:** Codex, como assistente de integração e validação.
+- **Onde:** migração renumerada para 0009 após o manifesto ENEM 0008,
+  `eventos.py`, testes de datas/resiliência e documentação da #57.
+- **O que foi pedido:** concluir as pendências do PR #67 preservando a fonte
+  canônica, com aprovação explícita dos arquivos e de Hypothesis isolado.
+- **O que foi aproveitado:** validação e exportação no mesmo snapshot UTC,
+  mantendo o filtro e o esquema dos eventos integrados na main.
+- **Como foi verificado:** resultados da suíte integrada, frescor com Gold
+  e propriedades registrados nas evidências da issue #57.
+- **Quem revisou:** escopo aprovado por Pedro; revisão do código pendente.
+
+### 2026-11-09 — Integração final das transformações (issue #48)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** ponte de fontes, runner e comparação dbt/SQL, fato ENEM e contratos,
+  testes da #48, Compose, configuração de referência e documentação.
+- **O que foi pedido:** concluir o checklist e o aceite após a entrada das #44/#45,
+  preservando os PRs integrados e as alterações locais; os 18 arquivos e a referência
+  temporal foram apresentados e aprovados antes desta etapa. A nota final de
+  `docs/enem.md` teve aprovação adicional antes de ser atualizada.
+- **O que foi aproveitado:** contrato real de desempenho_escola.parquet, referência
+  analítica explícita em 03/11/2024, entrada preservando escolas não encontradas e
+  fato somente com correspondência no Censo, preparo UNLOGGED e uso da fonte canônica.
+- **Como foi verificado:** testes em bancos descartáveis, igualdade exata das seis
+  tabelas de infraestrutura, benchmark com preparo incluído nos dois caminhos,
+  execução em exportação sem ambiente/dados locais, grafo dbt e monitoramento do CDC.
+  Resultados e limites em `docs/evidencias/issue-48/comparacao.md`.
+- **Quem revisou:** Pedro aprovou o escopo e a referência; revisão do código pendente.
