@@ -21,47 +21,55 @@ class TestE3Gold(unittest.TestCase):
         cls.config = carregar_configuracao()
         cls.auditor = GoldAuditor(cls.config)
 
-    # 1. ESQUEMA
+# 1. ESQUEMA
     def test_01_esquema(self):
-        colunas = [row[0] for row in self.auditor.conexao.execute("DESCRIBE fato_vistoria_item").fetchall()]
-        esperadas = {"ano_censo", "sg_uf", "co_entidade", "item_codigo", "situacao"}
+        colunas = [row[0] for row in self.auditor.query_rows(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'gold' AND table_name = 'fato_vistoria_item'"
+        )]
+        esperadas = {"vistoria_id", "co_entidade", "item_codigo", "situacao"}
         for col in esperadas:
             self.assertIn(col, colunas, f"Coluna {col} ausente na Gold!")
 
-    # 2. VOLUME (Próximo aos 3.08M itens)
+    # 2. VOLUME (Dinâmico contra a origem)
     def test_02_volume(self):
-        total = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
-        self.assertTrue(3_000_000 <= total <= 3_200_000, f"Volume inesperado na fato: {total} registros")
+        total_gold = self.auditor.query_count("SELECT COUNT(*) FROM gold.fato_vistoria_item")
+        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM public.vistoria_item")
 
-    # 3. UNICIDADE (Grão da fato)
+        self.assertEqual(
+            total_gold,
+            total_origem,
+            f"Volume inesperado: A Gold tem {total_gold} linhas, mas a Origem tem {total_origem}."
+        )
+
+    # 3. UNICIDADE (Grão da fato ajustado)
     def test_03_unicidade(self):
         duplicatas = self.auditor.query_count("""
             SELECT COUNT(*) FROM (
-                SELECT ano_censo, sg_uf, co_entidade, item_codigo
-                FROM fato_vistoria_item
-                GROUP BY 1, 2, 3, 4
+                SELECT vistoria_id, item_codigo
+                FROM gold.fato_vistoria_item
+                GROUP BY 1, 2
                 HAVING COUNT(*) > 1
-            )
+            ) subquery_alias
         """)
         self.assertEqual(duplicatas, 0, f"Encontradas {duplicatas} chaves duplicadas na Gold!")
 
-    # 4. INTEGRIDADE REFERENCIAL
+    # 4. INTEGRIDADE REFERENCIAL (Sem prefixo 'pg.')
     def test_04_integridade_referencial(self):
         faltantes = self.auditor.query_count("""
             SELECT COUNT(DISTINCT g.co_entidade)
-            FROM fato_vistoria_item g
-            LEFT JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
+            FROM gold.fato_vistoria_item g
+            LEFT JOIN gold.dim_escola s ON g.co_entidade = s.co_entidade
             WHERE s.co_entidade IS NULL
         """)
         self.assertEqual(faltantes, 0, f"{faltantes} escolas na fato não existem na dimensão Gold!")
 
-   # 5. DISTRIBUIÇÃO (Erro Silencioso)
+    # 5. DISTRIBUIÇÃO (Sem prefixo 'pg.')
     def test_05_distribuicao(self):
         resultados = self.auditor.query_rows("""
             SELECT s.co_municipio,
                    CAST(SUM(CASE WHEN g.situacao = 'existente' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) as proporcao
-            FROM fato_vistoria_item g
-            JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
+            FROM gold.fato_vistoria_item g
+            JOIN gold.dim_escola s ON g.co_entidade = s.co_entidade
             GROUP BY s.co_municipio
         """)
         for mun, proporcao in resultados:
