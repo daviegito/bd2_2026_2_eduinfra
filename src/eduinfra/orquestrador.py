@@ -20,12 +20,13 @@ from dagster import (
 RETRY = RetryPolicy(max_retries=3, delay=30, backoff=Backoff.EXPONENTIAL)
 
 JANELAS_MENSAIS = MonthlyPartitionsDefinition(start_date="2024-01-01")
-TRANSFORMACAO = Path(__file__).resolve().parents[2] / "transformacao" / "scripts" / "executar.py"
+RAIZ = Path(__file__).resolve().parents[2]
+TRANSFORMACAO = RAIZ / "transformacao" / "scripts" / "executar.py"
 
 
 def _executar(comando: list[str], descricao: str) -> None:
     ambiente = {"PGCONNECT_TIMEOUT": "15", **os.environ}
-    resultado = subprocess.run(comando, env=ambiente)
+    resultado = subprocess.run(comando, env=ambiente, cwd=RAIZ)
     if resultado.returncode != 0:
         raise Failure(f"{descricao} saiu com código {resultado.returncode}")
 
@@ -63,6 +64,14 @@ def processar_janelas() -> None:
 def construir_gold() -> None:
     _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
 
+
+# Os testes de dados do #63 só rodavam dentro do construir-gold, que o pipeline não chama mais.
+# Sem retry: um teste que falha aponta defeito na Gold, e repetir não corrige.
+@asset(deps=[construir_gold])
+def testar_gold() -> None:
+    _executar([sys.executable, "-m", "unittest", "tests.test_e3_gold"], "testes de dados da Gold")
+
+
 @asset(deps=[construir_gold])
 def medir_frescor() -> None:
     rodar("medir-frescor")
@@ -80,6 +89,7 @@ ETAPAS_DO_PIPELINE = [
     publicar_linha_de_base,
     processar_janelas,
     construir_gold,
+    testar_gold,
     medir_frescor,
 ]
 

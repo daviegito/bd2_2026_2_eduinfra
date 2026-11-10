@@ -1,5 +1,6 @@
 """Grafo, retry, agenda e partições do orquestrador Dagster, sem banco."""
 
+import importlib.util
 import os
 import subprocess
 
@@ -15,6 +16,7 @@ from eduinfra.orquestrador import (
     medir_frescor,
     processar_janelas,
     reprocessar_janela,
+    testar_gold,
 )
 
 
@@ -22,7 +24,8 @@ from eduinfra.orquestrador import (
 def chamadas(monkeypatch):
     registro = []
 
-    def run_falso(comando, env):
+    def run_falso(comando, env, cwd):
+        assert cwd == orquestrador.RAIZ
         registro.append("dbt" if comando[1] == str(orquestrador.TRANSFORMACAO) else " ".join(comando[3:]))
         return subprocess.CompletedProcess(comando, 0)
 
@@ -46,10 +49,12 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
         "publicar-analitico",
         "processar-janelas",
         "dbt",
+        "tests.test_e3_gold",
         "medir-frescor",
     }
     ordem = chamadas.index
     assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("dbt") < ordem("medir-frescor")
+    assert ordem("dbt") < ordem("tests.test_e3_gold")
 
 
 def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
@@ -60,8 +65,17 @@ def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
     assert chamadas == ["dbt"]
 
 
+def test_testes_de_dados_rodam_depois_do_dbt_e_sem_retry(chamadas):
+    assert importlib.util.find_spec("tests.test_e3_gold") is not None
+    assert testar_gold.op.retry_policy is None
+
+    materialize([testar_gold])
+
+    assert chamadas == ["tests.test_e3_gold"]
+
+
 def test_gold_e_frescor_entram_na_execucao_agendada():
-    assert {construir_gold.key, medir_frescor.key} <= set(agenda.job.selection.resolve(ETAPAS_DO_PIPELINE))
+    assert {construir_gold.key, testar_gold.key, medir_frescor.key} <= set(agenda.job.selection.resolve(ETAPAS_DO_PIPELINE))
 
 
 def test_frescor_fora_do_sla_falha_sem_retry():
@@ -78,7 +92,7 @@ def test_backfill_passa_o_mes_da_particao_para_a_cli(chamadas):
 
 
 def test_comando_que_falha_vira_falha_que_o_retry_repete(monkeypatch):
-    monkeypatch.setattr(orquestrador.subprocess, "run", lambda comando, env: subprocess.CompletedProcess(comando, 1))
+    monkeypatch.setattr(orquestrador.subprocess, "run", lambda comando, env, cwd: subprocess.CompletedProcess(comando, 1))
 
     with pytest.raises(Failure) as falha:
         orquestrador.rodar("migrar")
