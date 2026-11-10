@@ -1,6 +1,14 @@
+import importlib.util
 import unittest
 from eduinfra.configuracao import carregar_configuracao
 import psycopg
+
+# A imagem executa estes cenários por unittest, sem instalar pytest em produção.
+if importlib.util.find_spec("pytest") is not None:
+    import pytest
+
+    pytestmark = pytest.mark.integracao
+
 
 class GoldAuditor:
     def __init__(self, configuracao):
