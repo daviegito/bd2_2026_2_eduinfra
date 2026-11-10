@@ -26,8 +26,8 @@ flowchart LR
 
 - **Ordem das etapas.** Cada etapa só roda depois que as anteriores terminam
   bem. Se uma falha, as seguintes não rodam.
-- **Gold.** A Gold lê a tabela de eventos das vistorias. Por isso o pipeline
-  atualiza essa tabela antes de reconstruir a Gold.
+- **Gold.** A Gold é construída pelo dbt, com o mesmo script do serviço
+  `transformacao`, que também ingere o ENEM.
 - **Frescor.** Depois da Gold, o `medir_frescor` falha se alguma vistoria
   estiver há mais de 25 horas sem aparecer nela.
 - **Retry.** Cada etapa tem até 3 novas tentativas, com espera de 30, 90 e
@@ -41,7 +41,8 @@ flowchart LR
 
 ## Como rodar
 
-O serviço `orquestrador` sobe junto com o resto do ambiente.
+O serviço `orquestrador` sobe junto com o resto do ambiente. Ele espera o CDC
+estar no ar para o dbt construir a Gold
 
 ```bash
 docker compose up --build
