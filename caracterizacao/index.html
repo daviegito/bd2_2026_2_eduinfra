@@ -1106,6 +1106,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../consulta-otimizada/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consulta otimizada
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../dado-atrasado/" class="md-nav__link">
         
   
@@ -1961,12 +1989,13 @@ aplicativo é comparativamente desprezível em volume, mas é o que exige latên
 </tbody>
 </table>
 <p>As duas primeiras usam o índice <code>vistoria_por_escola_no_tempo</code> e ficam três
-ordens de grandeza abaixo do tolerado. A agregação nacional varre
-<code>vistoria_item</code> inteira, ordena em disco e é o caso que justifica o gatilho de
+ordens de grandeza abaixo do tolerado. A agregação nacional lê quase todos os
+blocos de <code>vistoria_item</code>, ordena em disco e é o caso que justifica o gatilho de
 revisão registrado no
 <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/">ADR 0001</a>: se essa
 classe de consulta migrar para o caminho interativo do assistente, a view passa
-a materializada.</p>
+a materializada. A <a href="../consulta-otimizada/">consulta otimizada</a> mostra o plano
+dela, antes e depois de materializar esse estado na Gold.</p>
 <table>
 <thead>
 <tr>
@@ -2062,6 +2091,13 @@ cenários projetados; não representam resultados já obtidos por uma CI.</p>
 <td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
 <td></td>
 <td>28 de setembro de 2026</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Aponta a página da consulta otimizada e corrige o que a agregação nacional lê</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>1 de novembro de 2026</td>
 </tr>
 </tbody>
 </table>

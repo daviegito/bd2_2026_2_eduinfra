@@ -1,0 +1,2158 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/consulta-otimizada/">
+      
+      
+        <link rel="prev" href="../metricas-cdc/">
+      
+      
+        <link rel="next" href="../dado-atrasado/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Consulta otimizada - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#consulta-otimizada" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href=".." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Consulta otimizada
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../modelo-analitico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../enem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consulta otimizada
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consulta otimizada
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-consulta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A consulta
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-o-plano-mostrou" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que o plano mostrou
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hipoteses-testadas-na-origem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hipóteses testadas na origem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-mudou" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que mudou
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resultado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custos
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-reproduzir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como reproduzir
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidências
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historico-de-versoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Histórico de Versões
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../frescor-e-sla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frescor e SLA da Gold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0005-ferramenta-de-transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0005 — Transformação
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-consulta" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A consulta
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-o-plano-mostrou" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que o plano mostrou
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#hipoteses-testadas-na-origem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hipóteses testadas na origem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#o-que-mudou" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        O que mudou
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#resultado" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultado
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custos" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custos
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-reproduzir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como reproduzir
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidências
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#historico-de-versoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Histórico de Versões
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="consulta-otimizada">Consulta otimizada<a class="headerlink" href="#consulta-otimizada" title="Permanent link">&para;</a></h1>
+<p>Esta página mostra como uma consulta foi otimizada a partir do plano de execução, que é o caminho
+escolhido pelo PostgreSQL para rodar a consulta e aparece no <code>EXPLAIN</code>. O plano mostrou que o custo
+está em recalcular o estado atual das escolas a cada leitura, então a otimização foi ler esse
+estado já materializado na camada Gold. Os planos e as saídas estão listados em
+<a href="#evidencias">Evidências</a>.</p>
+<h2 id="a-consulta">A consulta<a class="headerlink" href="#a-consulta" title="Permanent link">&para;</a></h2>
+<p>A consulta conta quantas escolas não têm biblioteca em cada rede de ensino (federal, estadual,
+municipal e privada). Na <a href="../caracterizacao/#taxa-e-padrao-de-leitura">caracterização da carga</a>, ela
+aparece como consulta de painel e de pipeline, que precisa responder em até 5 s, e é a mais lenta
+das que foram medidas ali, com 1.890 ms. Ela cobre o lado de infraestrutura da pergunta de gestão.</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">select</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">escolas</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">from</span><span class="w"> </span><span class="n">escola_estado_atual</span><span class="w"> </span><span class="n">s</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="k">join</span><span class="w"> </span><span class="n">escola</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="p">(</span><span class="n">co_entidade</span><span class="p">)</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="k">where</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">item_codigo</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'biblioteca'</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">s</span><span class="p">.</span><span class="n">situacao</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">'inexistente'</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">;</span>
+</span></code></pre></div>
+<p><code>escola_estado_atual</code> é uma view comum sobre <code>vistoria</code> e <code>vistoria_item</code>. O <code>DISTINCT ON</code> dela
+ordena as vistorias da mais recente para a mais antiga e fica com a primeira linha de cada escola e
+item. Uma view comum não guarda resultado, então cada leitura refaz esse cálculo.</p>
+<h2 id="o-que-o-plano-mostrou">O que o plano mostrou<a class="headerlink" href="#o-que-o-plano-mostrou" title="Permanent link">&para;</a></h2>
+<p>Os dados são o Censo 2024 mais as vistorias de teste, com 3.177.929 itens, 186.937 vistorias e 181.065
+escolas. Em <a href="../explain/rodada_2/antes.txt">rodada_2/antes.txt</a>, a consulta usa 469.476 blocos (as
+páginas de 8 kB que o PostgreSQL lê do cache ou do disco), e o plano aponta três problemas.</p>
+<ol>
+<li><strong>Recálculo a cada leitura.</strong> Para achar a vistoria mais recente de cada escola, o plano lê
+   186.937 itens em 23.029 blocos de <code>vistoria_item</code>, varre <code>vistoria</code> inteira e ordena tudo em
+   disco (9.160 kB, <code>external merge</code>), porque a ordenação não coube na memória.</li>
+<li><strong>Estimativa errada.</strong> O planejador, que é a parte do PostgreSQL que escolhe o plano a partir da
+   quantidade de linhas que espera encontrar, previa 868 linhas depois do filtro de <code>situacao</code>, e
+   vieram 110.806, um erro de 127 vezes. Esses 868 são 0,5% das linhas, a seletividade padrão, que é
+   a fração fixa suposta pelo planejador quando ele não tem estatística sobre a condição. Aqui não há
+   estatística porque o filtro está acima do <code>DISTINCT ON</code> da view. Com essa estimativa ele escolheu
+   um nested loop em <code>escola</code>, que busca em <code>escola</code> uma linha para cada linha que vem da view. Isso
+   funciona bem com poucas linhas, e com 110.806 buscas custou 443.220 blocos (94% do total).</li>
+<li><strong>Disco temporário.</strong> A tabela de hash que junta <code>vistoria_item</code> a <code>vistoria</code> e a ordenação
+   passaram de <code>work_mem</code>, a memória que cada uma dessas operações pode usar antes de ir para o
+   disco, e escreveram 2.153 blocos temporários.</li>
+</ol>
+<h2 id="hipoteses-testadas-na-origem">Hipóteses testadas na origem<a class="headerlink" href="#hipoteses-testadas-na-origem" title="Permanent link">&para;</a></h2>
+<p>Antes de mudar de camada, testamos o que o plano sugeria sem sair da origem. Cada linha rodou numa
+transação desfeita, com o resultado em <a href="../explain/hipoteses.txt">hipoteses.txt</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Hipótese</th>
+<th style="text-align: right;">Blocos em cache</th>
+<th style="text-align: right;">Blocos lidos</th>
+<th style="text-align: right;">Temporários escritos</th>
+<th style="text-align: right;">Linhas no join (estimadas / reais)</th>
+<th>Decisão</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linha de base</td>
+<td style="text-align: right;">443.220</td>
+<td style="text-align: right;">26.256</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">868 / 110.806</td>
+<td></td>
+</tr>
+<tr>
+<td>Estatística estendida em <code>item_codigo</code> e <code>situacao</code></td>
+<td style="text-align: right;">443.219</td>
+<td style="text-align: right;">26.257</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">868 / 110.806</td>
+<td>Descartada: a estatística não alcança o que está acima do <code>DISTINCT ON</code></td>
+</tr>
+<tr>
+<td><code>work_mem</code> de 64 MB</td>
+<td style="text-align: right;">443.220</td>
+<td style="text-align: right;">26.256</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">868 / 110.806</td>
+<td>Descartada: tira o disco temporário e não muda o que é lido</td>
+</tr>
+<tr>
+<td><code>enable_nestloop</code> desligado</td>
+<td style="text-align: right;">90.144</td>
+<td style="text-align: right;">26.811</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">868 / 110.806</td>
+<td>Só diagnóstico: confirma o custo da estimativa, mas forçar o planejador não é solução</td>
+</tr>
+<tr>
+<td>Filtro em <code>count(*) filter (...)</code></td>
+<td style="text-align: right;">114.995</td>
+<td style="text-align: right;">28.496</td>
+<td style="text-align: right;">4.306</td>
+<td style="text-align: right;">102.096 / 90.532 por processo</td>
+<td>Descartada: acerta a estimativa e dobra o disco temporário</td>
+</tr>
+<tr>
+<td>Índice em <code>(item_codigo, situacao, vistoria_id)</code></td>
+<td style="text-align: right;">447.210</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">868 / 110.806</td>
+<td>Descartada: evita ir à tabela, mas mantém o recálculo e o nested loop</td>
+</tr>
+<tr>
+<td>Filtro e índice juntos</td>
+<td style="text-align: right;">98.895</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">4.306</td>
+<td style="text-align: right;">102.096 / 90.532 por processo</td>
+<td>Descartada: nenhum bloco lido, com o mesmo recálculo</td>
+</tr>
+</tbody>
+</table>
+<p>As medianas de tempo dessas linhas ficaram entre 615 e 1.277 ms, sem ordem clara, porque a máquina
+não estava dedicada. Nenhuma hipótese remove o problema 1, e um índice na origem ainda seria pago em
+cada vistoria gravada por uma consulta que deve sair dali.</p>
+<h2 id="o-que-mudou">O que mudou<a class="headerlink" href="#o-que-mudou" title="Permanent link">&para;</a></h2>
+<p>A caracterização já previa materializar esse estado se a consulta fosse para o caminho interativo,
+e a Gold faz isso. <code>gold.fato_infra_escola_ano</code> guarda uma linha por escola e ano, com um booleano
+por item. A leitura deixa de recalcular e o filtro passa a ser numa coluna com estatística.</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">select</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">escolas</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">from</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">fato_infra_escola_ano</span><span class="w"> </span><span class="n">f</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">join</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">dim_escola</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="p">(</span><span class="n">co_entidade</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">where</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">biblioteca</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">false</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="k">and</span><span class="w"> </span><span class="k">not</span><span class="w"> </span><span class="k">exists</span><span class="w"> </span><span class="p">(</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="k">select</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="k">from</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">fato_infra_escola_ano</span><span class="w"> </span><span class="n">posterior</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="k">where</span><span class="w"> </span><span class="n">posterior</span><span class="p">.</span><span class="n">co_entidade</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">co_entidade</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">posterior</span><span class="p">.</span><span class="n">ano</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">ano</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="p">)</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">;</span>
+</span></code></pre></div>
+<p>O <code>not exists</code> descarta a linha de uma escola quando existe outra de ano posterior, então sobra a
+mais recente de cada escola e a resposta é a mesma da view. O PostgreSQL executa isso como anti-join,
+uma junção que mantém só as linhas sem correspondência do outro lado. A primeira versão usava
+<code>DISTINCT ON</code>, e <a href="../explain/gold_com_distinct_on.txt">o plano</a> mostrou 372.961 blocos para percorrer a
+chave primária e visitar a tabela a cada linha, então a troca pelo anti-join leva o total a 7.125.</p>
+<p>O painel não precisa disso, porque o grão do projeto é 2024:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">select</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">,</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">)</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">escolas</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">from</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">fato_infra_escola_ano</span><span class="w"> </span><span class="n">f</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">join</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">dim_escola</span><span class="w"> </span><span class="n">e</span><span class="w"> </span><span class="k">using</span><span class="w"> </span><span class="p">(</span><span class="n">co_entidade</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">where</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">ano</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2024</span><span class="w"> </span><span class="k">and</span><span class="w"> </span><span class="n">f</span><span class="p">.</span><span class="n">biblioteca</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="k">false</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">group</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="k">order</span><span class="w"> </span><span class="k">by</span><span class="w"> </span><span class="n">e</span><span class="p">.</span><span class="n">tp_dependencia</span><span class="p">;</span>
+</span></code></pre></div>
+<p>Nenhum índice novo entrou. O plano do painel lê o fato inteiro em 2.496 blocos e descarta poucas
+linhas, porque 181.065 das 186.066 são de 2024 e o filtro de <code>biblioteca</code> mantém perto de 60% delas.
+Um índice nessas colunas teria pouco a delimitar.</p>
+<h2 id="resultado">Resultado<a class="headerlink" href="#resultado" title="Permanent link">&para;</a></h2>
+<p>O comando <code>comparar-consulta</code> rodou duas vezes, na mesma cópia dos dados e com as mesmas
+configurações, para ver o que se repete de uma rodada para outra. A rodada 2 é uma repetição e não
+corrige a 1. Os blocos ficaram iguais, com diferença de até 4, e os tempos mudaram.</p>
+<p>Em cada rodada, cada consulta teve duas execuções de aquecimento, descartadas, e depois 5 execuções com
+<code>TIMING OFF</code>, que tira a cronometragem de cada etapa do plano e mantém o tempo total. As execuções
+das três consultas foram alternadas entre si, para a oscilação da máquina não cair toda sobre uma
+delas. A tabela traz a mediana, com os buffers da raiz do plano, que já somam as etapas abaixo dela.</p>
+<table>
+<thead>
+<tr>
+<th>Medida</th>
+<th style="text-align: right;">Rodada 1, view</th>
+<th style="text-align: right;">Rodada 1, Gold</th>
+<th style="text-align: right;">Rodada 1, painel</th>
+<th style="text-align: right;">Rodada 2, view</th>
+<th style="text-align: right;">Rodada 2, Gold</th>
+<th style="text-align: right;">Rodada 2, painel</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tempo de execução</td>
+<td style="text-align: right;">749,1 ms</td>
+<td style="text-align: right;">142,8 ms</td>
+<td style="text-align: right;">73,3 ms</td>
+<td style="text-align: right;">840,0 ms</td>
+<td style="text-align: right;">229,4 ms</td>
+<td style="text-align: right;">102,1 ms</td>
+</tr>
+<tr>
+<td>Tempo lendo do disco</td>
+<td style="text-align: right;">61,2 ms</td>
+<td style="text-align: right;">15,4 ms</td>
+<td style="text-align: right;">0 ms</td>
+<td style="text-align: right;">72,3 ms</td>
+<td style="text-align: right;">23,7 ms</td>
+<td style="text-align: right;">0 ms</td>
+</tr>
+<tr>
+<td>Blocos em cache (<code>shared hit</code>)</td>
+<td style="text-align: right;">443.214</td>
+<td style="text-align: right;">2.515</td>
+<td style="text-align: right;">4.629</td>
+<td style="text-align: right;">443.218</td>
+<td style="text-align: right;">2.515</td>
+<td style="text-align: right;">4.629</td>
+</tr>
+<tr>
+<td>Blocos lidos (<code>shared read</code>)</td>
+<td style="text-align: right;">26.262</td>
+<td style="text-align: right;">4.610</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">26.258</td>
+<td style="text-align: right;">4.610</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>Temporários escritos (<code>temp written</code>)</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2.153</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<p>O total de blocos cai de cerca de 469 mil para 7 mil na Gold, sem disco temporário. Os blocos lidos
+da Gold aparecem porque a view, rodando entre uma execução e outra, tira o fato do <code>shared_buffers</code>,
+o cache de blocos do PostgreSQL, que tem 128 MB. No plano de diagnóstico, sem essa alternância, são
+7.125 em cache e nenhum lido.</p>
+<p>O tempo acompanhou. As execuções da view ficaram entre 522,4 e 1.296,1 ms e as da Gold entre 113,4 e
+297,4 ms, sem sobreposição. Os planos salvos vão de 947,2 para 220,6 ms na rodada 1 e de 1.167,0 para
+123,7 ms na rodada 2. A máquina rodava outros contêineres, então os tempos são indicativos e os
+buffers, que se repetem, são a medida mais estável.</p>
+<p>A estimativa também deixou de ser um problema. Nos resumos das duas rodadas, os erros de estimativa
+de 10 vezes ou mais aparecem só no plano da view.</p>
+<h2 id="custos">Custos<a class="headerlink" href="#custos" title="Permanent link">&para;</a></h2>
+<p>Os valores vêm de <a href="../explain/custo_da_gold.txt">custo_da_gold.txt</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Custo</th>
+<th>Valor</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WAL de uma execução de <code>construir-gold</code></td>
+<td>968 MB</td>
+</tr>
+<tr>
+<td>Duração de <code>construir-gold</code></td>
+<td>333,8 s nessa execução. Duas anteriores, sem arquivo, levaram 112,1 e 144,2 s</td>
+</tr>
+<tr>
+<td>Espaço da Gold</td>
+<td>908 MB, dos quais 25 MB são o fato largo e 22 MB são <code>dim_escola</code></td>
+</tr>
+<tr>
+<td>Frescor</td>
+<td>A view vê a vistoria assim que ela é confirmada, e a Gold só depois da próxima construção</td>
+</tr>
+</tbody>
+</table>
+<p>O espaço e o WAL são do modelo dimensional inteiro, que existe para mais do que esta consulta.</p>
+<h2 id="limites">Limites<a class="headerlink" href="#limites" title="Permanent link">&para;</a></h2>
+<ul>
+<li>O WAL de <code>construir-gold</code> quase alcança o limite de 1 GB de <code>max_slot_wal_keep_size</code>, e o consumidor
+  do CDC não avança o slot quando a passada não encontra transação. Por isso a medição rodou numa cópia
+  dos dados, num cluster separado sem slot, com a mesma imagem e as mesmas configurações de memória.</li>
+<li><code>biblioteca is false</code> conta também escolas com o item em obra ou inutilizável, e a view conta só
+  <code>inexistente</code>. Hoje a origem só tem <code>existente</code> e <code>inexistente</code>, então as respostas são idênticas. Se
+  surgirem as outras situações, <code>comparar-consulta</code> sai com código 1.</li>
+<li>O painel responde 11.543, 82.416 e 20.518 para as redes estadual, municipal e privada, contra
+  10.762, 79.595 e 20.430 da view. A diferença vem das 5.001 linhas de 2026, todas de vistorias de
+  teste que marcam o item como existente. A rede federal fica em 19 nas duas.</li>
+<li>Quem precisa do dado no instante da vistoria continua lendo a view, com o plano mostrado aqui.</li>
+</ul>
+<h2 id="como-reproduzir">Como reproduzir<a class="headerlink" href="#como-reproduzir" title="Permanent link">&para;</a></h2>
+<p>Os números desta página foram medidos com a Gold do commit <code>183d9e9</code>, construída por
+<code>construir-gold</code>. Para não arriscar o slot do banco principal, crie a cópia na raiz do repositório:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>-d<span class="w"> </span>--name<span class="w"> </span>eduinfra-medicao-gold<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:55999:5432<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">POSTGRES_USER</span><span class="o">=</span>eduinfra<span class="w"> </span>-e<span class="w"> </span><span class="nv">POSTGRES_DB</span><span class="o">=</span>eduinfra<span class="w"> </span>-e<span class="w"> </span><span class="nv">POSTGRES_HOST_AUTH_METHOD</span><span class="o">=</span>trust<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>pgvector/pgvector:pg16<span class="w"> </span>postgres<span class="w"> </span>-c<span class="w"> </span><span class="nv">wal_level</span><span class="o">=</span>logical
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-T<span class="w"> </span>banco<span class="w"> </span>pg_dump<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra<span class="w"> </span>--no-owner<span class="w"> </span>--no-publications<span class="w"> </span>--no-subscriptions<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>-i<span class="w"> </span>eduinfra-medicao-gold<span class="w"> </span>psql<span class="w"> </span>-q<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>eduinfra-medicao-gold<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra<span class="w"> </span>-c<span class="w"> </span><span class="s2">"vacuum analyze"</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DATABASE_URL</span><span class="o">=</span>postgresql://eduinfra@127.0.0.1:55999/eduinfra
+</span></code></pre></div>
+<p>Desde o <a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>, <code>construir-gold</code> lê a tabela Delta
+<code>warehouse/eventos_vistoria</code>, que <code>publicar-analitico</code> cria a partir da origem. Esse comando também
+cria o slot do CDC, que a cópia não usa, então apague o slot logo depois:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">DIRETORIO_DADOS</span><span class="o">=</span><span class="s2">"</span><span class="k">$(</span>mktemp<span class="w"> </span>-d<span class="k">)</span><span class="s2">"</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>eduinfra.cli<span class="w"> </span>publicar-analitico
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>docker<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>eduinfra-medicao-gold<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra<span class="w"> </span>-c<span class="w"> </span><span class="s2">"select pg_drop_replication_slot('eduinfra_cdc')"</span>
+</span></code></pre></div>
+<p>Depois, construa a Gold e gere as evidências:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/explain/custo_da_gold.py<span class="w"> </span>&gt;<span class="w"> </span>docs/explain/custo_da_gold.txt
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>eduinfra.cli<span class="w"> </span>comparar-consulta<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">5</span><span class="w"> </span>--pasta-dos-planos<span class="w"> </span>docs/explain/rodada_1
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>docs/explain/hipoteses.py<span class="w"> </span>&gt;<span class="w"> </span>docs/explain/hipoteses.txt
+</span></code></pre></div>
+<p>A segunda rodada é o mesmo <code>comparar-consulta</code> com <code>--pasta-dos-planos docs/explain/rodada_2</code>.
+<code>comparar-consulta</code> só lê e sai com código 1 se a view e a Gold devolverem linhas diferentes.
+<code>hipoteses.py</code> desfaz cada hipótese, mas bloqueia <code>vistoria_item</code> enquanto testa o índice e gera WAL,
+então não rode esse script no banco principal.</p>
+<h2 id="evidencias">Evidências<a class="headerlink" href="#evidencias" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Arquivo</th>
+<th>O que mostra</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../explain/rodada_1/antes.txt">rodada_1/antes.txt</a>, <a href="../explain/rodada_1/depois.txt">depois.txt</a> e <a href="../explain/rodada_1/painel.txt">painel.txt</a></td>
+<td>Os planos com <code>ANALYZE</code>, <code>BUFFERS</code>, <code>VERBOSE</code> e <code>SETTINGS</code>, também em JSON, como em <a href="../explain/rodada_1/antes.json">antes.json</a></td>
+</tr>
+<tr>
+<td><a href="../explain/rodada_1/resumo.txt">rodada_1/resumo.txt</a> e <a href="../explain/rodada_2/resumo.txt">rodada_2/resumo.txt</a></td>
+<td>A saída do comando em cada rodada. A <code>rodada_2/</code> tem os mesmos arquivos da primeira</td>
+</tr>
+<tr>
+<td><a href="../explain/rodada_1/serie.json">rodada_1/serie.json</a></td>
+<td>Todas as execuções da série, com buffers separados</td>
+</tr>
+<tr>
+<td><a href="../explain/hipoteses.txt">hipoteses.txt</a></td>
+<td>A tabela e os planos das hipóteses, gerados por <a href="../explain/hipoteses.py">hipoteses.py</a></td>
+</tr>
+<tr>
+<td><a href="../explain/custo_da_gold.txt">custo_da_gold.txt</a></td>
+<td>O custo de construir a Gold, gerado por <a href="../explain/custo_da_gold.py">custo_da_gold.py</a></td>
+</tr>
+<tr>
+<td><a href="../explain/gold_com_distinct_on.txt">gold_com_distinct_on.txt</a></td>
+<td>A consulta e o plano da versão com <code>DISTINCT ON</code>, trocada pelo anti-join</td>
+</tr>
+</tbody>
+</table>
+<p>As séries usam <code>TIMING OFF</code> e os planos de diagnóstico não, então os tempos dos dois nunca entram
+na mesma mediana. Os arquivos trazem o plano de execução, sem valor de linha da origem.</p>
+<h2 id="historico-de-versoes">Histórico de Versões<a class="headerlink" href="#historico-de-versoes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Versão</th>
+<th>Descrição</th>
+<th>Autor</th>
+<th>Revisão</th>
+<th>Data</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.0</td>
+<td>Otimização da agregação nacional a partir do plano de execução, com a leitura materializada na Gold</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>1 de novembro de 2026</td>
+</tr>
+<tr>
+<td>1.1</td>
+<td>Explica os termos do plano e as duas rodadas, simplifica a descrição da consulta e tira as referências a issue e PR</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>7 de novembro de 2026</td>
+</tr>
+<tr>
+<td>1.2</td>
+<td>Inclui na reprodução a publicação da fonte de eventos, que a Gold passou a ler</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>9 de novembro de 2026</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

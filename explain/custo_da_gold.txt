@@ -1,0 +1,9 @@
+Duração de construir-gold: 333.8 s
+WAL gerado: 968 MB
+Tamanho total da Gold: 908 MB
+- gold.fato_vistoria_item: 723 MB
+- gold.dim_escola_infraestrutura: 138 MB
+- gold.fato_infra_escola_ano: 25 MB
+- gold.dim_escola: 22 MB
+- gold.dim_municipio: 664 kB
+- gold.dim_item: 32 kB
