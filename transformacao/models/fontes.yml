@@ -1,0 +1,23 @@
+version: 2
+sources:
+- name: analitico
+  schema: entrada_transformacao
+  description: 'Retrato transacional dos arquivos Silver do Censo e de uma única entrada
+    de eventos (Delta por padrão). ENEM agregado publicado pela #44; eventos da fonte canônica
+    Delta entregue pela #45.'
+  tables:
+  - name: censo_escola
+    description: 'Silver: ano_censo=AAAA/escola.parquet. Último cadastro por escola.'
+  - name: censo_municipio
+    description: 'Silver: ano_censo=AAAA/municipio.parquet.'
+  - name: item_infraestrutura
+    description: Catálogo de metadados versionado nas migrações da origem; não contém
+      vistorias.
+  - name: eventos_vistoria
+    description: Contrato único consumido pela transformação. Uma linha por vistoria_id/item_codigo.
+      FONTE_EVENTOS aponta para Delta ou Parquet; não há união implícita de produtores.
+  - name: enem_escola_ano
+    description: 'Silver da #44: desempenho_escola.parquet, com nomes adaptados e contagens
+      preservadas. Todas as escolas ficam na entrada; o mart publica as que juntam com o Censo.'
+    config:
+      enabled: '{{ var(''com_enem'', false) }}'
