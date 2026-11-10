@@ -5,17 +5,17 @@ base `e50f6a6`. PostgreSQL 16 dedicado, com `wal_level=logical`, e bancos/Delta
 descartáveis. A origem usada na medição é uma cópia da carga nacional do Censo
 Escolar 2024, com vistorias sintéticas de testes anteriores.
 
-## Em espera para integração
+## Integração das dependências
 
-O PR deve permanecer **Draft**, por decisão de Pedro, aguardando os PRs **#61,
-#65, #66 e #67**. Depois da integração, atualizar a branch, resolver os conflitos,
-executar a suíte com a Gold disponível e registrar o resultado antes de pedir
-nova autorização para retirar o Draft. Draft impede o merge; os revisores ainda
-podem comentar ou aprovar a revisão.
+Os PRs #61, #65, #66 e #67 foram integrados. A revalidação de 10/11/2026 usa
+`main` em `7912e44`, incluindo ENEM, fonte canônica, Gold dbt, datas, consulta
+otimizada, painel e orquestração. A CLI preserva esses comandos junto dos dois
+comandos de recuperação. Métricas e ADR mantêm a validação de datas da #57 e
+os procedimentos da #58. Todos os registros de uso de IA foram preservados.
 
-A CLI também é alterada pelos PRs #61/#65; as métricas e o ADR 0007 são alterados
-pelo #67. Essas branches não foram modificadas. O trabalho da #48 permanece
-no diretório original e não foi alterado nesta entrega.
+O Draft permanece até a autorização final de Pedro após a conferência das
+evidências. As medições e os resultados de 08/11 abaixo são históricos;
+a nova rodada integrada está registrada ao final.
 
 ## Decisões e procedimento
 
@@ -138,11 +138,11 @@ mesmo LSN, nova violação na mesma chave, novas rejeições apesar de um estado
 anterior aceito, mudanças antes de nova passada do consumidor, preservação de
 outras pendências e identificação operacional sem texto livre.
 
-A suíte opcional de propriedades não foi executada: `hypothesis` não está
+Na rodada inicial, a suíte opcional de propriedades não foi executada: `hypothesis` não está
 instalado e nenhuma dependência foi instalada nesta tarefa. Os testes de frescor
-que exigem Gold ficam pendentes até a validação integrada descrita no início.
+que exigem Gold ficaram pendentes naquela rodada; foram executados na revalidação abaixo.
 
-### Resultado final da verificação local
+### Resultado da verificação inicial (08/11/2026)
 
 ```text
 236 passed, 5 skipped, 11 warnings in 68.93s
@@ -169,3 +169,96 @@ as chaves revisadas. O tratamento deve ser serializado; uma disputa de criação
 escrita Delta exige nova tentativa. Problemas de infraestrutura continuam falhando
 em vez de gerar recibo. Slot, frescor e desvios atuais de catálogo continuam sendo
 avaliados normalmente, mesmo após o tratamento da fila.
+
+## Aceite integrado — 10/11/2026
+
+Base integrada: `main` em `7912e44`, após os merges de #61, #65, #66 e #67.
+Os quatro conflitos foram resolvidos na CLI, uso de IA, métricas e ADR 0007.
+O código de recuperação e os testes não precisaram de alterações funcionais.
+
+### Ambiente e preservação do histórico
+
+A validação usou PostgreSQL 16 em instância/volume próprios. Uma cópia da origem
+de teste nacional, com resíduos sintéticos anteriores, foi restaurada nesse
+ambiente. O banco pessoal e o banco do painel não foram alterados. A Silver
+oficial do Censo/ENEM já disponível localmente foi copiada; não houve novo
+download do INEP. O runner recebeu `FONTE_ENEM` para consumir esse retrato.
+
+| Upgrade da origem copiada | Antes (0007) | Depois (0009) |
+| --- | --- | --- |
+| Vistorias | 181.148 | 181.148 |
+| Impressão integral do histórico | `e1650cf4f8494e89b368612e401a913e` | `e1650cf4f8494e89b368612e401a913e` |
+
+Foram preservados o manifesto 0008 do ENEM e a regra de datas 0009. A cópia
+continha 181.065 escolas e a fonte canônica inicial teve 3.079.516 eventos.
+A Gold completa foi construída pelo runner dbt: **13 modelos e 26 testes,
+PASS=39**, sem WARN/ERROR/SKIP. O fato ENEM teve 25.179 escolas e o painel foi
+gerado pela CLI integrada. O frescor estava em dia antes dos cenários que
+inserem vistorias de propósito.
+
+### Testes da integração
+
+- Rodada direcionada de recuperação/auditoria/resiliência: **69 passed in 31.08s**.
+- Suíte completa, com todos os arquivos `test_*.py`: **360 passed, 12 warnings
+  in 168.62s**, sem skips ou exclusão de arquivos.
+- Inclui os cinco testes de frescor antes pendentes e a suíte de propriedades
+  com Hypothesis. A dependência opcional ficou no ambiente isolado de testes,
+  sem alteração dos arquivos de dependências.
+
+A auditoria da Gold foi executada primeiro, com origem e Gold no mesmo retrato;
+os cenários seguintes inserem vistorias deliberadamente e tornam esse retrato
+antigo. Essa ordenação permite conferir a auditoria e todos os cenários na
+mesma execução, sem ignorar testes. Reprodução após construir a Gold, com
+`DATABASE_URL` e `DIRETORIO_DADOS` apontando ao ambiente descartável:
+
+```bash
+uv run --group transformacao --with hypothesis python - <<'PYTEST'
+from pathlib import Path
+import pytest
+auditoria = Path('tests/test_e3_gold.py')
+arquivos = [str(auditoria)] + [
+    str(p) for p in sorted(Path('tests').glob('test_*.py')) if p != auditoria
+]
+raise SystemExit(pytest.main([*arquivos, '-q', '-rs']))
+PYTEST
+```
+
+Uma primeira rodada direcionada, simultânea à preparação pesada dos dados,
+terminou com 68 aprovados e um erro: a recuperação ocorreu, mas a auditoria
+acusou frescor de 75 s, acima do SLA de 60 s. O cenário passou isolado e a
+rodada direcionada completa acima passou sem carga concorrente. O limite de
+produção e os testes foram preservados. As advertências finais são onze de
+APIs de particionamento existentes e uma de coleta de asset do Dagster;
+não foram corrigidas fora do escopo.
+
+### Medição repetida após a integração
+
+A suíte deixou vistorias sintéticas na origem descartável. A nova linha de base
+teve 3.079.992 eventos; a medição adicionou uma vistoria de 17 itens. Foram
+três rodadas, alternando a ordem, com as mesmas cópias Delta de partida:
+
+| Rodada | Seletivo, com recibos (s) | Leitura/merge completos (s) |
+| --- | ---: | ---: |
+| 1 | 1,339 | 2,847 |
+| 2 | 1,319 | 2,884 |
+| 3 | 1,315 | 2,823 |
+| Mediana | **1,319** | **2,847** |
+
+O seletivo leu **17 itens**; o completo leu **3.080.009 eventos**. Os dois
+destinos tiveram 3.080.009 linhas e chaves distintas, com a mesma impressão
+das colunas analíticas, exceto LSN: `11910358003474991727`. Essa impressão é
+uma conferência adicional de 64 bits, não uma prova criptográfica de igualdade.
+O teste de integração confere os eventos efetivamente recuperados e sua
+repetição. Nas três repetições da medição houve 17 já tratados, zero linhas
+relidas, zero recuperações novas e zero pendências.
+
+O plano da consulta por chave continuou usando `Index Scan` nos índices
+`vistoria_item_pkey`, `vistoria_pkey`, `escola_pkey` e `municipio_pkey`, retornando
+uma linha e sem varrer a tabela inteira de itens. A máquina não estava dedicada,
+os caches estavam aquecidos e os números não garantem esse ganho em outras
+cargas. O escopo de custo continua sendo leitura/merge completos versus
+recuperação seletiva com recibos; não inclui inicialização de slot/CLI no completo.
+
+Após a suíte e a medição, a fonte canônica foi republicada com 3.080.009 eventos
+e a Gold foi reconstruída: **PASS=39, WARN=0, ERROR=0, SKIP=0**. Isso atualiza
+o retrato analítico após as inserções sintéticas da validação.
