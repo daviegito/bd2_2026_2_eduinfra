@@ -354,18 +354,29 @@ e a comparação de custo com a carga completa.
 
 ## Limites
 
-- A origem aceita `-infinity` e datas antes de Cristo, porque o check só exige
-  `ocorrido_em <= registrado_em`. A fila contém o dano, mas a validação na origem continua
-  aberta.
+- A migração 0009 exige `ocorrido_em` finito entre `0001-01-01 00:00:00+00`
+  (inclusive) e `10000-01-01 00:00:00+00` (exclusive), mantendo
+  `ocorrido_em <= registrado_em`. É o intervalo técnico dos anos 1 a 9999 do Python
+  em UTC, sem recorte de negócio em 2007 ou 2024. Antes de criar o check, a migração
+  verifica o histórico e aborta com quantidade, IDs e datas de até dez exemplos se
+  houver violações; não corrige nem remove linhas insert-only.
+- Não há reprocessamento automático da fila. `publicar-analitico --forcar` valida
+  toda a origem no mesmo snapshot usado pela exportação, inclusive vistorias sem
+  itens. Em uma origem legada com datas inválidas, aborta antes da escrita e preserva
+  o Delta existente, sem criar partições inválidas. A recuperação da fila permanece
+  no escopo da [issue #58](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/58).
+  Os cenários históricos de falha acima continuam reproduzíveis apenas simulando uma
+  origem sem o check em banco descartável. Veja as
+  [evidências da #57](evidencias/issue-57/validacao-datas.md).
 - A recuperação da fila é operacional e seletiva, pelos comandos acima. Dados
   ainda inválidos permanecem pendentes; o aceite de desvios exige revisão explícita.
-  A validação preventiva das datas e da publicação completa está no PR #67 (#57).
+  A validação preventiva das datas e da publicação completa já foi integrada pela #57.
 - O aceite manual de um desvio conserva a divergência revisada e seu histórico;
   o operador assume explicitamente esse estado. Ele não altera a origem ou o Delta.
 - A taxa de entrega sob carga sustentada e o crescimento de arquivos ao longo de meses não
   foram medidos.
-- Os testes de integração não rodam em CI: o único fluxo do repositório publica a
-  documentação.
+- O CI valida a carga nacional, a Gold e o painel. Os cenários operacionais de
+  recuperação e tratamento do CDC são validados separadamente em bancos descartáveis.
 
 ## Evidências
 

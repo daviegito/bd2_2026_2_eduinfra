@@ -1,5 +1,24 @@
 # Como executar e demonstrar
 
+## Transformação declarativa (issue #48)
+
+Com `.env` configurado, inclusive `DATA_REFERENCIA_ENEM=2024-11-03`:
+
+```bash
+docker compose run --build --rm transformacao
+```
+
+O serviço aguarda a carga do Censo e o CDC saudável, ingere o ENEM real,
+congela as sources, constrói/testa a Gold e gera o grafo. Uma falha na ingestão,
+no preparo, no build/testes ou na documentação devolve código diferente de zero.
+O fluxo padrão usa a Silver da #44 e a fonte canônica Delta da #45. A primeira
+execução baixa os pacotes públicos; reexecuções usam o manifesto e a Bronze.
+
+O modo explícito `--somente-infraestrutura` serve para execução parcial e não
+substitui a validação completa com ENEM. Para contratos, variáveis, referência
+temporal, grafo interativo e limites de publicação, consulte
+[Transformação declarativa](transformacao.md).
+
 Execute os comandos a partir da raiz do repositório. O fluxo padrão sobe o
 PostgreSQL, prepara os dados do Censo e inicia o consumidor CDC.
 
@@ -65,6 +84,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | --- | --- |
 | `docker compose run --rm carga migrar` | Aplica as migrações |
 | `docker compose run --rm carga ingerir` | Ingere o Censo com manifesto e publicação da Silver |
+| `docker compose run --rm carga ingerir-enem` | Ingere o ENEM 2024 no mesmo manifesto e publica a Silver por escola ([ENEM](enem.md)) |
+| `docker compose run --rm carga medir-cobertura-enem` | Mede a junção das escolas do ENEM com as do Censo |
 | `docker compose run --rm carga caracterizar` | Exibe contagens e tamanhos da origem |
 | `docker compose run --rm carga tudo` | Migra, ingere, publica a linha de base e verifica a tabela analítica |
 | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
@@ -76,6 +97,11 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga medir-recarga` | Mede a recarga periódica e o WAL retido, com o consumidor parado |
 | `docker compose run --rm carga comparar-compressao` | Compara formatos e compressão |
 | `docker compose run --rm carga comparar-particionamento` | Compara estratégias de particionamento |
+
+O serviço `orquestrador` sobe o Dagster em <http://localhost:3000>. Ele roda o
+pipeline em lote na agenda de `AGENDA_ORQUESTRADOR`, e o backfill das janelas
+mensais é lançado pela interface. Detalhes e demonstrações em
+[Orquestração](orquestracao.md).
 
 As demonstrações de CDC e atraso e a comparação de ingestão inserem dados de
 teste. Execute-as em um ambiente de desenvolvimento descartável. Para uma
@@ -106,6 +132,7 @@ uv run eduinfra tudo
 | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
 | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |
 | Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
+| Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
 
 Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos

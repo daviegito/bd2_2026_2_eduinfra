@@ -24,7 +24,6 @@ O fluxo separa a origem transacional, as camadas de dados e os componentes de co
 flowchart LR
     INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
     IBGE["API do IBGE"]
-    APP["Aplicativo<br/>de vistorias"]
 
     BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
     LOTE["Ingestão em lote<br/>Validação e padronização"]
@@ -33,6 +32,7 @@ flowchart LR
     OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
     CDC["CDC<br/>Captura pelo WAL"]
     DUCK["DuckDB<br/>Consulta e processamento"]
+    DBT["dbt<br/>Transformação em camadas"]
     GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
 
     EMB["Geração de<br/>embeddings"]
@@ -46,12 +46,12 @@ flowchart LR
     BRONZE --> LOTE
     LOTE --> SILVER
 
-    APP --> OLTP
     OLTP --> CDC
     CDC --> SILVER
 
     SILVER --> DUCK
-    DUCK -->|transformação| GOLD
+    SILVER --> DBT
+    DBT -->|transformação| GOLD
     SILVER -->|conteúdo selecionado| EMB
     EMB --> VET
 
@@ -61,7 +61,7 @@ flowchart LR
     AGENTE --> USER
 ```
 
-Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. A integração das demais fontes, a Gold, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
+Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. Na E3, o ENEM 2024 passou a ser ingerido na Silver, agregado por escola, e a Gold é construída pelo dbt ([transformação declarativa](docs/transformacao.md)). A integração das demais fontes, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
 
 | Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |
@@ -216,9 +216,11 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
 | `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
 | `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
+| `docker compose run --rm carga ingerir-enem` | baixa o ENEM 2024, se preciso, e publica a Silver agregada por escola; idempotente pelo mesmo manifesto ([ENEM](docs/enem.md)) |
+| `docker compose run --rm carga medir-cobertura-enem` | mede a junção das escolas do ENEM com as do Censo; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
-| `docker compose run --rm carga processar-janelas` | leva à camada analítica as vistorias registradas desde a última execução, em janelas mensais ([dado atrasado](docs/dado-atrasado.md)) |
+| `docker compose run --rm carga processar-janelas` | reconcilia com a origem as janelas mensais tocadas pelas vistorias registradas desde a última execução, completando a fonte canônica de eventos ([dado atrasado](docs/dado-atrasado.md)) |
 | `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
 | `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
 | `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
@@ -227,7 +229,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
-| `docker compose run --rm carga construir-gold` | recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
+| `docker compose run --rm carga construir-gold` | copia uma versão da fonte canônica de eventos para `fonte.eventos_vistoria`, confere com a origem e recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
 | `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
 | `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
@@ -241,6 +243,71 @@ uv sync
 set -a && source .env && set +a
 uv run eduinfra tudo
 ```
+
+## Transformações declarativas da Gold (E3, issue #48)
+
+Depois de configurar `.env` a partir de `.env.example`, um comando prepara as
+fontes reais, constrói e testa a Gold no PostgreSQL e gera o grafo dbt:
+
+```bash
+docker compose run --build --rm transformacao
+```
+
+O Compose executa a carga do Censo e aguarda o CDC saudável. O runner ingere o
+ENEM 2024 pelo manifesto, fixa uma versão da fonte canônica Delta, publica as
+sources em `entrada_transformacao` e roda `dbt build` e `dbt docs generate`.
+A retenção do CDC é finita (2 GB por padrão), com verificação de margem e dreno
+recente. O comando habitual da E2 continua disponível.
+
+Os modelos ficam em `transformacao/models/{staging,intermediate,marts}`. Além
+dos seis marts de infraestrutura, o fluxo completo publica
+`gold.fato_desempenho_escola_ano`. Escolas do ENEM sem correspondência no Censo
+ficam fora desse fato e são contabilizadas no resumo; a Silver original é
+preservada e não há corte adicional em 30 participantes.
+
+`DATA_REFERENCIA_ENEM=2024-11-03` define o ponto de corte da infraestrutura,
+explicitamente parametrizado, sem tratá-lo como data individual da prova. O
+modo parcial `--somente-infraestrutura` não atende ao aceite completo. O
+construtor SQL `construir-gold` continua como opção nula para comparação.
+
+Contratos, referência temporal, limites de publicação e exportação do grafo
+interativo estão em [Transformação declarativa](docs/transformacao.md).
+A [comparação com SQL direto e as evidências](docs/evidencias/issue-48/comparacao.md)
+registram os tempos, os testes e a validação do fluxo completo.
+
+## Painel analítico (E3, issue #53)
+
+O [painel no GitHub Pages](https://daviegito.github.io/bd2_2026_2_eduinfra/painel.html)
+é atualizado pelo workflow de documentação. Ele usa HTML estático e Plotly para
+permitir interação no Pages, sem servidor de aplicação ou serviço pago.
+
+Para gerar localmente com Censo, ENEM e eventos canônicos reais:
+
+```bash
+docker compose run --build --rm transformacao
+docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+uv run mkdocs serve
+```
+
+Abra `http://127.0.0.1:8000/painel.html`. O arquivo gerado é `docs/painel.html`;
+ele não é versionado. `construir-gold` sozinho só entrega a infraestrutura e
+não substitui a transformação completa com ENEM exigida pelo painel.
+
+A visualização seleciona `ANO_ENEM` (2024 por padrão) e usa o vínculo
+`fato_desempenho_escola_ano.escola_infra_sk` com a dimensão SCD para comparar a
+infraestrutura na referência analítica da prova. Os itens vêm do JSON `itens`
+e seus nomes, do catálogo Gold. Estados desconhecidos, em obra e inutilizáveis
+permanecem separados da ausência confirmada. O painel mostra média simples das
+médias escolares válidas por rede/item, n e um desvio padrão; não estima efeito
+causal nem controla INSE, que não está disponível neste contrato. Grupos com
+menos de dez escolas com média válida são suprimidos e a regra é informada.
+
+Os gráficos leem exclusivamente fatos e dimensões Gold. A cobertura completa
+ENEM × Censo usa também o retrato `entrada_transformacao.enem_escola_ano`, pois
+o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
+com perfil temporal conhecido ficam explícitos, sem converter dados ausentes em
+zero. O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica
+o mesmo artefato validado; ausência do painel ou de dados obrigatórios falha.
 
 ## O que a carga produz
 
@@ -284,25 +351,28 @@ Docker, o diretório é `dados/` na raiz do repositório (variável
 | Caminho | Formato | Partição | Quem grava |
 | --- | --- | --- | --- |
 | `silver/ano_censo=AAAA/` | Parquet zstd | ano do Censo | `ingerir` (lote) |
+| `silver/enem/ano=AAAA/` | Parquet zstd | ano do ENEM | `ingerir-enem` (lote) |
 | `warehouse/vistoria_item/` | Delta Lake | `ano_censo` e `sg_uf` | `publicar-analitica` |
-| `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base) e serviço `cdc` |
-| `analitico/eventos_vistoria/` | Parquet zstd | `ocorrido_mes=AAAA-MM` | `processar-janelas` (não roda no `tudo`) |
+| `warehouse/eventos_vistoria/` | Delta Lake | mês de `ocorrido_em` | `publicar-analitico` (linha de base), serviço `cdc` e `processar-janelas` |
+| `warehouse/eventos_vistoria_janelas.json` | JSON | — | `processar-janelas` e `reprocessar-janela` (controle das janelas) |
 
 - `warehouse/vistoria_item` é a tabela da camada analítica, montada a partir da
   Silver: um registro por item de vistoria, já com escola e município.
-- `warehouse/eventos_vistoria` recebe da origem, pelo CDC, cada item de vistoria
-  confirmado no banco.
-- `analitico/eventos_vistoria` é o caminho de dado atrasado em janelas mensais.
-  Ele coexiste com o CDC; a unificação dos dois destinos ainda não está
-  implementada (ADR 0004).
+- `warehouse/eventos_vistoria` é a **fonte canônica de eventos**
+  ([ADR 0008](docs/adr/0008-fonte-canonica-de-eventos.md)): um registro por item de
+  vistoria, com chave `(vistoria_id, item_codigo)`. A linha de base, o CDC e as
+  janelas de dado atrasado gravam nela pelo mesmo merge, então um evento que
+  chega por mais de um caminho aparece uma vez. A Gold lê só esta tabela.
+- O antigo destino das janelas em Parquet, `analitico/eventos_vistoria/`, não é
+  mais escrito nem lido e pode ser apagado.
 
 Os comandos `demonstrar-cdc`, `demonstrar-atraso` e `comparar-ingestao` inserem
 vistorias de teste na origem: rode-os num ambiente de desenvolvimento.
 
 ### Ingestão em lote idempotente
 
-A versão vigente de um ano é o SHA-256 do arquivo da última execução registrada
-na tabela `ingestao_execucao` (o manifesto). A Silver publicada guarda o hash do
+A versão vigente de uma fonte num ano é o SHA-256 do arquivo da última execução
+registrada na tabela `ingestao_execucao` (o manifesto) para aquela fonte. A Silver publicada guarda o hash do
 arquivo que a gerou em `origem.sha256`. A execução só é ignorada quando o
 arquivo de origem coincide com **as duas** versões vigentes; por isso a sequência
 A → B → A reprocessa a última execução em vez de ignorá-la.
@@ -328,8 +398,30 @@ Se o arquivo de um ano já ingerido mudar (o INEP republicou), a partição Parq
 
 ```bash
 docker compose exec banco psql -U eduinfra -d eduinfra \
-  -c "select id, ano_censo, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos from ingestao_execucao order by id;"
+  -c "select id, fonte, ano, left(hash_sha256, 12) as hash, forcada, escolas_inseridas, itens_inseridos, linhas_publicadas from ingestao_execucao order by id;"
 ```
+
+### Ingestão do ENEM
+
+O ENEM 2024 entra pelo mesmo protocolo: manifesto por SHA-256, Silver trocada
+inteira depois do commit e reexecução ignorada. A migração `0008` acrescenta ao
+manifesto a coluna `fonte` (`censo` ou `enem`) e renomeia `ano_censo` para `ano`.
+Do pacote do INEP entra só `RESULTADOS_2024.csv`, o único arquivo com a escola e
+as notas. A Silver tem uma linha por escola, com participantes, notas válidas e
+médias por área e da redação.
+
+```bash
+docker compose run --rm carga migrar
+docker compose run --rm carga ingerir-enem          # na primeira vez, baixa cerca de 526 MB
+docker compose run --rm carga ingerir-enem          # repetir é ignorado pelo manifesto
+docker compose run --rm carga medir-cobertura-enem  # precisa também da Silver do Censo
+```
+
+O `CO_ESCOLA` do ENEM junta com o `CO_ENTIDADE` do Censo em 100% das escolas de
+código real. O INEP mascara o código das escolas com menos de 10 participantes,
+que somam 14,4% das escolas e 1,4% dos participantes com escola. A medição, o
+critério para ausentes, faltantes e nota zero e os limites estão em
+[docs/enem.md](docs/enem.md). O ENEM não roda no `tudo`.
 
 ### Captura de mudanças pelo slot lógico
 
@@ -389,15 +481,17 @@ preparada caso outros eventos sejam publicados no futuro.
 
 ### Dado atrasado em janelas mensais
 
-`processar-janelas` leva à camada analítica as vistorias registradas desde a
-última execução, agrupadas pelo mês em que ocorreram. Uma vistoria que chega
-atrasada reabre a janela do mês dela em vez de ser descartada, e reprocessar uma
-janela é idempotente.
+A janela é o mês de `ocorrido_em`, a partição da fonte canônica de eventos.
+`processar-janelas` pega as vistorias registradas desde a última execução,
+reconcilia com a origem as janelas dos meses em que elas ocorreram e grava na
+fonte só o que o CDC ainda não entregou. Uma vistoria que chega atrasada reabre
+a janela do mês dela em vez de ser descartada, e reprocessar uma janela é
+idempotente.
 
 ```bash
 docker compose run --rm carga processar-janelas                  # janelas tocadas desde a última execução
 docker compose run --rm carga demonstrar-atraso                  # insere vistorias atrasadas e mostra a janela de cada uma
-docker compose run --rm carga reprocessar-janela --mes 2024-05   # regrava um mês a partir da origem
+docker compose run --rm carga reprocessar-janela --mes 2024-05   # reconcilia um mês com a origem
 ```
 
 Margem, tolerância, reabertura e medições estão em
@@ -423,16 +517,25 @@ load delta;
 select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by all;
 ```
 
+## Orquestração (E3)
+
+O serviço `orquestrador` sobe o [Dagster](https://docs.dagster.io/) em
+<http://localhost:3000>, com o pipeline em lote agendado, retry e backfill.
+Detalhes e demonstrações em [docs/orquestracao.md](docs/orquestracao.md).
+
 ## Estrutura do repositório
 
 ```
-alembic/versions/   migrações do esquema, em ordem (0001 a 0006)
+alembic/versions/   migrações do esquema, em ordem (0001 a 0008)
 src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   microdados.py     download retomável do pacote do INEP
   tls.py            completa a cadeia de certificados do INEP (ADR 0002)
   transformacao.py  valida o cabeçalho e gera a Silver em Parquet
   carga.py          staging, consolidação idempotente e resumo
   ingestao.py       ingestão em lote idempotente, com manifesto (E2)
+  enem.py           Silver do ENEM: resultados agregados por escola
+  ingestao_enem.py  ingestão idempotente do ENEM, no mesmo manifesto
+  cobertura_enem.py junção das escolas do ENEM com as do Censo
   cdc.py            leitura do slot de replicação lógica da origem
   pgoutput.py       decodificação das mensagens do plugin pgoutput
   fluxo_cdc.py      consumidor do CDC: do slot à tabela Delta de eventos
@@ -442,11 +545,12 @@ src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   caracterizacao.py contagens e tamanhos da base populada
   comparacao_*.py   medições citadas nos ADRs e em docs/
   demonstracao_*.py demonstrações do CDC e do dado atrasado
+  orquestrador.py   pipeline em lote no Dagster (E3)
 tests/              testes unitários e de integração (ver docs/testes.md)
 docs/               medições e decisões de cada tema da E2
 docs/adr/           registros de decisão de arquitetura
 docs/diario/        diário de bordo semanal
-docker-compose.yml  banco PostgreSQL, serviço de carga e consumidor do CDC
+docker-compose.yml  banco PostgreSQL, serviço de carga, consumidor do CDC e Dagster
 Dockerfile          imagem da carga, com uv
 .env.example        variáveis de ambiente; copie para .env
 AI-USAGE.md         registro de uso de IA

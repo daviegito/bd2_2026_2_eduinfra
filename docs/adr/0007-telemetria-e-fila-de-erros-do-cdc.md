@@ -1,6 +1,6 @@
 # 0007 — Registrar telemetria por transação no consumidor do CDC e isolar linhas ruins numa fila de erros
 
-- **Status:** proposto, aguardando revisão da squad
+- **Status:** aceito, aprovado por Gabriel Lopes de Amorim no PR #59, depois da revisão em que Davi Coelho achou o teste que dependia do intervalo entre dois commits
 - **Data:** 2026-10-31
 - **Decisores:** Artur Mendonça Arruda
 
@@ -87,13 +87,33 @@ Escolhemos B, com estas regras:
 **O que perdemos:**
 
 - Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar `auditar-cdc`, porque além dela só o log avisa.
-- A recuperação não é automática. A #58 adiciona reprocessamento pela chave para itens rejeitados, com recibos; dados ainda inválidos permanecem pendentes. A validação preventiva de datas está na #57 (PR #67).
+- A recuperação não é automática. A #58 adiciona reprocessamento pela chave com recibos; dados ainda inválidos permanecem pendentes. A #57 já impede datas inválidas na origem e rejeita o legado inválido antes da publicação completa.
 - `contrato_cdc.py` precisa mudar junto com toda migração de `vistoria` ou `vistoria_item`. Se o autor esquecer, a auditoria acusa desvio.
 - O operador pode aceitar um desvio pela ocorrência exata, registrando o estado revisado; a auditoria mantém o histórico e volta a alertar para novas ocorrências ou mudanças não aceitas.
 
-**Riscos assumidos:** a validação da origem continua aberta. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
+**Riscos assumidos:** a validação de datas foi tratada pela #57, conforme a revisão abaixo; outros erros de origem ainda podem chegar à fila. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
 
-**O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
+**O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado. Antes da #58, recuperar exigia releitura completa; a recuperação seletiva e sua medição estão na revisão abaixo. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
+
+## Revisão da validação de datas — issue #57
+
+A migração 0009 limita `ocorrido_em` a valores finitos nos anos 1 a 9999 em UTC:
+`[0001-01-01 00:00:00+00, 10000-01-01 00:00:00+00)`. O motivo é a
+representação de datas pelo Python, não o ano do Censo Escolar ou do ENEM.
+O check anterior de evento anterior ou igual ao registro continua vigente.
+
+O histórico é verificado sob bloqueio antes da criação do check. Se houver
+violações, a migração aborta com diagnóstico (quantidade e até dez IDs/datas),
+sem `UPDATE`, remoção ou correção automática. Isso exige uma decisão explícita
+sobre o histórico antes de migrar uma origem legada inválida.
+
+A publicação completa valida todas as vistorias e exporta no mesmo snapshot,
+com leitura em UTC. Ao encontrar data inválida, falha antes de gravar no Delta;
+a versão e os arquivos existentes permanecem intactos. Os testes da fila ainda
+simulam datas legadas em bancos descartáveis, removendo explicitamente apenas
+o novo check nesses cenários. Essa validação preventiva não substitui a recuperação da fila descrita na revisão da #58.
+
+[Evidências e checklist da #57](../evidencias/issue-57/validacao-datas.md).
 
 ## Revisão da recuperação — issue #58
 
@@ -143,5 +163,6 @@ declarada pelo executor e não substitui controle de acesso.
 | --- | --- | --- | --- | --- |
 | 1.0 | Telemetria, fila de erros, publicação e checksum do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.1 | Inclui padrões de acesso, riscos assumidos e evidências brutas; reduz o texto | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
-
-| 1.2 | Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 8 de novembro de 2026 |
+| 1.2 | Validação das datas na origem e na publicação completa (#57) | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente de PR | 8 de novembro de 2026 |
+| 1.3 | Passa de proposto a aceito, com a aprovação no PR #59 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
+| 1.4 | Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 10 de novembro de 2026 |

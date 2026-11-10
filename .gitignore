@@ -9,9 +9,22 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+.tmp_dagster_home_*/
+
+tests/docs
 
 # Protótipos do ADR 0005
 docs/evidencias/adr-0005/dbt/target/
 docs/evidencias/adr-0005/dbt/logs/
 docs/evidencias/adr-0005/sqlmesh/.cache/
 docs/evidencias/adr-0005/sqlmesh/logs/
+site/
+
+site/
+
+transformacao/target/
+transformacao/logs/
+transformacao/dbt_packages/
+transformacao/.user.yml
+
+dbt-docs/

@@ -2,7 +2,6 @@
 .venv
 dados
 docs
-tests
 .env
 __pycache__
 *.pyc

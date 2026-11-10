@@ -11,6 +11,7 @@ from eduinfra import (
     auditoria_cdc,
     camada_analitica,
     caracterizacao,
+    cobertura_enem,
     comparacao_compressao,
     comparacao_ingestao,
     comparacao_latencia,
@@ -22,8 +23,10 @@ from eduinfra import (
     janelas,
     modelo_analitico,
     recuperacao_cdc,
+    otimizacao_consulta,
 )
 from eduinfra.ingestao import ingerir
+from eduinfra.ingestao_enem import ingerir_enem
 from eduinfra.configuracao import Configuracao, carregar_configuracao
 
 log = logging.getLogger("eduinfra")
@@ -36,17 +39,19 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
-                                           "reprocessar-fila-cdc", "tratar-desvio-cdc", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor"))
-    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
+                                           "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
+    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
+    parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
     parser.add_argument("--escolas", type=int, default=1000, help="número de escolas a gerar quando usar gerar_amostra")
     parser.add_argument("--revisao", default="head", help="revisão alvo do Alembic")
-    parser.add_argument("--forcar", action="store_true", help="reexecuta mesmo que o resultado já exista: em ingerir, ignora o manifesto; em publicar-analitico, relê a origem")
+    parser.add_argument("--forcar", action="store_true", help="reexecuta mesmo que o resultado já exista: em ingerir e ingerir-enem, ignora o manifesto; em publicar-analitico, relê a origem")
     parser.add_argument("--continuo", action="store_true", help="no comando cdc, fica acompanhando o slot em vez de passar uma vez")
     parser.add_argument("--intervalo", type=float, default=2.0, help="segundos entre passadas do comando cdc --continuo")
-    parser.add_argument("--saida", type=Path, help="em comparar-granularidades, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
+    parser.add_argument("--saida", type=Path, help="em comparar-granularidades e medir-cobertura-enem, grava o resultado neste arquivo Markdown além de imprimir; no Compose, monte a pasta (-v ./docs:/app/docs), senão o arquivo fica dentro do contêiner")
     parser.add_argument("--sla-horas", type=float, default=frescor.SLA_PADRAO.total_seconds() / 3600, help="em medir-frescor, SLA de frescor da Gold em horas (padrão 25)")
     parser.add_argument("--responsavel", help="identificador operacional sem nome/e-mail: operador-01")
     parser.add_argument("--motivo", choices=recuperacao_cdc.MOTIVOS, help="motivo padronizado do tratamento")
@@ -83,12 +88,17 @@ def main(argumentos: list[str] | None = None) -> int:
         return _executar_analitico(opcoes, configuracao)
 
     if opcoes.comando == "construir-gold":
-        resumo = modelo_analitico.construir(configuracao.dsn)
+        resumo = modelo_analitico.construir(configuracao)
+        fonte = resumo.fonte
+        log.info(
+            "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",
+            fonte.versao_delta, fonte.na_fonte, fonte.na_origem, fonte.so_na_origem, fonte.so_na_fonte,
+        )
         for tabela, linhas in resumo.linhas.items():
             log.info("gold.%s: %d linhas", tabela, linhas)
         # Cada construção registra o frescor; a violação só reprova em medir-frescor.
         frescor.medir(configuracao.dsn, comando="construir-gold")
-        return 0
+        return 0 if _auditar_gold() else 1
 
     if opcoes.comando == "medir-frescor":
         medicao = frescor.medir(configuracao.dsn, timedelta(hours=opcoes.sla_horas))
@@ -103,10 +113,21 @@ def main(argumentos: list[str] | None = None) -> int:
         texto = modelo_analitico.formatar_markdown(
             modelo_analitico.comparar(configuracao.dsn, opcoes.repeticoes)
         )
-        print(texto)
-        if opcoes.saida:
-            opcoes.saida.parent.mkdir(parents=True, exist_ok=True)
-            opcoes.saida.write_text(texto + "\n", encoding="utf-8")
+        _imprimir(texto, opcoes.saida)
+        return 0
+
+    if opcoes.comando == "ingerir-enem":
+        resultado = ingerir_enem(configuracao, forcar=opcoes.forcar)
+        if resultado.ignorada:
+            log.info("ingestão do ENEM ignorada: arquivo já registrado no manifesto (use --forcar para reexecutar)")
+        elif resultado.silver_republicada:
+            log.info("Silver do ENEM republicada: o manifesto já estava na versão deste arquivo")
+        else:
+            log.info("ingestão do ENEM concluída: %d escolas agregadas", resultado.escolas)
+        return 0
+
+    if opcoes.comando == "medir-cobertura-enem":
+        _imprimir(cobertura_enem.formatar_markdown(cobertura_enem.medir(configuracao)), opcoes.saida)
         return 0
 
     if opcoes.comando == "comparar-modelagem":
@@ -140,6 +161,12 @@ def main(argumentos: list[str] | None = None) -> int:
         comparacao = comparacao_particionamento.comparar(silver, opcoes.repeticoes, opcoes.lotes)
         print(comparacao_particionamento.formatar_markdown(comparacao))
         return 0
+
+    if opcoes.comando == "comparar-consulta":
+        comparacao = otimizacao_consulta.comparar(configuracao.dsn, opcoes.repeticoes)
+        otimizacao_consulta.gravar_planos(comparacao, opcoes.pasta_dos_planos)
+        print(otimizacao_consulta.formatar_markdown(comparacao))
+        return 0 if comparacao.mesmo_resultado else 1
 
     if opcoes.comando in ("migrar", "tudo"):
         command.upgrade(_alembic(configuracao), opcoes.revisao)
@@ -182,7 +209,36 @@ def main(argumentos: list[str] | None = None) -> int:
 
         gerar_amostra(configuracao, opcoes.escolas)
 
+    if opcoes.comando == "gerar-painel":
+        from eduinfra.painel import gerar_painel
+        gerar_painel()
+        return 0
+
     return 0
+
+
+def _auditar_gold() -> bool:
+    log.info("Iniciando auditoria E3 automática...")
+    import unittest
+    import sys
+
+    # Garante que a raiz do container e o diretório atual estejam no sys.path
+    caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
+    for caminho in caminhos_busca:
+        if caminho not in sys.path:
+            sys.path.insert(0, caminho)
+
+    loader = unittest.TestLoader()
+    suite = loader.loadTestsFromName("tests.test_e3_gold")
+    runner = unittest.TextTestRunner(verbosity=2)
+    resultado = runner.run(suite)
+
+    if not resultado.wasSuccessful():
+        log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
+        return False
+
+    log.info("Auditoria E3 concluída com sucesso!")
+    return True
 
 
 COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
@@ -224,6 +280,13 @@ def _auditar(configuracao: Configuracao, sla_de_frescor_s: float) -> int:
 def _publicar_linha_de_base(configuracao: Configuracao, forcar: bool) -> None:
     resultado = fluxo_cdc.publicar_linha_de_base(configuracao, forcar)
     log.info("analítico: %d recebidos, %d inseridos", resultado.recebidas, resultado.inseridas)
+
+
+def _imprimir(texto: str, saida: Path | None) -> None:
+    print(texto)
+    if saida:
+        saida.parent.mkdir(parents=True, exist_ok=True)
+        saida.write_text(texto + "\n", encoding="utf-8")
 
 
 def _alembic(configuracao: Configuracao) -> Config:

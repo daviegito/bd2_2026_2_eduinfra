@@ -7,12 +7,14 @@ ENV UV_COMPILE_BYTECODE=1 \
     PYTHONUNBUFFERED=1
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-install-project --no-dev
+RUN uv sync --locked --no-install-project --no-dev --group transformacao
 
 COPY src ./src
+COPY tests ./tests
 COPY alembic ./alembic
 COPY alembic.ini ./
-RUN uv sync --locked --no-dev
+COPY transformacao ./transformacao
+RUN uv sync --locked --no-dev --group transformacao
 
 ENTRYPOINT ["uv", "run", "--no-sync", "eduinfra"]
 CMD ["tudo"]

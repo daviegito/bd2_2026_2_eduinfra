@@ -1,5 +1,6 @@
 """Frescor da Gold e SLA (issue #52), sem banco."""
 
+import unittest
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -87,7 +88,17 @@ def test_medir_frescor_sai_com_codigo_1_fora_do_sla(banco_falso):
 
 
 def test_construir_gold_registra_o_frescor(banco_falso, monkeypatch):
-    monkeypatch.setattr(modelo_analitico, "construir", lambda dsn: modelo_analitico.ResumoGold({}, 0.0))
+    fonte = modelo_analitico.ConferenciaDaFonte(versao_delta=1, na_fonte=0, na_origem=0, so_na_origem=0, so_na_fonte=0)
+    monkeypatch.setattr(modelo_analitico, "construir", lambda configuracao: modelo_analitico.ResumoGold({}, 0.0, fonte))
+    monkeypatch.setattr(cli, "_auditar_gold", lambda: True)
 
     assert cli.main(["construir-gold"]) == 0
     assert banco_falso == [("construir-gold", frescor.SLA_PADRAO)]
+
+
+def test_construir_gold_sai_com_codigo_1_quando_a_auditoria_falha(banco_falso, monkeypatch):
+    fonte = modelo_analitico.ConferenciaDaFonte(versao_delta=1, na_fonte=0, na_origem=0, so_na_origem=0, so_na_fonte=0)
+    monkeypatch.setattr(modelo_analitico, "construir", lambda configuracao: modelo_analitico.ResumoGold({}, 0.0, fonte))
+    monkeypatch.setattr(cli, "_auditar_gold", lambda: False)
+
+    assert cli.main(["construir-gold"]) == 1

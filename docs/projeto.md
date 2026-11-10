@@ -9,7 +9,7 @@ estruturados e, futuramente, consultas em linguagem natural.
 | Fonte | Papel | Situação até a E2 |
 | --- | --- | --- |
 | [Censo Escolar 2024 — INEP](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/censo-escolar) | Cadastro de escolas, infraestrutura e linha de base das vistorias | Integrado |
-| [Microdados do ENEM — INEP](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/enem) | Desempenho educacional | Integração prevista |
+| [Microdados do ENEM — INEP](https://www.gov.br/inep/pt-br/acesso-a-informacao/dados-abertos/microdados/enem) | Desempenho educacional | ENEM 2024 integrado na Silver, na E3 ([junção com o Censo](enem.md)) |
 | INSE — INEP | Contexto socioeconômico | Integração prevista |
 | API do IBGE | Enriquecimento territorial e demográfico | Integração prevista |
 | Dicionários do INEP | Interpretação dos campos e metadados | Uso previsto na camada semântica |
@@ -28,7 +28,7 @@ eventos não exportam sua identificação; detalhes no [modelo da origem](modelo
 | --- | --- | --- |
 | E1 | Origem transacional e carga pública reprodutível | Implementada |
 | E2 | Lote idempotente, CDC e armazenamento analítico aberto | Implementada; ADR 0004 aceito |
-| E3 | Modelagem analítica, testes de dados e orquestração | Prevista |
+| E3 | Modelagem analítica, testes de dados e orquestração | Em entrega; modelo dimensional, dbt, testes de dados, frescor e consulta otimizada implementados |
 | E4 | Consumo, governança e plataforma integrada | Prevista |
 
 Os prazos devem ser consultados no

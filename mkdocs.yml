@@ -56,6 +56,7 @@ extra_css:
 
 nav:
   - Início: index.md
+  - Painel analítico: painel.html
   - Projeto:
       - Arquitetura: arquitetura.md
       - Modelo da origem: modelo-origem.md
@@ -63,12 +64,16 @@ nav:
       - Fontes, equipe e entregas: projeto.md
   - Execução:
       - Como executar e demonstrar: execucao.md
+      - Transformação declarativa: transformacao.md
       - Testes: testes.md
+      - Orquestração: orquestracao.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
+      - ENEM e junção com o Censo: enem.md
       - Compressão: serializacao-compressao.md
       - CDC e semântica de entrega: cdc-e-semantica-de-entrega.md
       - Métricas do CDC: metricas-cdc.md
+      - Consulta otimizada: consulta-otimizada.md
       - Dados atrasados: dado-atrasado.md
       - Camada analítica: camada-analitica.md
       - Frescor e SLA da Gold: frescor-e-sla.md
@@ -79,6 +84,12 @@ nav:
       - ADR 0004 — Ingestão: adr/0004-ingestao.md
       - ADR 0005 — Transformação: adr/0005-ferramenta-de-transformacao.md
       - ADR 0007 — Telemetria e fila de erros: adr/0007-telemetria-e-fila-de-erros-do-cdc.md
+      - ADR 0008 — Fonte única de eventos: adr/0008-fonte-canonica-de-eventos.md
   - Processo:
       - Diário de bordo: diario/diario-de-bordo.md
       - Uso de IA: https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md
+  - Granularidades: granularidades.md
+  - ADRs e Evidências:
+      - Template ADR: adr/0000-template.md
+      - Evidência ADR 0005: evidencias/adr-0005/README.md
+      - Evidência Retenção WAL: evidencias/issue-60/retencao-wal.md

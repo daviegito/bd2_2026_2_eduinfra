@@ -10,18 +10,23 @@ O projeto combina um histórico de vistorias escolares com uma camada analítica
 O objetivo futuro é permitir que gestores e pesquisadores explorem esses dados
 por painéis e por um assistente em linguagem natural.
 
-## Estado atual — E2
+## Estado atual — E3
 
 | Implementado | Próximas entregas |
 | --- | --- |
-| Origem PostgreSQL com vistorias insert-only | Integração de ENEM, INSE e IBGE |
-| Carga do Censo com manifesto e reexecução idempotente | Modelagem e indicadores na Gold |
-| Captura de novas vistorias pelo CDC | Painéis e assistente RAG |
-| Parquet, tabelas Delta e consultas DuckDB | Busca vetorial e cache |
-| Tratamento de eventos atrasados e medições | Integração dos caminhos analíticos |
+| Origem PostgreSQL com vistorias insert-only | Integração do INSE e do IBGE |
+| Carga do Censo com manifesto e reexecução idempotente | Painéis e assistente RAG |
+| Captura de novas vistorias pelo CDC | Busca vetorial e cache |
+| Parquet, tabelas Delta e consultas DuckDB | |
+| Tratamento de eventos atrasados e medições | |
+| Fonte única de eventos ([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)) | |
+| ENEM 2024 na Silver e no fato de desempenho da Gold | |
+| Gold transformada pelo dbt, com testes de dados e frescor | |
 
-A ingestão usa lote anual para o Censo e CDC para as novas vistorias.
-Os destinos analíticos ainda coexistem; não formam uma tabela única integrada.
+A ingestão usa lote anual para o Censo e CDC para as novas vistorias. Os eventos
+de vistoria têm uma fonte única, a tabela Delta `eventos_vistoria`, completada pelo
+CDC e pelas janelas de dado atrasado e lida pela Gold
+([ADR 0008](adr/0008-fonte-canonica-de-eventos.md)).
 O [ADR 0004](adr/0004-ingestao.md) registra as garantias e limitações e tem
 status **aceito**. O diário de bordo está atualizado até a semana 10.
 
