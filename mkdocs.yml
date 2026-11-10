@@ -56,6 +56,7 @@ extra_css:
 
 nav:
   - Início: index.md
+  - Painel analítico: painel.html
   - Projeto:
       - Arquitetura: arquitetura.md
       - Modelo da origem: modelo-origem.md
