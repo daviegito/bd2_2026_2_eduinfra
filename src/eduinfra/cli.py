@@ -78,6 +78,27 @@ def main(argumentos: list[str] | None = None) -> int:
             log.info("gold.%s: %d linhas", tabela, linhas)
         # Cada construção registra o frescor; a violação só reprova em medir-frescor.
         frescor.medir(configuracao.dsn, comando="construir-gold")
+
+        log.info("Iniciando auditoria E3 automática...")
+        import unittest
+        import sys
+
+        # Garante que a raiz do container e o diretório atual estejam no sys.path
+        caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
+        for caminho in caminhos_busca:
+            if caminho not in sys.path:
+                sys.path.insert(0, caminho)
+
+        loader = unittest.TestLoader()
+        suite = loader.loadTestsFromName("tests.test_e3_gold")
+        runner = unittest.TextTestRunner(verbosity=2)
+        resultado = runner.run(suite)
+
+        if not resultado.wasSuccessful():
+            log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
+            return 1
+
+        log.info("Auditoria E3 concluída com sucesso!")
         return 0
 
     if opcoes.comando == "medir-frescor":

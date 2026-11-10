@@ -1,5 +1,6 @@
 """Frescor da Gold e SLA (issue #52), sem banco."""
 
+import unittest
 from datetime import datetime, timedelta, timezone
 
 import pytest
