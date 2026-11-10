@@ -817,6 +817,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orquestracao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orquestração
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1722,6 +1750,10 @@ esses dados e reconstruir o ambiente.</p>
 </tr>
 </tbody>
 </table>
+<p>O serviço <code>orquestrador</code> sobe o Dagster em <a href="http://localhost:3000">http://localhost:3000</a>. Ele roda o
+pipeline em lote na agenda de <code>AGENDA_ORQUESTRADOR</code>, e o backfill das janelas
+mensais é lançado pela interface. Detalhes e demonstrações em
+<a href="../orquestracao/">Orquestração</a>.</p>
 <p>As demonstrações de CDC e atraso e a comparação de ingestão inserem dados de
 teste. Execute-as em um ambiente de desenvolvimento descartável. Para uma
 demonstração manual do CDC, pause o consumidor contínuo antes e retome depois:</p>
