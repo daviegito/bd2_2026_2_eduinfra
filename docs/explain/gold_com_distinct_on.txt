@@ -1,0 +1,52 @@
+select e.tp_dependencia, count(*) as escolas
+from (
+    select distinct on (co_entidade) co_entidade, biblioteca
+    from gold.fato_infra_escola_ano
+    order by co_entidade, ano desc
+) f
+join gold.dim_escola e using (co_entidade)
+where f.biblioteca is false
+group by e.tp_dependencia
+order by e.tp_dependencia
+
+Finalize GroupAggregate  (cost=30974.05..30974.57 rows=4 width=10) (actual time=838.542..852.632 rows=4 loops=1)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=375131
+  ->  Gather Merge  (cost=30974.05..30974.51 rows=4 width=10) (actual time=838.531..852.615 rows=8 loops=1)
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=375131
+        ->  Sort  (cost=29974.04..29974.05 rows=4 width=10) (actual time=831.549..831.558 rows=4 loops=2)
+              Sort Key: e.tp_dependencia
+              Sort Method: quicksort  Memory: 25kB
+              Buffers: shared hit=375131
+              Worker 0:  Sort Method: quicksort  Memory: 25kB
+              ->  Partial HashAggregate  (cost=29973.96..29974.00 rows=4 width=10) (actual time=831.504..831.513 rows=4 loops=2)
+                    Group Key: e.tp_dependencia
+                    Batches: 1  Memory Usage: 24kB
+                    Buffers: shared hit=375124
+                    Worker 0:  Batches: 1  Memory Usage: 24kB
+                    ->  Hash Join  (cost=26256.01..29712.70 rows=52252 width=2) (actual time=689.237..809.421 rows=55403 loops=2)
+                          Hash Cond: (e.co_entidade = f.co_entidade)
+                          Buffers: shared hit=375124
+                          ->  Parallel Seq Scan on dim_escola e  (cost=0.00..3177.09 rows=106509 width=6) (actual time=0.011..18.971 rows=90532 loops=2)
+                                Buffers: shared hit=2112
+                          ->  Hash  (cost=25145.66..25145.66 rows=88828 width=4) (actual time=688.563..688.567 rows=110806 loops=2)
+                                Buckets: 131072  Batches: 1  Memory Usage: 4920kB
+                                Buffers: shared hit=373001
+                                ->  Subquery Scan on f  (cost=0.51..25145.66 rows=88828 width=4) (actual time=41.893..614.837 rows=110806 loops=2)
+                                      Filter: (f.biblioteca IS FALSE)
+                                      Rows Removed by Filter: 70259
+                                      Buffers: shared hit=373001
+                                      ->  Unique  (cost=0.51..23369.09 rows=177657 width=9) (actual time=0.287..565.868 rows=181065 loops=2)
+                                            Buffers: shared hit=373001
+                                            ->  Incremental Sort  (cost=0.51..22903.93 rows=186066 width=9) (actual time=0.286..505.566 rows=186066 loops=2)
+                                                  Sort Key: fato_infra_escola_ano.co_entidade, fato_infra_escola_ano.ano DESC
+                                                  Presorted Key: fato_infra_escola_ano.co_entidade
+                                                  Full-sort Groups: 5815  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                                                  Buffers: shared hit=373001
+                                                  Worker 0:  Full-sort Groups: 5815  Sort Method: quicksort  Average Memory: 26kB  Peak Memory: 26kB
+                                                  ->  Index Scan using fato_infra_escola_ano_pkey on fato_infra_escola_ano  (cost=0.42..14825.27 rows=186066 width=9) (actual time=0.044..414.627 rows=186066 loops=2)
+                                                        Buffers: shared hit=372961
+Planning Time: 0.426 ms
+Execution Time: 853.349 ms

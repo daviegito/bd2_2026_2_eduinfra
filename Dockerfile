@@ -10,6 +10,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --locked --no-install-project --no-dev --group transformacao
 
 COPY src ./src
+COPY tests ./tests
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY transformacao ./transformacao

@@ -25,7 +25,7 @@ arquitetura da camada de dados e ficam fora do portfólio avaliado.
 | ADR | Decisão | Status |
 | --- | --- | --- |
 | [0002](0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação | Aceito |
-| [0007](0007-telemetria-e-fila-de-erros-do-cdc.md) | Registrar telemetria por transação no consumidor do CDC e isolar linhas ruins numa fila de erros | Proposto |
+| [0007](0007-telemetria-e-fila-de-erros-do-cdc.md) | Registrar telemetria por transação no consumidor do CDC e isolar linhas ruins numa fila de erros | Aceito |
 | [0008](0008-fonte-canonica-de-eventos.md) | Adotar a tabela Delta `eventos_vistoria` como fonte única de eventos, completada pelo CDC e pelas janelas | Proposto |
 
 ## Histórico de Versões
@@ -35,3 +35,4 @@ arquitetura da camada de dados e ficam fora do portfólio avaliado.
 | 1.0 | Índice dos ADRs e template da disciplina | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 26 de setembro de 2026 |
 | 1.1 | Inclui o ADR 0007 nos registros complementares | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.2 | Inclui o ADR 0008 nos registros complementares | Squad EduInfra |  | 8 de novembro de 2026 |
+| 1.3 | Marca o ADR 0007 como aceito | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
