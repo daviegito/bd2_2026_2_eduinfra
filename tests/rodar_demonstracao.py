@@ -1,24 +1,41 @@
 import sys
-import pyarrow as pa
+import duckdb
 from eduinfra.configuracao import carregar_configuracao
-import psycopg
 
-def injetar_defeito(configuracao):
-    print("\n--- [1/3] Injetando defeito de propósito na Gold (PostgreSQL) ---")
-    with psycopg.connect(configuracao.dsn, autocommit=True) as conn:
-        conn.execute("""
-            INSERT INTO gold.fato_vistoria_item (co_entidade, item_codigo, situacao, quantidade)
-            SELECT co_entidade, item_codigo, 'ERRO_DE_DOMINIO', 1
-            FROM gold.fato_vistoria_item
-            LIMIT 1
-        """)
+def injetar_defeito(conexao, dsn):
+    print("\n--- [1/3] Injetando defeito de propósito na Gold ---")
+
+    # Verifica se a tabela Gold existe no PostgreSQL
+    tabelas = [row[0] for row in conexao.execute(
+        "SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'"
+    ).fetchall()]
+
+    if "fato_vistoria_item" not in tabelas:
+        print("Erro: Tabela gold.fato_vistoria_item não encontrada no banco. Rode a transformação primeiro!")
+        sys.exit(1)
+
+    print("Injetando registro sujo na camada Gold do PostgreSQL...")
+
+    # Busca um co_entidade real para não quebrar a integridade referencial
+    co_entidade = conexao.execute("SELECT co_entidade FROM pg.gold.dim_escola LIMIT 1").fetchone()
+    if not co_entidade:
+         print("Erro: dim_escola está vazia.")
+         sys.exit(1)
+
+    co_entidade = co_entidade[0]
+
+    # Injeta a linha com a situação proibida
+    conexao.execute(f"""
+        INSERT INTO pg.gold.fato_vistoria_item (vistoria_id, co_entidade, item_codigo, situacao)
+        VALUES (999999999, {co_entidade}, 'ITEM_DEMO', 'ERRO_DE_DOMINIO')
+    """)
+
     print("✅ Defeito injetado com sucesso!")
 
 def rodar_testes():
     print("\n--- [2/3] Executando testes de auditoria (E3) ---")
     import unittest
 
-    # Garante o path pro import dentro do container
     if "/app" not in sys.path:
         sys.path.insert(0, "/app")
 
@@ -40,21 +57,27 @@ def rodar_testes():
         print("Verifique se o teste de 'casos_sujos' no arquivo test_e3_gold.py está rigoroso o suficiente.")
         print("="*50)
 
-
 def main():
     print("=== INICIANDO DEMONSTRAÇÃO DE AUDITORIA E3 ===")
     config = carregar_configuracao()
 
+    conexao = duckdb.connect()
+    conexao.execute("INSTALL postgres; LOAD postgres;")
+    conexao.execute(f"ATTACH '{config.dsn}' AS pg (TYPE POSTGRES);")
+
     try:
-        injetar_defeito(config)
+        injetar_defeito(conexao, config.dsn)
         rodar_testes()
     except Exception as e:
         print(f"Erro durante a demonstração: {e}")
         import traceback
         traceback.print_exc()
     finally:
-        with psycopg.connect(config.dsn, autocommit=True) as conn:
-            conn.execute("DELETE FROM gold.fato_vistoria_item WHERE situacao = 'ERRO_DE_DOMINIO'")
+        print("Limpando defeito injetado...")
+        try:
+             conexao.execute("DELETE FROM pg.gold.fato_vistoria_item WHERE situacao = 'ERRO_DE_DOMINIO'")
+        except Exception:
+             pass
 
 if __name__ == "__main__":
     main()

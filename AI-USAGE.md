@@ -594,3 +594,9 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   executado nessa validação; depende da integração e execução do workflow.
 - **Quem revisou:** escopo e validação isolada aprovados por Pedro; alterações
   preparadas para revisão humana.
+
+- **Limpeza de escopo aprovada posteriormente:** `docs/testes.md` e
+  `tests/rodar_demonstracao.py` restaurados exatamente à main para preservar
+  a entrega da #63. A demonstração restaurada detectou o defeito intencional
+  no banco descartável e removeu a linha; a Gold terminou com a mesma contagem
+  de 3.078.105 eventos e zero linhas com `ERRO_DE_DOMINIO`.
