@@ -33,8 +33,7 @@ jobs:
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
 
-      #Geração Painel E4 (Injeção com env)
-      - name: Subir banco, construir Gold e gerar painel
+      - name: Subir banco, publicar fonte analítica, construir Gold e gerar painel
         env:
           POSTGRES_USER: eduinfra
           POSTGRES_PASSWORD: eduinfra
@@ -43,7 +42,8 @@ jobs:
           ANO_CENSO: 2024
         run: |
           docker compose up -d banco
-          # 1. Aplica as migrações
+
+          # 1. Aplica as migrações do banco
           docker compose run --rm carga migrar
 
           # 2. Desativa validação de chaves estrangeiras no banco para a amostra mockada
@@ -55,14 +55,16 @@ jobs:
           # 4. Reativa a segurança do banco
           docker compose exec -T banco psql -U eduinfra -d eduinfra -c "ALTER DATABASE eduinfra SET session_replication_role = 'origin';"
 
-          # 5. Garante a existência do município 11 para que os testes e as views não retornem em branco
+          # 5. Garante a existência do município 11 com todos os campos NOT NULL para que a view não quebre
           docker compose exec -T banco psql -U eduinfra -d eduinfra -c "INSERT INTO public.municipio (co_municipio, no_municipio, sg_uf, co_uf) VALUES (11, 'Município Fictício', 'RO', 11) ON CONFLICT DO NOTHING;" || true
 
-          # 6. Constrói a Gold, roda testes de auditoria E3 e gera o painel HTML
+          # 6. Publica a amostra do OLTP para a fonte canônica analítica (Delta)
+          docker compose run --rm carga publicar-analitico
+
+          # 7. Constrói a Gold, roda testes de auditoria E3 e gera o painel HTML
           docker compose run --rm carga construir-gold
           docker compose run --rm -v ./docs:/app/docs carga gerar-painel
 
-      #Mostra o erro real se o banco falhar
       - name: 🚨 Mostrar logs do banco se der erro
         if: failure()
         run: docker compose logs banco
@@ -92,8 +94,7 @@ jobs:
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
 
-      # Repete a geração do painel E4 para deploy
-      - name: Subir banco, construir Gold e gerar painel
+      - name: Subir banco, publicar fonte analítica, construir Gold e gerar painel
         env:
           POSTGRES_USER: eduinfra
           POSTGRES_PASSWORD: eduinfra
@@ -102,6 +103,26 @@ jobs:
           ANO_CENSO: 2024
         run: |
           docker compose up -d banco
+
+          # 1. Aplica as migrações do banco
+          docker compose run --rm carga migrar
+
+          # 2. Desativa validação de chaves estrangeiras no banco para a amostra mockada
+          docker compose exec -T banco psql -U eduinfra -d eduinfra -c "ALTER DATABASE eduinfra SET session_replication_role = 'replica';"
+
+          # 3. Gera a amostra sintética
+          docker compose run --rm carga gerar_amostra --escolas 1000
+
+          # 4. Reativa a segurança do banco
+          docker compose exec -T banco psql -U eduinfra -d eduinfra -c "ALTER DATABASE eduinfra SET session_replication_role = 'origin';"
+
+          # 5. Garante a existência do município 11 com todos os campos NOT NULL para que a view não quebre
+          docker compose exec -T banco psql -U eduinfra -d eduinfra -c "INSERT INTO public.municipio (co_municipio, no_municipio, sg_uf, co_uf) VALUES (11, 'Município Fictício', 'RO', 11) ON CONFLICT DO NOTHING;" || true
+
+          # 6. Publica a amostra do OLTP para a fonte canônica analítica (Delta)
+          docker compose run --rm carga publicar-analitico
+
+          # 7. Constrói a Gold, roda testes de auditoria E3 e gera o painel HTML
           docker compose run --rm carga construir-gold
           docker compose run --rm -v ./docs:/app/docs carga gerar-painel
 

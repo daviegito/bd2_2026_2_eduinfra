@@ -1342,7 +1342,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "more-itertools"
 version = "10.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1482,7 +1481,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/4a/88/39c83c35d5e97cc203e9e77a4f93bf87ec89cf6a22ac4818fdcc65d66584/orderly_set-5.5.0.tar.gz", hash = "sha256:e87185c8e4d8afa64e7f8160ee2c542a475b738bc891dc3f58102e654125e6ce", size = 27414, upload-time = "2025-07-10T20:10:55.885Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl", hash = "sha256:46f0b801948e98f427b412fcabb831677194c05c3b699b80de260374baa0b1e7", size = 13068, upload-time = "2025-07-10T20:10:54.377Z" },
-=======
 name = "narwhals"
 version = "2.28.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1654,7 +1652,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/b5/4da41c328788f575838f97a098fe8ca691ebc6f6fd73ad4a262ee40b184d/numpy-2.5.4-cp315-cp315t-win32.whl", hash = "sha256:ad62a416ddcf863bf44bba76fbf6b53366ab0692e294f51cae4b5fbe0d246788", size = 6335804, upload-time = "2026-10-10T20:05:19.921Z" },
     { url = "https://files.pythonhosted.org/packages/98/94/6482ddfa3d312490cb9358f375bf2ad56427dbea8769187158e94d653753/numpy-2.5.4-cp315-cp315t-win_amd64.whl", hash = "sha256:38f47be9f74ab870d2633b5456ae519c43758a8d1fd05342f0ce4ecc034396ee", size = 12890095, upload-time = "2026-10-10T20:05:21.875Z" },
     { url = "https://files.pythonhosted.org/packages/48/7f/c2d1b436b6e7cfebac140c2579a298344b85f2991a2ce5c3615cefb29400/numpy-2.5.4-cp315-cp315t-win_arm64.whl", hash = "sha256:7a14a461d9340f1b46b8648578aed9cdb8b3b018a8fac6c1dde2c9192a01a87f", size = 10883718, upload-time = "2026-10-10T20:05:28.547Z" },
->>>>>>> 27cd9f6 (fix: dependências adicionadas)
 ]
 
 [[package]]
@@ -1676,10 +1673,8 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
 name = "parsedatetime"
 version = "2.6"
-=======
 name = "pandas"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1753,7 +1748,6 @@ wheels = [
 [[package]]
 name = "pathspec"
 version = "1.1.1"
->>>>>>> 27cd9f6 (fix: dependências adicionadas)
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/a8/20/cb587f6672dbe585d101f590c3871d16e7aec5a576a1694997a3777312ac/parsedatetime-2.6.tar.gz", hash = "sha256:4cb368fbb18a0b7231f4d76119165451c8d2e35951455dfee97c62a87b04d455", size = 60114, upload-time = "2020-05-31T23:50:57.443Z" }
 wheels = [

@@ -1,16 +1,13 @@
 import unittest
 import duckdb
 from eduinfra.configuracao import carregar_configuracao
+import psycopg
 
 class GoldAuditor:
-    def __init__(self, configuracao: carregar_configuracao):
+    def __init__(self, configuracao):
         self.config = configuracao
-        self.conexao = duckdb.connect()
-        self.conexao.execute("INSTALL delta; LOAD delta;")
-
-        # Mapeia a tabela Gold
-        caminho_fato = configuracao.diretorio_dados / "warehouse" / "vistoria_item"
-        self.conexao.execute(f"CREATE VIEW fato_vistoria_item AS SELECT * FROM delta_scan('{caminho_fato.as_posix()}')")
+        self.conexao = psycopg.connect(configuracao.dsn, autocommit=True)
+        self.conexao.execute("SET search_path TO gold, public")
 
     def query_count(self, sql: str) -> int:
         return self.conexao.execute(sql).fetchone()[0]
