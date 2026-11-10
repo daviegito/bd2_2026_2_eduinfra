@@ -359,6 +359,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
 
+
+### 2026-11-08 — Validação de datas de vistoria (issue #57)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** migração 0008, leitura da origem em `eventos.py`, testes de datas e
+  de resiliência, métricas do CDC, ADR 0007 e evidências da issue #57.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite, com aprovação
+  prévia dos oito arquivos e das regras de datas.
+- **O que foi aproveitado:** validação técnica de datas finitas nos anos 1 a 9999
+  em UTC, sem corte arbitrário por ano do Censo; diagnóstico do legado sem alterar
+  o histórico e rejeição da publicação completa antes de escrever no Delta.
+- **Como foi verificado:** testes de integração em PostgreSQL descartável, migração
+  sobre cópia populada e comparação integral do histórico; resultados registrados
+  em `docs/evidencias/issue-57/validacao-datas.md`.
+- **Quem revisou:** Pedro aprovou o escopo e as regras; revisão do código pendente.
 ### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
@@ -435,6 +450,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   construção, medido no Docker), com testes de integração que falham no código
   anterior
 
+### 2026-11-09 — Integração final da validação de datas (issue #57)
+
+- **Ferramenta:** Codex, como assistente de integração e validação.
+- **Onde:** migração renumerada para 0009 após o manifesto ENEM 0008,
+  `eventos.py`, testes de datas/resiliência e documentação da #57.
+- **O que foi pedido:** concluir as pendências do PR #67 preservando a fonte
+  canônica, com aprovação explícita dos arquivos e de Hypothesis isolado.
+- **O que foi aproveitado:** validação e exportação no mesmo snapshot UTC,
+  mantendo o filtro e o esquema dos eventos integrados na main.
+- **Como foi verificado:** resultados da suíte integrada, frescor com Gold
+  e propriedades registrados nas evidências da issue #57.
+- **Quem revisou:** escopo aprovado por Pedro; revisão do código pendente.
 
 ### 2026-11-09 — Integração final das transformações (issue #48)
 
