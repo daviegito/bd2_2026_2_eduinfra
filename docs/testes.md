@@ -63,6 +63,7 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | CDC e reentrega | `tests/test_pgoutput.py`, `tests/test_fluxo_cdc.py`, `tests/test_fluxo_cdc_integracao.py` |
 | Métricas do CDC | `tests/test_telemetria_cdc.py`, `tests/test_auditoria_cdc.py`, `tests/test_comparacao_latencia.py`, `tests/test_comparacao_latencia_integracao.py` |
 | Fila de erros e desvio de esquema | `tests/test_contrato_cdc.py`, `tests/test_resiliencia_cdc_integracao.py` |
+| Consulta otimizada | `tests/test_otimizacao_consulta.py`, `tests/test_otimizacao_consulta_integracao.py` |
 | Eventos e deduplicação | `tests/test_eventos.py` |
 | Janelas e atraso | `tests/test_janelas.py`, `tests/test_janelas_integracao.py` |
 | Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
