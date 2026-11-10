@@ -1,5 +1,4 @@
 import unittest
-import duckdb
 from eduinfra.configuracao import carregar_configuracao
 import psycopg
 
@@ -34,8 +33,8 @@ class TestE3Gold(unittest.TestCase):
     def test_02_volume(self):
         total_gold = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
 
-        # Consulta diretamente o schema 'public' do PostgreSQL anexado via DuckDB
-        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM pg.public.vistoria_item")
+        # A conexão psycopg acessa o schema public diretamente.
+        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM public.vistoria_item")
 
         self.assertEqual(
             total_gold,
