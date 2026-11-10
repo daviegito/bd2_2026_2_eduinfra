@@ -24,6 +24,10 @@ dev = [
     "mkdocs-material>=9.7.7",
     "pytest>=8.3",
 ]
+transformacao = [
+    "dbt-core==1.12.6",
+    "dbt-postgres==1.11.0",
+]
 
 [project.optional-dependencies]
 dev_extra = [

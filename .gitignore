@@ -16,3 +16,10 @@ docs/evidencias/adr-0005/dbt/logs/
 docs/evidencias/adr-0005/sqlmesh/.cache/
 docs/evidencias/adr-0005/sqlmesh/logs/
 site/
+
+transformacao/target/
+transformacao/logs/
+transformacao/dbt_packages/
+transformacao/.user.yml
+
+dbt-docs/

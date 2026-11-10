@@ -1,0 +1,17 @@
+eduinfra:
+  target: local
+  outputs:
+    local:
+      type: postgres
+      host: "{{ env_var('PGHOST', 'banco') }}"
+      port: "{{ env_var('PGPORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'eduinfra') }}"
+      schema: "{{ env_var('DBT_SCHEMA', 'gold') }}"
+      threads: 1
+      connect_timeout: 15
+      retries: 1
+      session_role: null
+      search_path: public
+      keepalives_idle: 30

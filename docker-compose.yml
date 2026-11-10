@@ -42,6 +42,34 @@ services:
     restart: "no"
     command: ["tudo"]
 
+  transformacao:
+    build: .
+    profiles: [analitico]
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+      FONTE_EVENTOS: ${FONTE_EVENTOS:-/dados/warehouse/eventos_vistoria}
+      FONTE_ENEM: ${FONTE_ENEM:-}
+      ANO_ENEM: ${ANO_ENEM:-2024}
+      URL_ENEM: ${URL_ENEM:-https://download.inep.gov.br/microdados/microdados_enem_2024.zip}
+      DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGHOST: banco
+      DBT_SCHEMA: gold
+      DBT_TARGET_PATH: /dados/dbt
+      DBT_LOG_PATH: /dados/dbt_logs
+    volumes:
+      - dados_censo:/dados
+    depends_on:
+      carga:
+        condition: service_completed_successfully
+      cdc:
+        condition: service_healthy
+    entrypoint: ["uv", "run", "--no-sync", "python", "transformacao/scripts/executar.py"]
+    restart: "no"
+
   cdc:
     build: .
     environment:
