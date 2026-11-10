@@ -87,13 +87,33 @@ Escolhemos B, com estas regras:
 **O que perdemos:**
 
 - Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar `auditar-cdc`, porque além dela só o log avisa.
-- Não há reprocessamento automático. `publicar-analitico --forcar` relê a origem inteira, aceita `-infinity` e cria uma partição com esse nome.
+- Não há reprocessamento automático. Após a #57, `publicar-analitico --forcar` rejeita datas inválidas no histórico antes de escrever no Delta; a recuperação da fila continua pendente na #58.
 - `contrato_cdc.py` precisa mudar junto com toda migração de `vistoria` ou `vistoria_item`. Se o autor esquecer, a auditoria acusa desvio.
 - Um desvio do insert-only fica como violação para sempre, porque a auditoria não o marca como tratado.
 
-**Riscos assumidos:** a validação da origem continua aberta. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
+**Riscos assumidos:** a validação de datas foi tratada pela #57, conforme a revisão abaixo; outros erros de origem ainda podem chegar à fila. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
 
 **O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
+
+## Revisão da validação de datas — issue #57
+
+A migração 0009 limita `ocorrido_em` a valores finitos nos anos 1 a 9999 em UTC:
+`[0001-01-01 00:00:00+00, 10000-01-01 00:00:00+00)`. O motivo é a
+representação de datas pelo Python, não o ano do Censo Escolar ou do ENEM.
+O check anterior de evento anterior ou igual ao registro continua vigente.
+
+O histórico é verificado sob bloqueio antes da criação do check. Se houver
+violações, a migração aborta com diagnóstico (quantidade e até dez IDs/datas),
+sem `UPDATE`, remoção ou correção automática. Isso exige uma decisão explícita
+sobre o histórico antes de migrar uma origem legada inválida.
+
+A publicação completa valida todas as vistorias e exporta no mesmo snapshot,
+com leitura em UTC. Ao encontrar data inválida, falha antes de gravar no Delta;
+a versão e os arquivos existentes permanecem intactos. Os testes da fila ainda
+simulam datas legadas em bancos descartáveis, removendo explicitamente apenas
+o novo check nesses cenários. Isso não implementa a recuperação da fila da #58.
+
+[Evidências e checklist da #57](../evidencias/issue-57/validacao-datas.md).
 
 ## Gatilho de revisão
 
@@ -114,3 +134,5 @@ Escolhemos B, com estas regras:
 | --- | --- | --- | --- | --- |
 | 1.0 | Telemetria, fila de erros, publicação e checksum do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.1 | Inclui padrões de acesso, riscos assumidos e evidências brutas; reduz o texto | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
+
+| 1.2 | Validação das datas na origem e na publicação completa (#57) | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente de PR | 8 de novembro de 2026 |

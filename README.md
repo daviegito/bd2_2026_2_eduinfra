@@ -244,6 +244,37 @@ set -a && source .env && set +a
 uv run eduinfra tudo
 ```
 
+## Transformações declarativas da Gold (E3, issue #48)
+
+Depois de configurar `.env` a partir de `.env.example`, um comando prepara as
+fontes reais, constrói e testa a Gold no PostgreSQL e gera o grafo dbt:
+
+```bash
+docker compose run --build --rm transformacao
+```
+
+O Compose executa a carga do Censo e aguarda o CDC saudável. O runner ingere o
+ENEM 2024 pelo manifesto, fixa uma versão da fonte canônica Delta, publica as
+sources em `entrada_transformacao` e roda `dbt build` e `dbt docs generate`.
+A retenção do CDC é finita (2 GB por padrão), com verificação de margem e dreno
+recente. O comando habitual da E2 continua disponível.
+
+Os modelos ficam em `transformacao/models/{staging,intermediate,marts}`. Além
+dos seis marts de infraestrutura, o fluxo completo publica
+`gold.fato_desempenho_escola_ano`. Escolas do ENEM sem correspondência no Censo
+ficam fora desse fato e são contabilizadas no resumo; a Silver original é
+preservada e não há corte adicional em 30 participantes.
+
+`DATA_REFERENCIA_ENEM=2024-11-03` define o ponto de corte da infraestrutura,
+explicitamente parametrizado, sem tratá-lo como data individual da prova. O
+modo parcial `--somente-infraestrutura` não atende ao aceite completo. O
+construtor SQL `construir-gold` continua como opção nula para comparação.
+
+Contratos, referência temporal, limites de publicação e exportação do grafo
+interativo estão em [Transformação declarativa](docs/transformacao.md).
+A [comparação com SQL direto e as evidências](docs/evidencias/issue-48/comparacao.md)
+registram os tempos, os testes e a validação do fluxo completo.
+
 ## O que a carga produz
 
 Medido numa execução a partir de um clone limpo, em 26/09/2026, com o comando

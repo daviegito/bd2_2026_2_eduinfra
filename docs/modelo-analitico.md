@@ -1,11 +1,21 @@
 # Modelo analítico (Gold)
 
+Há dois caminhos para construir o modelo de infraestrutura: o SQL direto de
+`construir-gold`, descrito abaixo como opção nula, e o projeto dbt da issue #48.
+O dbt lê um retrato da Silver e dos eventos em `entrada_transformacao`, mantém
+os seis marts e integra o fato de desempenho da Silver real do ENEM. A equivalência dos seis marts é verificada por testes de integração
+e por [benchmark com dados públicos](evidencias/issue-48/comparacao.md).
+
+As garantias de transação única abaixo pertencem ao construtor SQL. No dbt, as
+entradas são fixas durante o job, mas os modelos são publicados separadamente.
+Consulte [Transformação declarativa](transformacao.md) para executar, explorar
+o grafo, integrar as fontes e entender os limites de publicação.
+
 A Gold responde à pergunta de gestão do projeto: a infraestrutura de uma escola
 se reflete no desempenho dos seus alunos no ENEM? Esta página declara o grão de
 cada tabela, a decisão de modelagem, as regras da dimensão de variação lenta e o
 que ainda depende de outras entregas. O SQL fica em `src/eduinfra/modelo_analitico.py`,
-em constantes, para poder ser movido sem mudanças para dbt ou SQLMesh quando o
-ADR 0005 escolher a ferramenta.
+em constantes como opção nula; o projeto dbt implementa a decisão do ADR 0005.
 
 ## Como rodar
 
@@ -175,13 +185,16 @@ pergunta nos dois (% de escolas com laboratório de ciências por UF e rede, no 
 de maior cobertura) e confere se as respostas são iguais. Se divergirem, o comando
 avisa; a herança entre anos é uma causa possível, mas não a única.
 
-## O que ainda depende de outras entregas
+## Integrações e evolução do modelo
 
-- **ENEM.** O fato de desempenho ainda não existe. O ENEM 2024 já está na Silver,
-  agregado por escola, em `silver/enem/ano=2024/` ([ENEM](enem.md)). Interface esperada: `fato_desempenho_escola_ano`, com uma linha por
-  escola por ano do ENEM, chave `(co_entidade, ano)`. Para saber se a escola tinha
-  laboratório **na época da prova**, a junção correta é pelo ponto no tempo:
-  `d.valid_from <= data_da_prova and data_da_prova < d.valid_to`.
+- **ENEM integrado no dbt.** `fato_desempenho_escola_ano` tem grão
+  `(co_entidade, ano)` e preserva médias, contagens de notas válidas e de participantes
+  da Silver. Só inclui escolas encontradas na dimensão do Censo; as exclusões ficam
+  no resumo. Não há corte adicional em 30 participantes. A referência analítica da
+  infraestrutura é `data_referencia_infraestrutura`, configurada por
+  `DATA_REFERENCIA_ENEM` (2024-11-03 por padrão), e não uma data individual fornecida
+  pelo microdado. A junção é `valid_from <= referência < valid_to`; sem estado
+  conhecido nesse instante, a chave SCD fica nula, sem inventar um perfil.
 - **Fonte de eventos única.** Decidida no
   [ADR 0008](adr/0008-fonte-canonica-de-eventos.md): a Gold copia uma versão da
   tabela Delta `warehouse/eventos_vistoria` para `fonte.eventos_vistoria`, confere

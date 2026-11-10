@@ -63,6 +63,7 @@ nav:
       - Fontes, equipe e entregas: projeto.md
   - Execução:
       - Como executar e demonstrar: execucao.md
+      - Transformação declarativa: transformacao.md
       - Testes: testes.md
       - Orquestração: orquestracao.md
   - Dados e ingestão:

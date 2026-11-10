@@ -1,0 +1,125 @@
+version: 2
+models:
+- name: dim_item
+  columns:
+  - name: item_codigo
+    data_tests:
+    - unique
+    - not_null
+  description: Uma linha por item de infraestrutura do catálogo.
+- name: dim_escola
+  columns:
+  - name: co_entidade
+    data_tests:
+    - unique
+    - not_null
+  - name: co_municipio
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_municipio')
+          field: co_municipio
+  description: Uma linha por escola, com o cadastro do último ano ingerido.
+- name: dim_escola_infraestrutura
+  columns:
+  - name: escola_infra_sk
+    data_tests:
+    - unique
+    - not_null
+  description: 'SCD tipo 2: uma linha por escola e intervalo [valid_from, valid_to) de perfil estável.
+    Quantidade ausente e nao_informado preservam conhecimento anterior.'
+- name: fato_vistoria_item
+  columns:
+  - name: situacao
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - existente
+          - inexistente
+          - em_obra
+          - inutilizavel
+          - nao_informado
+  - name: escola_infra_sk
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_escola_infraestrutura')
+          field: escola_infra_sk
+  - name: co_entidade
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_escola')
+          field: co_entidade
+  - name: item_codigo
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_item')
+          field: item_codigo
+  description: Uma linha por escola, item e vistoria; referência à versão vigente no instante do evento.
+- name: dim_municipio
+  description: Uma linha por município presente na Silver.
+  columns:
+  - name: co_municipio
+    data_tests:
+    - unique
+    - not_null
+- name: fato_infra_escola_ano
+  description: Uma linha por escola e ano civil em que houve vistoria; perfil no fim do ano, ou no instante
+    de construção para o ano corrente.
+  columns:
+  - name: co_entidade
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_escola')
+          field: co_entidade
+  - name: ano
+    data_tests:
+    - not_null
+- name: fato_desempenho_escola_ano
+  description: Uma linha por escola do ENEM encontrada no Censo e ano; infraestrutura na referência analítica
+    explicitamente configurada, sem corte adicional de participantes.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+  columns:
+  - name: co_entidade
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_escola')
+          field: co_entidade
+  - name: ano
+    data_tests:
+    - not_null
+  - name: data_referencia_infraestrutura
+    data_tests:
+    - not_null
+  - name: n_participantes
+    data_tests:
+    - not_null
+  - name: escola_infra_sk
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_escola_infraestrutura')
+          field: escola_infra_sk
+- name: int_mudanca_item
+  description: Uma linha por mudança de situação ou quantidade de cada escola/item, com intervalo de vigência.
+- name: stg_censo_escola
+  description: Cadastro da Silver do Censo, com tipos preservados.
+- name: stg_censo_municipio
+  description: Municípios da Silver do Censo.
+- name: stg_item_infraestrutura
+  description: Catálogo versionado usado para gerar as colunas dos itens.
+- name: stg_eventos_vistoria
+  description: Fonte única de eventos por vistoria/item; preserva ocorrido_em e registrado_em.
+- name: stg_enem_escola_ano
+  description: Agregados públicos de desempenho, sem dados individuais. Somente habilitado com a Silver
+    real do ENEM.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
