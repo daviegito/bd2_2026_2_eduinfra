@@ -1,0 +1,22 @@
+| Medida (mediana da série, buffers da raiz do plano) | Antes (view) | Depois (Gold) | Painel (Gold, 2024) |
+| --- | ---: | ---: | ---: |
+| Tempo de execução | 840,0 ms | 229,4 ms | 102,1 ms |
+| Tempo lendo do disco | 72,3 ms | 23,7 ms | 0,0 ms |
+| Blocos em cache (shared hit) | 443.218 | 2.515 | 4.629 |
+| Blocos lidos (shared read) | 26.258 | 4.610 | 0 |
+| Temporários lidos (temp read) | 2.149 | 0 | 0 |
+| Temporários escritos (temp written) | 2.153 | 0 | 0 |
+
+Execuções da série, em ms.
+- antes: 747,5, 588,0, 840,0, 987,3, 1296,1
+- depois: 121,0, 204,8, 244,9, 229,4, 256,7
+- painel: 59,0, 102,1, 122,3, 143,6, 95,7
+
+| Erro de estimativa no diagnóstico | Nó | Estimadas | Reais | Fator |
+| --- | --- | ---: | ---: | ---: |
+| antes | Sort | 868 | 110.806 | 127,7 |
+| antes | Nested Loop | 868 | 110.806 | 127,7 |
+| antes | Subquery Scan em s | 868 | 110.806 | 127,7 |
+
+A view e a Gold devolveram as mesmas linhas.
+Linhas do painel: [(1, 19), (2, 11543), (3, 82416), (4, 20518)].

@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.11"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -897,6 +897,7 @@ dependencies = [
     { name = "httpx" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyarrow" },
+    { name = "pytest" },
 ]
 
 [package.optional-dependencies]
@@ -931,6 +932,7 @@ requires-dist = [
     { name = "hypothesis", marker = "extra == 'dev-extra'", specifier = ">=6.80" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pyarrow", specifier = ">=26.0.0" },
+    { name = "pytest", specifier = ">=8.3" },
 ]
 provides-extras = ["dev-extra"]
 

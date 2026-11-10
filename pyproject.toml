@@ -14,6 +14,7 @@ dependencies = [
     "httpx>=0.27",
     "psycopg[binary]>=3.2",
     "pyarrow>=26.0.0",
+    "pytest>=8.3",
 ]
 
 [project.scripts]

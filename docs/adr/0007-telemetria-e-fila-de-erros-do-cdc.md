@@ -1,6 +1,6 @@
 # 0007 — Registrar telemetria por transação no consumidor do CDC e isolar linhas ruins numa fila de erros
 
-- **Status:** proposto, aguardando revisão da squad
+- **Status:** aceito, aprovado por Gabriel Lopes de Amorim no PR #59, depois da revisão em que Davi Coelho achou o teste que dependia do intervalo entre dois commits
 - **Data:** 2026-10-31
 - **Decisores:** Artur Mendonça Arruda
 
@@ -134,5 +134,5 @@ o novo check nesses cenários. Isso não implementa a recuperação da fila da #
 | --- | --- | --- | --- | --- |
 | 1.0 | Telemetria, fila de erros, publicação e checksum do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.1 | Inclui padrões de acesso, riscos assumidos e evidências brutas; reduz o texto | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
-
 | 1.2 | Validação das datas na origem e na publicação completa (#57) | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente de PR | 8 de novembro de 2026 |
+| 1.3 | Passa de proposto a aceito, com a aprovação no PR #59 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
