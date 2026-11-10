@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from dagster import (
     AssetExecutionContext,
@@ -19,13 +20,18 @@ from dagster import (
 RETRY = RetryPolicy(max_retries=3, delay=30, backoff=Backoff.EXPONENTIAL)
 
 JANELAS_MENSAIS = MonthlyPartitionsDefinition(start_date="2024-01-01")
+TRANSFORMACAO = Path(__file__).resolve().parents[2] / "transformacao" / "scripts" / "executar.py"
+
+
+def _executar(comando: list[str], descricao: str) -> None:
+    ambiente = {"PGCONNECT_TIMEOUT": "15", **os.environ}
+    resultado = subprocess.run(comando, env=ambiente)
+    if resultado.returncode != 0:
+        raise Failure(f"{descricao} saiu com código {resultado.returncode}")
 
 
 def rodar(*argumentos: str) -> None:
-    ambiente = {"PGCONNECT_TIMEOUT": "15", **os.environ}
-    resultado = subprocess.run([sys.executable, "-m", "eduinfra.cli", *argumentos], env=ambiente)
-    if resultado.returncode != 0:
-        raise Failure(f"eduinfra {' '.join(argumentos)} saiu com código {resultado.returncode}")
+    _executar([sys.executable, "-m", "eduinfra.cli", *argumentos], f"eduinfra {' '.join(argumentos)}")
 
 
 @asset(retry_policy=RETRY)
@@ -53,14 +59,10 @@ def publicar_linha_de_base() -> None:
 def processar_janelas() -> None:
     rodar("processar-janelas")
 
-
 @asset(deps=[processar_janelas], retry_policy=RETRY)
 def construir_gold() -> None:
-    rodar("construir-gold")
+    _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
 
-
-# Sem retry: medir-frescor sai com código 1 quando o SLA de 25 h foi violado, e repetir a medição
-# minutos depois não muda isso. A falha deve aparecer na execução como alerta.
 @asset(deps=[construir_gold])
 def medir_frescor() -> None:
     rodar("medir-frescor")

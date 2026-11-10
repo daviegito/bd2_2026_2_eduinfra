@@ -23,7 +23,7 @@ def chamadas(monkeypatch):
     registro = []
 
     def run_falso(comando, env):
-        registro.append(" ".join(comando[3:]))
+        registro.append("dbt" if comando[1] == str(orquestrador.TRANSFORMACAO) else " ".join(comando[3:]))
         return subprocess.CompletedProcess(comando, 0)
 
     monkeypatch.setattr(orquestrador.subprocess, "run", run_falso)
@@ -45,12 +45,19 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
         "publicar-analitica",
         "publicar-analitico",
         "processar-janelas",
-        "construir-gold",
+        "dbt",
         "medir-frescor",
     }
-    # A Gold lê a fonte de eventos que a linha de base cria e as janelas completam (ADR 0008).
     ordem = chamadas.index
-    assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("construir-gold") < ordem("medir-frescor")
+    assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("dbt") < ordem("medir-frescor")
+
+
+def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
+    assert orquestrador.TRANSFORMACAO.is_file()
+
+    materialize([construir_gold])
+
+    assert chamadas == ["dbt"]
 
 
 def test_gold_e_frescor_entram_na_execucao_agendada():
