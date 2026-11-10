@@ -1,0 +1,65 @@
+### eventos na fonte antes do backfill [2026-11-09 22:56:19]
+2026-11: 1000 eventos
+### reprocessar_janela, partição 2024-04-01 [2026-11-09 22:58:03]
+C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\click\core.py:910: SupersessionWarning: Function `asset_materialize_command` is superseded and its usage is discouraged. Use 'dg launch --assets <selection>' instead.
+  return callback(*args, **kwargs)
+2026-11-09 22:58:10 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 21304 - RUN_START - Started execution of run for "__ASSET_JOB".
+2026-11-09 22:58:10 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 21304 - ENGINE_EVENT - Executing steps using multiprocess executor: parent process (pid: 21304)
+2026-11-09 22:58:10 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 21304 - reprocessar_janela - STEP_WORKER_STARTING - Launching subprocess for "reprocessar_janela".
+2026-11-09 22:58:12 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - STEP_WORKER_STARTED - Executing step "reprocessar_janela" in subprocess.
+2026-11-09 22:58:13 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - RESOURCE_INIT_STARTED - Starting initialization of resources [io_manager].
+2026-11-09 22:58:13 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - RESOURCE_INIT_SUCCESS - Finished initialization of resources [io_manager].
+2026-11-09 22:58:13 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - LOGS_CAPTURED - Capturing logs for process (pid: 31396).
+2026-11-09 22:58:13 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - STEP_START - Started execution of step "reprocessar_janela".
+2026-11-09 22:58:17,367 INFO janela 2024-04 reconciliada: 15 linhas, 15 completadas pelas janelas
+janela 2024-04: 15 linhas, impressão 67c57bc80d93cd3ff
+2026-11-09 22:58:17 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - STEP_OUTPUT - Yielded output "result" of type "Nothing". (Type check passed).
+2026-11-09 22:58:17 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - ASSET_MATERIALIZATION - Materialized value reprocessar_janela.
+2026-11-09 22:58:17 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 31396 - reprocessar_janela - STEP_SUCCESS - Finished execution of step "reprocessar_janela" in 4.74s.
+2026-11-09 22:58:18 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 21304 - ENGINE_EVENT - Multiprocess executor: parent process exiting after 8.37s (pid: 21304)
+2026-11-09 22:58:18 -0300 - dagster - DEBUG - __ASSET_JOB - c58ef6d3-2d1e-4acb-b968-249687df7051 - 21304 - RUN_SUCCESS - Finished execution of run for "__ASSET_JOB".
+### saída do dagster: 0 [2026-11-09 22:58:19]
+### reprocessar_janela, partição 2024-05-01 [2026-11-09 22:58:19]
+C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\click\core.py:910: SupersessionWarning: Function `asset_materialize_command` is superseded and its usage is discouraged. Use 'dg launch --assets <selection>' instead.
+  return callback(*args, **kwargs)
+2026-11-09 22:58:22 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 14184 - RUN_START - Started execution of run for "__ASSET_JOB".
+2026-11-09 22:58:22 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 14184 - ENGINE_EVENT - Executing steps using multiprocess executor: parent process (pid: 14184)
+2026-11-09 22:58:22 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 14184 - reprocessar_janela - STEP_WORKER_STARTING - Launching subprocess for "reprocessar_janela".
+2026-11-09 22:58:26 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - STEP_WORKER_STARTED - Executing step "reprocessar_janela" in subprocess.
+2026-11-09 22:58:26 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - RESOURCE_INIT_STARTED - Starting initialization of resources [io_manager].
+2026-11-09 22:58:27 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - RESOURCE_INIT_SUCCESS - Finished initialization of resources [io_manager].
+2026-11-09 22:58:28 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - LOGS_CAPTURED - Capturing logs for process (pid: 9728).
+2026-11-09 22:58:29 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - STEP_START - Started execution of step "reprocessar_janela".
+2026-11-09 22:58:31,701 INFO janela 2024-05 reconciliada: 15 linhas, 15 completadas pelas janelas
+janela 2024-05: 15 linhas, impressão 5eb19ed587af56295
+2026-11-09 22:58:32 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - STEP_OUTPUT - Yielded output "result" of type "Nothing". (Type check passed).
+2026-11-09 22:58:32 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - ASSET_MATERIALIZATION - Materialized value reprocessar_janela.
+2026-11-09 22:58:32 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 9728 - reprocessar_janela - STEP_SUCCESS - Finished execution of step "reprocessar_janela" in 3.04s.
+2026-11-09 22:58:33 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 14184 - ENGINE_EVENT - Multiprocess executor: parent process exiting after 10.84s (pid: 14184)
+2026-11-09 22:58:33 -0300 - dagster - DEBUG - __ASSET_JOB - 0d3c3e32-bc9c-4f90-adb7-a22bae92f3ec - 14184 - RUN_SUCCESS - Finished execution of run for "__ASSET_JOB".
+### saída do dagster: 0 [2026-11-09 22:58:34]
+### reprocessar_janela, partição 2024-06-01 [2026-11-09 22:58:34]
+C:\Users\artur\AppData\Local\Temp\w74\.venv\Lib\site-packages\click\core.py:910: SupersessionWarning: Function `asset_materialize_command` is superseded and its usage is discouraged. Use 'dg launch --assets <selection>' instead.
+  return callback(*args, **kwargs)
+2026-11-09 22:58:38 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 19452 - RUN_START - Started execution of run for "__ASSET_JOB".
+2026-11-09 22:58:38 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 19452 - ENGINE_EVENT - Executing steps using multiprocess executor: parent process (pid: 19452)
+2026-11-09 22:58:38 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 19452 - reprocessar_janela - STEP_WORKER_STARTING - Launching subprocess for "reprocessar_janela".
+2026-11-09 22:58:41 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - STEP_WORKER_STARTED - Executing step "reprocessar_janela" in subprocess.
+2026-11-09 22:58:41 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - RESOURCE_INIT_STARTED - Starting initialization of resources [io_manager].
+2026-11-09 22:58:41 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - RESOURCE_INIT_SUCCESS - Finished initialization of resources [io_manager].
+2026-11-09 22:58:42 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - LOGS_CAPTURED - Capturing logs for process (pid: 29176).
+2026-11-09 22:58:42 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - STEP_START - Started execution of step "reprocessar_janela".
+2026-11-09 22:58:45,574 INFO janela 2024-06 reconciliada: 15 linhas, 15 completadas pelas janelas
+janela 2024-06: 15 linhas, impressão 88ae71f6a0b3bd6f4
+2026-11-09 22:58:45 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - STEP_OUTPUT - Yielded output "result" of type "Nothing". (Type check passed).
+2026-11-09 22:58:47 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - ASSET_MATERIALIZATION - Materialized value reprocessar_janela.
+2026-11-09 22:58:48 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 29176 - reprocessar_janela - STEP_SUCCESS - Finished execution of step "reprocessar_janela" in 4.9s.
+2026-11-09 22:58:48 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 19452 - ENGINE_EVENT - Multiprocess executor: parent process exiting after 10.16s (pid: 19452)
+2026-11-09 22:58:48 -0300 - dagster - DEBUG - __ASSET_JOB - 4702ce4b-28b4-40ec-b5a4-7aac201a7c89 - 19452 - RUN_SUCCESS - Finished execution of run for "__ASSET_JOB".
+### saída do dagster: 0 [2026-11-09 22:58:49]
+### eventos na fonte depois do backfill
+2024-04: 15 eventos
+2024-05: 15 eventos
+2024-06: 15 eventos
+2026-11: 1000 eventos
+FIM

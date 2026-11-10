@@ -9,8 +9,9 @@ violado. Responde à issue #52.
 
 ## O que se mede
 
-A Gold é reconstruída inteira por `construir-gold`, numa transação só, a partir de
-uma versão da fonte canônica de eventos ([modelo analítico](modelo-analitico.md)).
+A Gold é reconstruída inteira a partir de uma versão da fonte canônica de eventos,
+pelo dbt ([transformação declarativa](transformacao.md)) ou, na opção nula, por
+`construir-gold`, numa transação só ([modelo analítico](modelo-analitico.md)).
 O que a origem recebe depois só aparece na Gold quando chega à fonte, pelo CDC ou
 pelas janelas, e a Gold é construída de novo.
 
@@ -109,6 +110,10 @@ docker compose run --rm carga construir-gold
 docker compose run --rm carga medir-frescor; echo $?
 ```
 
+`construir-gold` apaga o schema `gold` inteiro antes de reconstruir, inclusive o
+`gold.fato_desempenho_escola_ano`, que só o dbt cria. Depois da demonstração, rode o
+serviço `transformacao` de novo.
+
 `demonstrar-frescor` insere uma vistoria na origem, que é insert-only: ela fica no
 banco, marcada na observação. Rode num ambiente de desenvolvimento. Para não esperar
 25 h, a violação usa um SLA reduzido a segundos.
@@ -201,3 +206,4 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.
 | 1.0 | Frescor da Gold, SLA de 25 h, registro e demonstração da violação | [Gabriel Lopes de Amorim](https://github.com/BrzGab) |  | 2 de novembro de 2026 |
 | 1.1 | Conta como pendente a vistoria sem item de escola e ano que faltam no fato anual | [Gabriel Lopes de Amorim](https://github.com/BrzGab) | [Pedro Sanchez](https://github.com/PedroDev-sketch) | 4 de novembro de 2026 |
 | 1.2 | Gold lida da fonte única de eventos (ADR 0008): o SLA cobre origem → fonte → Gold, e a vistoria sem item deixa de contar | Squad EduInfra |  | 8 de novembro de 2026 |
+| 1.3 | A Gold pelo dbt, com o construir-gold como opção nula, e o aviso de que ele apaga o fato de desempenho | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
