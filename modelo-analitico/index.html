@@ -699,10 +699,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#o-que-ainda-depende-de-outras-entregas" class="md-nav__link">
+  <a href="#integracoes-e-evolucao-do-modelo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        O que ainda depende de outras entregas
+        Integrações e evolução do modelo
       
     </span>
   </a>
@@ -820,6 +820,34 @@
     
   
     Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
   
 
     
@@ -1653,10 +1681,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#o-que-ainda-depende-de-outras-entregas" class="md-nav__link">
+  <a href="#integracoes-e-evolucao-do-modelo" class="md-nav__link">
     <span class="md-ellipsis">
       
-        O que ainda depende de outras entregas
+        Integrações e evolução do modelo
       
     </span>
   </a>
@@ -1684,12 +1712,20 @@
 
 
 <h1 id="modelo-analitico-gold">Modelo analítico (Gold)<a class="headerlink" href="#modelo-analitico-gold" title="Permanent link">&para;</a></h1>
+<p>Há dois caminhos para construir o modelo de infraestrutura: o SQL direto de
+<code>construir-gold</code>, descrito abaixo como opção nula, e o projeto dbt da issue #48.
+O dbt lê um retrato da Silver e dos eventos em <code>entrada_transformacao</code>, mantém
+os seis marts e integra o fato de desempenho da Silver real do ENEM. A equivalência dos seis marts é verificada por testes de integração
+e por <a href="../evidencias/issue-48/comparacao/">benchmark com dados públicos</a>.</p>
+<p>As garantias de transação única abaixo pertencem ao construtor SQL. No dbt, as
+entradas são fixas durante o job, mas os modelos são publicados separadamente.
+Consulte <a href="../transformacao/">Transformação declarativa</a> para executar, explorar
+o grafo, integrar as fontes e entender os limites de publicação.</p>
 <p>A Gold responde à pergunta de gestão do projeto: a infraestrutura de uma escola
 se reflete no desempenho dos seus alunos no ENEM? Esta página declara o grão de
 cada tabela, a decisão de modelagem, as regras da dimensão de variação lenta e o
 que ainda depende de outras entregas. O SQL fica em <code>src/eduinfra/modelo_analitico.py</code>,
-em constantes, para poder ser movido sem mudanças para dbt ou SQLMesh quando o
-ADR 0005 escolher a ferramenta.</p>
+em constantes como opção nula; o projeto dbt implementa a decisão do ADR 0005.</p>
 <h2 id="como-rodar">Como rodar<a class="headerlink" href="#como-rodar" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>build<span class="w"> </span>carga
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>construir-gold
@@ -1956,13 +1992,16 @@ de variação lenta, com um item por coluna. <code>comparar-granularidades</code
 pergunta nos dois (% de escolas com laboratório de ciências por UF e rede, no ano
 de maior cobertura) e confere se as respostas são iguais. Se divergirem, o comando
 avisa; a herança entre anos é uma causa possível, mas não a única.</p>
-<h2 id="o-que-ainda-depende-de-outras-entregas">O que ainda depende de outras entregas<a class="headerlink" href="#o-que-ainda-depende-de-outras-entregas" title="Permanent link">&para;</a></h2>
+<h2 id="integracoes-e-evolucao-do-modelo">Integrações e evolução do modelo<a class="headerlink" href="#integracoes-e-evolucao-do-modelo" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>ENEM.</strong> O fato de desempenho ainda não existe. O ENEM 2024 já está na Silver,
-  agregado por escola, em <code>silver/enem/ano=2024/</code> (<a href="../enem/">ENEM</a>). Interface esperada: <code>fato_desempenho_escola_ano</code>, com uma linha por
-  escola por ano do ENEM, chave <code>(co_entidade, ano)</code>. Para saber se a escola tinha
-  laboratório <strong>na época da prova</strong>, a junção correta é pelo ponto no tempo:
-  <code>d.valid_from &lt;= data_da_prova and data_da_prova &lt; d.valid_to</code>.</li>
+<li><strong>ENEM integrado no dbt.</strong> <code>fato_desempenho_escola_ano</code> tem grão
+  <code>(co_entidade, ano)</code> e preserva médias, contagens de notas válidas e de participantes
+  da Silver. Só inclui escolas encontradas na dimensão do Censo; as exclusões ficam
+  no resumo. Não há corte adicional em 30 participantes. A referência analítica da
+  infraestrutura é <code>data_referencia_infraestrutura</code>, configurada por
+  <code>DATA_REFERENCIA_ENEM</code> (2024-11-03 por padrão), e não uma data individual fornecida
+  pelo microdado. A junção é <code>valid_from &lt;= referência &lt; valid_to</code>; sem estado
+  conhecido nesse instante, a chave SCD fica nula, sem inventar um perfil.</li>
 <li><strong>Fonte de eventos única.</strong> Decidida no
   <a href="../adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>: a Gold copia uma versão da
   tabela Delta <code>warehouse/eventos_vistoria</code> para <code>fonte.eventos_vistoria</code>, confere

@@ -18,7 +18,7 @@
         <link rel="prev" href="../projeto/">
       
       
-        <link rel="next" href="../testes/">
+        <link rel="next" href="../transformacao/">
       
       
         
@@ -709,6 +709,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#transformacao-declarativa-issue-48" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transformação declarativa (issue #48)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#preparar-o-ambiente" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -745,6 +756,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1465,6 +1504,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#transformacao-declarativa-issue-48" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Transformação declarativa (issue #48)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#preparar-o-ambiente" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1518,6 +1568,19 @@
 
 
 <h1 id="como-executar-e-demonstrar">Como executar e demonstrar<a class="headerlink" href="#como-executar-e-demonstrar" title="Permanent link">&para;</a></h1>
+<h2 id="transformacao-declarativa-issue-48">Transformação declarativa (issue #48)<a class="headerlink" href="#transformacao-declarativa-issue-48" title="Permanent link">&para;</a></h2>
+<p>Com <code>.env</code> configurado, inclusive <code>DATA_REFERENCIA_ENEM=2024-11-03</code>:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--build<span class="w"> </span>--rm<span class="w"> </span>transformacao
+</span></code></pre></div>
+<p>O serviço aguarda a carga do Censo e o CDC saudável, ingere o ENEM real,
+congela as sources, constrói/testa a Gold e gera o grafo. Uma falha na ingestão,
+no preparo, no build/testes ou na documentação devolve código diferente de zero.
+O fluxo padrão usa a Silver da #44 e a fonte canônica Delta da #45. A primeira
+execução baixa os pacotes públicos; reexecuções usam o manifesto e a Bronze.</p>
+<p>O modo explícito <code>--somente-infraestrutura</code> serve para execução parcial e não
+substitui a validação completa com ENEM. Para contratos, variáveis, referência
+temporal, grafo interativo e limites de publicação, consulte
+<a href="../transformacao/">Transformação declarativa</a>.</p>
 <p>Execute os comandos a partir da raiz do repositório. O fluxo padrão sobe o
 PostgreSQL, prepara os dados do Censo e inicia o consumidor CDC.</p>
 <h2 id="preparar-o-ambiente">Preparar o ambiente<a class="headerlink" href="#preparar-o-ambiente" title="Permanent link">&para;</a></h2>
@@ -1530,28 +1593,28 @@ PostgreSQL, prepara os dados do Censo e inicia o consumidor CDC.</p>
 </ul>
 <p>O resto vem nas imagens: PostgreSQL 16 (<code>pgvector/pgvector:pg16</code>) e Python 3.12
 com <a href="https://docs.astral.sh/uv/">uv</a>.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/daviegito/bd2_2026_2_eduinfra.git
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>bd2_2026_2_eduinfra
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Edite .env: ajuste POSTGRES_PASSWORD e a senha correspondente em DATABASE_URL.</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/daviegito/bd2_2026_2_eduinfra.git
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nb">cd</span><span class="w"> </span>bd2_2026_2_eduinfra
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Edite .env: ajuste POSTGRES_PASSWORD e a senha correspondente em DATABASE_URL.</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
 </span></code></pre></div>
 <p>O serviço <code>carga</code> aplica as migrações, ingere o Censo 2024, publica a linha de
 base analítica, imprime a caracterização e verifica as contagens da tabela
 derivada da Silver. Ao terminar com código 0, libera o serviço <code>cdc</code>, que
 acompanha novas vistorias a cada dois segundos. <code>banco</code> e <code>cdc</code> continuam no ar.
 O tempo depende da máquina, da rede e do cache das imagens.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>ps
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>--tail<span class="o">=</span><span class="m">30</span><span class="w"> </span>cdc
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>ps
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>logs<span class="w"> </span>--tail<span class="o">=</span><span class="m">30</span><span class="w"> </span>cdc
 </span></code></pre></div>
 <p>A primeira leitura Delta pelo DuckDB pode baixar sua extensão e exigir internet.</p>
 <p>Se a porta 5432 já estiver em uso, mude <code>PORTA_POSTGRES</code> no <code>.env</code>.</p>
 <p>Para conferir a base populada:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>banco<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"select * from escola_estado_atual where co_entidade = 53002580;"</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span><span class="nb">exec</span><span class="w"> </span>banco<span class="w"> </span>psql<span class="w"> </span>-U<span class="w"> </span>eduinfra<span class="w"> </span>-d<span class="w"> </span>eduinfra<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>-c<span class="w"> </span><span class="s2">"select * from escola_estado_atual where co_entidade = 53002580;"</span>
 </span></code></pre></div>
 <p>Para parar os serviços preservando os volumes:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>down
 </span></code></pre></div>
 <details class="warning">
 <summary>Recomeçar com volumes vazios</summary>
@@ -1634,15 +1697,15 @@ esses dados e reconstruir o ambiente.</p>
 <p>As demonstrações de CDC e atraso e a comparação de ingestão inserem dados de
 teste. Execute-as em um ambiente de desenvolvimento descartável. Para uma
 demonstração manual do CDC, pause o consumidor contínuo antes e retome depois:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>cdc
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>demonstrar-cdc
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>start<span class="w"> </span>cdc
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>cdc
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>demonstrar-cdc
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>start<span class="w"> </span>cdc
 </span></code></pre></div>
 <p>Para rodar fora do Docker, com <a href="https://docs.astral.sh/uv/">uv</a> e o banco do
 compose publicado na porta do <code>.env</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>sync
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">set</span><span class="w"> </span>-a<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.env<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span>+a
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>eduinfra<span class="w"> </span>tudo
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>sync
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="nb">set</span><span class="w"> </span>-a<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">source</span><span class="w"> </span>.env<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">set</span><span class="w"> </span>+a
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>uv<span class="w"> </span>run<span class="w"> </span>eduinfra<span class="w"> </span>tudo
 </span></code></pre></div>
 <h2 id="demonstracoes-e-medicoes">Demonstrações e medições<a class="headerlink" href="#demonstracoes-e-medicoes" title="Permanent link">&para;</a></h2>
 <table>

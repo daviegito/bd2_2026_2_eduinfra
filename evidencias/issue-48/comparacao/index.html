@@ -1,0 +1,1895 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/evidencias/issue-48/comparacao/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Comparação da issue #48 — SQL direto e dbt - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#comparacao-da-issue-48-sql-direto-e-dbt" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href="../../.." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Comparação da issue #48 — SQL direto e dbt
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../modelo-analitico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../frescor-e-sla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frescor e SLA da Gold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0005-ferramenta-de-transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0005 — Transformação
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#condicoes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condições
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tempo-de-parede" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tempo de parede
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#igualdade-exata" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Igualdade exata
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#codigo-testes-e-linhagem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Código, testes e linhagem
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#como-reproduzir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Como reproduzir
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aceite-integrado-com-dados-reais-09112026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aceite integrado com dados reais — 09/11/2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aceite integrado com dados reais — 09/11/2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resultados-nacionais" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultados nacionais
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reexecucao-e-grafo" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reexecução e grafo
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#saude-do-cdc-e-frescor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Saúde do CDC e frescor
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testes-finais-e-condicao-de-concorrencia" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testes finais e condição de concorrência
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklist-e-criterios-de-aceite-da-48" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklist e critérios de aceite da #48
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="comparacao-da-issue-48-sql-direto-e-dbt">Comparação da issue #48 — SQL direto e dbt<a class="headerlink" href="#comparacao-da-issue-48-sql-direto-e-dbt" title="Permanent link">&para;</a></h1>
+<p>Data UTC: 2026-11-09T13:56:32.462373+00:00
+Python: 3.12.3; sistema: Linux x86_64.
+PostgreSQL: PostgreSQL 16.15 (Debian 16.15-1.pgdg12+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 12.2.0-14+deb12u1) 12.2.0, 64-bit.
+dbt-core: 1.12.6; dbt-postgres: 1.11.0.</p>
+<h2 id="condicoes">Condições<a class="headerlink" href="#condicoes" title="Permanent link">&para;</a></h2>
+<p>Banco de desenvolvimento dedicado, sem slot de CDC. Entradas e origem ficam paradas durante a medição.
+A opção nula é o construtor SQL de construir-gold, agendável por cron; mede-se a execução, sem instalar nem medir o agendador.
+Recorte público do Censo 2024: SP, DF, GO, MT e MS. ENEM não participa deste benchmark.
+Preparo inicial de validação: 11.853 s (fora das amostras). Cada amostra inclui seu próprio preparo.
+Entradas: <code>{"com_enem": false, "linhas": {"censo_escola": 41380, "censo_municipio": 1112, "eventos_vistoria": 703460}, "versao_delta": 1}</code>.
+SQL direto lê cadastros do OLTP e copia a fonte canônica Delta; dbt prepara um retrato Silver/Delta. Cada tempo inclui esse preparo e a igualdade exata confere os resultados.
+Cada tempo dbt inclui inicialização do processo. As rodadas são sequenciais, com cache possivelmente aquecido, sem alegação de máquina dedicada.</p>
+<h2 id="tempo-de-parede">Tempo de parede<a class="headerlink" href="#tempo-de-parede" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Caminho</th>
+<th>Rodadas (s)</th>
+<th style="text-align: right;">Mediana (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SQL direto (com preparo, sem testes declarativos)</td>
+<td>15.255, 14.738, 13.490</td>
+<td style="text-align: right;">14.738</td>
+</tr>
+<tr>
+<td>dbt run (com preparo)</td>
+<td>28.519, 23.458, 24.406</td>
+<td style="text-align: right;">24.406</td>
+</tr>
+<tr>
+<td>dbt build (com preparo e testes)</td>
+<td>27.123, 25.760, 25.936</td>
+<td style="text-align: right;">25.936</td>
+</tr>
+</tbody>
+</table>
+<h2 id="igualdade-exata">Igualdade exata<a class="headerlink" href="#igualdade-exata" title="Permanent link">&para;</a></h2>
+<p>EXCEPT ALL nos dois sentidos, em todas as colunas, após cada rodada.</p>
+<table>
+<thead>
+<tr>
+<th>Tabela</th>
+<th style="text-align: right;">Linhas</th>
+<th style="text-align: right;">Diferenças</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>dim_item</td>
+<td style="text-align: right;">17</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>dim_municipio</td>
+<td style="text-align: right;">1112</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>dim_escola</td>
+<td style="text-align: right;">41380</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>dim_escola_infraestrutura</td>
+<td style="text-align: right;">41380</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>fato_vistoria_item</td>
+<td style="text-align: right;">703460</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr>
+<td>fato_infra_escola_ano</td>
+<td style="text-align: right;">41380</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+<h2 id="codigo-testes-e-linhagem">Código, testes e linhagem<a class="headerlink" href="#codigo-testes-e-linhagem" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Critério</th>
+<th>SQL direto</th>
+<th>dbt</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linhas SQL não vazias/comentários</td>
+<td>166</td>
+<td>162</td>
+</tr>
+<tr>
+<td>Testes declarativos executados por dbt build</td>
+<td>não há executor declarativo</td>
+<td>20</td>
+</tr>
+<tr>
+<td>Linhagem automática</td>
+<td>não há manifest</td>
+<td>11 modelos, 14 dependências diretas e sources em manifest.json</td>
+</tr>
+</tbody>
+</table>
+<p>O contador SQL exclui comentários de linha e linhas vazias; não conta o runner Python, YAML ou testes SQL externos.
+A expansão do catálogo dinâmico é contada uma vez com um item nos dois caminhos. A medição não usa linhas de código como medida isolada de manutenção.
+A opção nula tem restrições PK/unique no SQL e a suíte pytest existente; não equivale a ausência de validação.</p>
+<h2 id="como-reproduzir">Como reproduzir<a class="headerlink" href="#como-reproduzir" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># DATABASE_URL deve apontar para banco de teste vazio; DIRETORIO_DADOS guarda o download:</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>transformacao
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>transformacao<span class="w"> </span>python<span class="w"> </span>transformacao/scripts/comparar.py<span class="w"> </span>--confirmar-banco-de-teste<span class="w"> </span>--preparar-recorte<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">3</span><span class="w"> </span>--saida<span class="w"> </span>docs/evidencias/issue-48/comparacao.md
+</span></code></pre></div>
+<p>Para repetir em banco já preparado, omita --preparar-recorte e aponte DIRETORIO_DADOS para o subdiretório _benchmark48.
+O comando recria gold e gold_dbt. Nunca apontar para produção ou para um banco com slot do CDC compartilhado (issue #60).
+Os resultados complementam o ADR 0005 integrado na main e não repetem a comparação com SQLMesh.</p>
+<h2 id="aceite-integrado-com-dados-reais-09112026">Aceite integrado com dados reais — 09/11/2026<a class="headerlink" href="#aceite-integrado-com-dados-reais-09112026" title="Permanent link">&para;</a></h2>
+<p>Base: <code>main</code> em <code>7f6ef47</code>, com as #44, #45 e #60 integradas. A validação usou
+uma exportação da árvore de trabalho contendo apenas os arquivos necessários ao
+build, sem <code>.env</code>, <code>.venv</code>, dados ou artefatos dbt do host. O projeto Compose
+<code>eduinfra48-aceite9</code> criou rede, PostgreSQL e volumes novos. As credenciais eram
+exclusivas de teste; nenhum banco pessoal/compartilhado foi alterado.</p>
+<p>O único comando de construção foi:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--build<span class="w"> </span>--rm<span class="w"> </span>transformacao
+</span></code></pre></div>
+<p>O comando foi executado com nome de projeto e arquivo de ambiente de teste
+separados. O Compose baixou o Censo oficial, aplicou as migrações até a 0008,
+publicou a Silver e o Delta canônico e iniciou o CDC. O runner baixou o ENEM
+oficial, executou seu protocolo de manifesto, preparou as sources e construiu
+a Gold. Não foram copiados arquivos de dados do host para essa validação.</p>
+<h3 id="resultados-nacionais">Resultados nacionais<a class="headerlink" href="#resultados-nacionais" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Relação</th>
+<th style="text-align: right;">Linhas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gold.dim_item</code></td>
+<td style="text-align: right;">17</td>
+</tr>
+<tr>
+<td><code>gold.dim_municipio</code></td>
+<td style="text-align: right;">5.570</td>
+</tr>
+<tr>
+<td><code>gold.dim_escola</code></td>
+<td style="text-align: right;">181.065</td>
+</tr>
+<tr>
+<td><code>gold.dim_escola_infraestrutura</code></td>
+<td style="text-align: right;">181.065</td>
+</tr>
+<tr>
+<td><code>gold.fato_vistoria_item</code></td>
+<td style="text-align: right;">3.078.105</td>
+</tr>
+<tr>
+<td><code>gold.fato_infra_escola_ano</code></td>
+<td style="text-align: right;">181.065</td>
+</tr>
+<tr>
+<td><code>gold.fato_desempenho_escola_ano</code></td>
+<td style="text-align: right;">25.179</td>
+</tr>
+<tr>
+<td>Entrada ENEM, incluindo escolas sem correspondência</td>
+<td style="text-align: right;">29.400</td>
+</tr>
+</tbody>
+</table>
+<p>O ENEM permanece integral na Silver e na entrada: 29.400 escolas e 1.565.797
+participantes com escola informada. A Gold contém as 25.179 encontradas no Censo,
+com 1.543.488 participantes. As 4.221 excluídas da Gold são as de poucos
+participantes/código mascarado, sem correspondência no Censo. As contagens aqui
+se referem aos participantes das escolas agregadas, não aos 4.332.944 inscritos
+do arquivo inteiro. A cobertura completa do produtor está em <a href="../../../enem/">ENEM</a>.</p>
+<p>As <strong>9.266 escolas com 10 a 29 participantes</strong> continuam no fato: não foi aplicado
+um corte adicional em 30. As médias e suas contagens foram preservadas, sem
+recalcular notas ou converter ausência em zero. A referência analítica foi
+<code>data_referencia_infraestrutura = 2024-11-03</code>, conforme a configuração aprovada.</p>
+<p>SHA-256 dos CSVs registrados no manifesto:</p>
+<ul>
+<li>Censo: <code>3fb4d93c714b7d9303e34430f0287ca102bf984a4769d5abaca21eb4d1453bc9</code>.</li>
+<li>ENEM: <code>6fc3469bb7b67b02840f0d073021ce58358cb68ef896feb017fd5730cb97b49d</code>.</li>
+</ul>
+<h3 id="reexecucao-e-grafo">Reexecução e grafo<a class="headerlink" href="#reexecucao-e-grafo" title="Permanent link">&para;</a></h3>
+<p>O primeiro build terminou com 13 modelos e os 21 testes então declarados
+(<code>PASS=34</code>, sem falhas). Após ampliar os testes de contrato do fato ENEM,
+as reexecuções terminaram com <strong>13 modelos e 26 testes</strong> (<code>PASS=39</code>, sem
+WARN/ERROR/SKIP). <code>dbt docs generate</code> produziu <code>index.html</code>, <code>manifest.json</code>
+e <code>catalog.json</code>; o grafo tem <strong>5 sources e 18 dependências diretas dos modelos</strong>.
+A exportação foi servida por HTTP local: <code>index.html</code>, <code>manifest.json</code> e
+<code>catalog.json</code> responderam 200, e o catálogo continha os 13 modelos.
+Todas as sources dbt apontam para <code>entrada_transformacao</code>, sem source de eventos
+em <code>public</code>. A navegação e o diagrama estão em <a href="../../../transformacao/">Transformação</a>.</p>
+<p>O produtor ignorou o ENEM já ingerido. O manifesto permaneceu com uma execução
+Censo/2024 e uma ENEM/2024. As contagens e a impressão de todas as colunas das
+sete tabelas Gold permaneceram iguais nas reexecuções:</p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="k">count</span><span class="p">(</span><span class="o">*</span><span class="p">),</span><span class="w"> </span><span class="n">bit_xor</span><span class="p">(</span><span class="n">hashtextextended</span><span class="p">(</span><span class="n">to_jsonb</span><span class="p">(</span><span class="n">t</span><span class="p">)::</span><span class="nb">text</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">))</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">FROM</span><span class="w"> </span><span class="n">gold</span><span class="p">.</span><span class="n">fato_vistoria_item</span><span class="w"> </span><span class="n">t</span><span class="p">;</span>
+</span></code></pre></div>
+<p>A mesma consulta foi aplicada a cada mart. Essa impressão de 64 bits é uma
+conferência adicional, não uma prova criptográfica de igualdade. A igualdade
+exata é verificada pelo <code>EXCEPT ALL</code> do benchmark das seis tabelas e pelos
+testes de integração, que também conferem o fato ENEM e sua junção temporal.</p>
+<h3 id="saude-do-cdc-e-frescor">Saúde do CDC e frescor<a class="headerlink" href="#saude-do-cdc-e-frescor" title="Permanent link">&para;</a></h3>
+<p>O CDC permaneceu <code>healthy</code>, com retenção finita de <strong>2 GB</strong>, consumidor ativo e
+checkpoints provocados a cada 10 s durante os builds. A Gold ficou em dia, com
+zero vistorias pendentes. O <code>auditar-cdc</code> terminou com código 0 e
+<code>Nenhuma violação</code>, comparando origem e Delta; a fila estava vazia.</p>
+<table>
+<thead>
+<tr>
+<th>Rodada monitorada</th>
+<th style="text-align: right;">Pico de WAL retido</th>
+<th>Estados do slot</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dois primeiros builds</td>
+<td style="text-align: right;">1.041.331.376 bytes (993,09 MiB)</td>
+<td>somente <code>reserved</code></td>
+</tr>
+<tr>
+<td>Build final, após o ajuste de ordem dos snapshots</td>
+<td style="text-align: right;">1.016.278.512 bytes (969,20 MiB)</td>
+<td>somente <code>reserved</code></td>
+</tr>
+</tbody>
+</table>
+<p>A amostragem ocorreu aproximadamente a cada 0,2 s, por uma conexão separada,
+sem iniciar um segundo consumidor do mesmo slot. No fechamento do último
+build ainda havia WAL aguardando liberação; depois de um checkpoint e novas
+passadas do consumidor, ficaram <strong>560 bytes</strong> retidos e o slot <code>reserved</code>.
+Não houve erro de monitoramento. Esses valores descrevem este ambiente e volume;
+não substituem reavaliação para outras cargas, slots ou pausas do consumidor.</p>
+<h3 id="testes-finais-e-condicao-de-concorrencia">Testes finais e condição de concorrência<a class="headerlink" href="#testes-finais-e-condicao-de-concorrencia" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>15 testes específicos da #48 passaram.
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>263 passed, 11 warnings in 104.46s
+</span></code></pre></div>
+<p>A suíte geral foi executada contra banco descartável populado com o recorte
+público do benchmark, com Gold disponível. Não houve skips na suíte selecionada.
+Foi excluído <code>tests/test_transformacao_property.py</code> porque a dependência opcional
+Hypothesis não está instalada; nenhuma dependência opcional foi instalada.
+As onze advertências são de APIs antigas de particionamento já existentes em
+<code>comparacao_latencia.py</code>, fora deste escopo.</p>
+<p>O teste adicional de concorrência falhou antes do ajuste: um evento confirmado
+na origem e no Delta durante a cópia parecia inexistente no snapshot PG mais
+antigo. A correção fixa a versão Delta <strong>antes</strong> de iniciar o snapshot PostgreSQL.
+O teste confirma sete eventos na versão 0 durante a primeira execução e oito na
+versão 1 na seguinte, sem incluir parcialmente a chegada concorrente nem gerar
+falso alarme. Também permanecem cobertos duplicatas, rollback das sources,
+referência de outro ano, cadastros conflitantes, reexecução, SCD2, linhagem e um
+defeito de vigência injetado que o <code>dbt test</code> rejeita.</p>
+<p><code>mkdocs build --strict</code> e <code>git diff --check</code> passaram.</p>
+<h2 id="checklist-e-criterios-de-aceite-da-48">Checklist e critérios de aceite da #48<a class="headerlink" href="#checklist-e-criterios-de-aceite-da-48" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] Mesma transformação de infraestrutura em SQL direto e dbt, com comparação
+  de código, tempo, testes e linhagem; igualdade exata das seis tabelas.</li>
+<li>[x] Projeto versionado e perfil para o Compose.</li>
+<li>[x] Sources reais da Silver do Censo, ENEM e eventos canônicos.</li>
+<li>[x] Camadas staging/intermediate/marts e convenções declaradas.</li>
+<li>[x] Serviço Compose e procedimento de execução documentados.</li>
+<li>[x] Grafo interativo gerado, com diagrama e navegação documentados.</li>
+<li>[x] Um comando constrói a Gold numa exportação limpa, com banco e volumes novos.</li>
+<li>[x] Comparação com a opção nula salva para complementar o ADR 0005.</li>
+</ul>
+<p>O dbt publica modelos em transações separadas, como já discutido no ADR 0005;
+a atomicidade das sources não significa atomicidade da Gold inteira. Uma falha
+no build exige correção/reexecução antes de tratar a Gold como atualizada.
+O benchmark mede infraestrutura; não atribui ao ENEM os tempos desse recorte.
+A validação nacional e o benchmark ocorreram na mesma máquina, com outras
+atividades locais e caches possivelmente aquecidos; não são um SLA de desempenho.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

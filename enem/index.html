@@ -672,6 +672,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../testes/" class="md-nav__link">
         
   
@@ -1993,8 +2021,11 @@ Silver levou de 6,6 s a 12,3 s.</p>
 <ul>
 <li>Só o layout de 2024 em diante é aceito; o cabeçalho é validado, e um arquivo
   de outro layout é recusado com mensagem.</li>
-<li>O fato <code>fato_desempenho_escola_ano</code> da Gold (<a href="../modelo-analitico/">modelo analítico</a>)
-  ainda precisa ser construído a partir desta Silver.</li>
+<li>A Gold consome esta Silver pelo <a href="../transformacao/">fluxo dbt da #48</a>:
+  <code>docker compose run --build --rm transformacao</code> constrói
+  <code>fato_desempenho_escola_ano</code>, incluindo somente escolas encontradas no Censo e
+  registrando as exclusões. A referência temporal da infraestrutura é um parâmetro
+  explícito da transformação, não um campo individual do ENEM.</li>
 </ul>
 
 
