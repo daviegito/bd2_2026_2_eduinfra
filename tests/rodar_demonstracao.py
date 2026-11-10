@@ -1,40 +1,17 @@
 import sys
 import pyarrow as pa
-from deltalake import DeltaTable, write_deltalake
 from eduinfra.configuracao import carregar_configuracao
+import psycopg
 
 def injetar_defeito(configuracao):
-    print("\n--- [1/3] Injetando defeito de propósito na Gold ---")
-    caminho_tabela = configuracao.diretorio_dados / "warehouse" / "vistoria_item"
-
-    if not caminho_tabela.exists():
-        print(f"Erro: Tabela não encontrada em {caminho_tabela}. Rode a transformação primeiro!")
-        sys.exit(1)
-
-    print("Lendo amostra da tabela para garantir compatibilidade...")
-    dt = DeltaTable(str(caminho_tabela))
-
-    sample_table = dt.to_pyarrow_table()
-
-    if sample_table.num_rows == 0:
-        print("Erro: A tabela está vazia. Não é possível injetar defeito baseado em dados existentes.")
-        sys.exit(1)
-
-    # Pegamos a primeira linha para clonar a estrutura e os tipos de dados
-    first_row = sample_table.slice(0, 1)
-
-    # Exportamos TODAS as colunas dessa linha para um dicionário Python nativo
-    data_dict = first_row.to_pydict()
-
-    # Injetamos o defeito modificando apenas a coluna alvo
-    data_dict["situacao"] = ["ERRO_DE_DOMINIO"]
-
-    # Recriamos a tabela de defeito com todas as colunas intactas
-    defeito_table = pa.Table.from_pydict(data_dict, schema=sample_table.schema)
-
-    print(f"Injetando registro sujo...")
-
-    write_deltalake(str(caminho_tabela), defeito_table, mode="append")
+    print("\n--- [1/3] Injetando defeito de propósito na Gold (PostgreSQL) ---")
+    with psycopg.connect(configuracao.dsn, autocommit=True) as conn:
+        conn.execute("""
+            INSERT INTO gold.fato_vistoria_item (co_entidade, item_codigo, situacao, quantidade)
+            SELECT co_entidade, item_codigo, 'ERRO_DE_DOMINIO', 1
+            FROM gold.fato_vistoria_item
+            LIMIT 1
+        """)
     print("✅ Defeito injetado com sucesso!")
 
 def rodar_testes():
@@ -75,6 +52,9 @@ def main():
         print(f"Erro durante a demonstração: {e}")
         import traceback
         traceback.print_exc()
+    finally:
+        with psycopg.connect(config.dsn, autocommit=True) as conn:
+            conn.execute("DELETE FROM gold.fato_vistoria_item WHERE situacao = 'ERRO_DE_DOMINIO'")
 
 if __name__ == "__main__":
     main()
