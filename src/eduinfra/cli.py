@@ -22,6 +22,7 @@ from eduinfra import (
     frescor,
     janelas,
     modelo_analitico,
+    otimizacao_consulta,
 )
 from eduinfra.ingestao import ingerir
 from eduinfra.ingestao_enem import ingerir_enem
@@ -37,9 +38,10 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
-                                           "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
+                                           "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
                                            "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
-    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc e medir-recarga")
+    parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
+    parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
     parser.add_argument("--mes", help="janela AAAA-MM para reprocessar-janela")
     parser.add_argument("--lotes", type=int, default=20, help="lotes pequenos gravados antes da compactação em comparar-particionamento")
@@ -78,6 +80,27 @@ def main(argumentos: list[str] | None = None) -> int:
             log.info("gold.%s: %d linhas", tabela, linhas)
         # Cada construção registra o frescor; a violação só reprova em medir-frescor.
         frescor.medir(configuracao.dsn, comando="construir-gold")
+
+        log.info("Iniciando auditoria E3 automática...")
+        import unittest
+        import sys
+
+        # Garante que a raiz do container e o diretório atual estejam no sys.path
+        caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
+        for caminho in caminhos_busca:
+            if caminho not in sys.path:
+                sys.path.insert(0, caminho)
+
+        loader = unittest.TestLoader()
+        suite = loader.loadTestsFromName("tests.test_e3_gold")
+        runner = unittest.TextTestRunner(verbosity=2)
+        resultado = runner.run(suite)
+
+        if not resultado.wasSuccessful():
+            log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
+            return 1
+
+        log.info("Auditoria E3 concluída com sucesso!")
         return 0
 
     if opcoes.comando == "medir-frescor":
@@ -141,6 +164,12 @@ def main(argumentos: list[str] | None = None) -> int:
         comparacao = comparacao_particionamento.comparar(silver, opcoes.repeticoes, opcoes.lotes)
         print(comparacao_particionamento.formatar_markdown(comparacao))
         return 0
+
+    if opcoes.comando == "comparar-consulta":
+        comparacao = otimizacao_consulta.comparar(configuracao.dsn, opcoes.repeticoes)
+        otimizacao_consulta.gravar_planos(comparacao, opcoes.pasta_dos_planos)
+        print(otimizacao_consulta.formatar_markdown(comparacao))
+        return 0 if comparacao.mesmo_resultado else 1
 
     if opcoes.comando in ("migrar", "tudo"):
         command.upgrade(_alembic(configuracao), opcoes.revisao)

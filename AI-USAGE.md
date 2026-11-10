@@ -270,6 +270,22 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   Os commits foram feitos à mão, sem a IA
 - **Quem revisou:** Marcos Vinícius
 
+### 2026-10-19 — Fechamento da E2 (PR #43)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `docker-compose.yml`, `docs/cdc-e-semantica-de-entrega.md`, o status do ADR 0004 nas
+  páginas que o citam, os links para o site da disciplina e duas entradas deste arquivo
+- **O que foi pedido:** fechar as pendências da E2, medindo o healthcheck do serviço `cdc`, que
+  aparecia unhealthy na partida, e corrigindo os links que davam 404
+- **O que foi aproveitado:** o `start_period` de 120 s, a medição registrada no documento do CDC e a
+  troca de `unb-bd2.github.io/Disciplina/` por `unb-bd2.github.io/PlanoEnsino/`
+- **Como foi verificado:** a primeira passada do consumidor levou de 65 a 86 s no Docker Desktop, com
+  200 escolas de amostra; com a nova carência, o serviço ficou saudável em 52 s, sem reinícios, e o
+  stop e start com inserções durante a parada entregou os 15 itens ao Delta, sem duplicata. Artur
+  conferiu os links novos antes do commit. Entrada registrada em 9 de novembro, a partir do PR e
+  dos commits
+- **Quem revisou:** Gabriel, no PR #43
+
 ### 2026-10-26 — Modelo dimensional da Gold e dimensão de variação lenta (E3-3 e E3-4)
 
 - **Ferramenta:** Claude (assistente conversacional com acesso a ambiente de execução)
@@ -292,7 +308,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   itens).
 - **Quem revisou:** Pedro Teixeira Moriel Sanchez
 
-### 2026-10-31 — Métricas do CDC, telemetria e fila de erros (issue #52, ADR 0007)
+### 2026-10-31 — Métricas do CDC, telemetria e fila de erros (issues #52 e #56, ADR 0007)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
 - **Onde:** `src/eduinfra/telemetria_cdc.py`, `auditoria_cdc.py`, `fila_de_erros.py`,
@@ -308,17 +324,51 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   métrica, por causa da issue #52, aceito por Artur; e a leitura do fora de ordem em três eixos. Foi
   descartada uma medição de 3 amostras que sugeria cerca de 12 s para o evento atrasado, porque a
   medida por fora marcava o instante antes de atualizar a tabela. Corrigida a medida, as 30 amostras
-  deram cerca de 4 s
+  deram cerca de 4 s. A IA também redigiu as issues #56, #57 e #58; as duas últimas registram o que
+  ficou fora deste trabalho, as datas inválidas aceitas pela origem e a saída da fila de erros
 - **Como foi verificado:** 176 testes (unitários e de integração), com as falhas provocadas em bancos
   descartáveis. A revisão do Davi achou um teste que dependia do intervalo entre dois commits, depois
   corrigido. Duas rodadas de medição nos dados reais, com a latência medida por fora e por dentro.
   A hipótese de que os arquivos pequenos piorariam o merge não se confirmou nesta escala. Os números
   de `docs/metricas-cdc.md` vêm das saídas dos comandos ali documentados, guardadas em
-  `docs/evidencias/metricas-cdc/`
+  `docs/evidencias/metricas-cdc/`.
   O conflito com o #55 ao trazer a main (`cli.py` e este arquivo) foi resolvido com a IA, juntando os
   comandos dos dois lados, e conferido com a suíte em banco temporário com o Censo 2024 (195 de 196 testes;
   o que falhou é o limite de 0,2 s de `test_transacao_longa_inverte...`, em arquivo que o merge não alterou)
-- **Quem revisou:** Davi, no PR #59, com a revisão em andamento
+- **Quem revisou:** Davi e Gabriel, no PR #59. O Gabriel aprovou depois de rodar os testes de
+  resiliência três vezes com o Censo 2024 e aprovou de novo depois do merge com a main
+
+### 2026-11-01 — Consulta otimizada com EXPLAIN (issue #51)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `src/eduinfra/otimizacao_consulta.py`, o comando `comparar-consulta`, testes
+  correspondentes, `docs/consulta-otimizada.md` e `docs/explain/`
+- **O que foi pedido:** fazer a issue #51 seguindo oito pontos escritos por Artur: planos também em
+  JSON, buffers só da raiz, aquecimento e mediana, investigar a estimativa antes de criar índice,
+  justificar a ordem das colunas, separar diagnóstico de medição, medir o tempo de leitura e conferir
+  se a view é comum ou materializada. Revisando a primeira versão, que otimizava a origem, Artur
+  decidiu refazer sobre a Gold, como a issue pede
+- **O que foi aproveitado:** o código, os testes, as consultas na Gold e o rascunho da documentação.
+  Foram descartados a reescrita do filtro e o índice cobrindo da primeira versão, que não mostraram
+  ganho de tempo com cache quente, e uma leitura inicial que atribuía ao índice uma queda vinda do cache.
+  A IA também redigiu a issue #60, com o WAL que `construir-gold` gerou nesta medição e o que o slot
+  retinha
+- **Como foi verificado:** o aquecimento pedido por Artur expôs o efeito do cache. Duas rodadas sobre
+  uma cópia dos dados reais, com a view e a Gold devolvendo as mesmas linhas, e as hipóteses da origem
+  guardadas em `docs/explain/hipoteses.txt`. 188 testes (unitários e de integração) na mesma cópia.
+  As correções de `docs/consulta-otimizada.md` pedidas na revisão do Lucas foram redigidas com a IA,
+  com cada número e cada explicação de termo conferidos nos planos de `docs/explain/` e no código de
+  `comparar-consulta`. Os conflitos ao trazer a branch do #59 (2 de novembro, no `cli.py`) e a main
+  (9 de novembro, no `cli.py` e neste arquivo, e de novo depois do #67, no histórico do ADR 0007)
+  foram resolvidos com a IA, mantendo o que os dois lados acrescentaram. Na primeira vez, 206 de 208 testes passaram numa cópia com o Censo 2024, e as duas
+  falhas já existiam antes (o limite de 0,2 s de `test_transacao_longa_inverte...` e o prazo do
+  Hypothesis em `test_transformacao_property`). Na segunda, a main e a branch rodaram cada uma num
+  clone do mesmo banco com o Censo 2024: 244 testes passaram na main e 256 na branch, os mesmos 244
+  mais os 12 da consulta, com os mesmos 5 pulados por falta da Gold. Com a Gold construída pelo código
+  novo, que lê a fonte de eventos do ADR 0008, `comparar-consulta` devolveu as mesmas linhas na view e
+  na Gold, e o passo de publicar essa fonte entrou na reprodução. Depois do #67, os 12 testes da
+  consulta passaram sobre a migração 0009 e a suíte sem banco passou com 165 testes
+- **Quem revisou:** Lucas, no PR #61
 
 ### 2026-11-02 — Frescor e SLA da Gold (issue #52)
 
@@ -359,6 +409,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** pendente (PR)
 
+
+### 2026-11-08 — Validação de datas de vistoria (issue #57)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** migração 0008, leitura da origem em `eventos.py`, testes de datas e
+  de resiliência, métricas do CDC, ADR 0007 e evidências da issue #57.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite, com aprovação
+  prévia dos oito arquivos e das regras de datas.
+- **O que foi aproveitado:** validação técnica de datas finitas nos anos 1 a 9999
+  em UTC, sem corte arbitrário por ano do Censo; diagnóstico do legado sem alterar
+  o histórico e rejeição da publicação completa antes de escrever no Delta.
+- **Como foi verificado:** testes de integração em PostgreSQL descartável, migração
+  sobre cópia populada e comparação integral do histórico; resultados registrados
+  em `docs/evidencias/issue-57/validacao-datas.md`.
+- **Quem revisou:** Pedro aprovou o escopo e as regras; revisão do código pendente.
 ### 2026-11-08 — Vistoria sem item nas janelas de dado atrasado
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
@@ -435,6 +500,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   construção, medido no Docker), com testes de integração que falham no código
   anterior
 
+### 2026-11-09 — Integração final da validação de datas (issue #57)
+
+- **Ferramenta:** Codex, como assistente de integração e validação.
+- **Onde:** migração renumerada para 0009 após o manifesto ENEM 0008,
+  `eventos.py`, testes de datas/resiliência e documentação da #57.
+- **O que foi pedido:** concluir as pendências do PR #67 preservando a fonte
+  canônica, com aprovação explícita dos arquivos e de Hypothesis isolado.
+- **O que foi aproveitado:** validação e exportação no mesmo snapshot UTC,
+  mantendo o filtro e o esquema dos eventos integrados na main.
+- **Como foi verificado:** resultados da suíte integrada, frescor com Gold
+  e propriedades registrados nas evidências da issue #57.
+- **Quem revisou:** escopo aprovado por Pedro; revisão do código pendente.
 
 ### 2026-11-09 — Integração final das transformações (issue #48)
 
