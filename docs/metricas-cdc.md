@@ -278,7 +278,7 @@ antes.
 
 ## Limites
 
-- A migração 0008 exige `ocorrido_em` finito entre `0001-01-01 00:00:00+00`
+- A migração 0009 exige `ocorrido_em` finito entre `0001-01-01 00:00:00+00`
   (inclusive) e `10000-01-01 00:00:00+00` (exclusive), mantendo
   `ocorrido_em <= registrado_em`. É o intervalo técnico dos anos 1 a 9999 do Python
   em UTC, sem recorte de negócio em 2007 ou 2024. Antes de criar o check, a migração

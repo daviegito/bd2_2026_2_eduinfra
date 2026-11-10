@@ -96,20 +96,13 @@ def test_vistoria_nova_fica_pendente_ate_a_proxima_construcao(dsn):
     assert ultima_medicao(dsn)[-1] is False
 
 
-def test_vistoria_sem_item_de_ano_que_falta_no_fato_anual_fica_pendente(dsn):
+@pytest.mark.parametrize("ano", [2019, 2024])
+def test_vistoria_sem_item_nao_conta_porque_nao_e_evento(dsn, ano):
     antes = frescor.medir(dsn, SLA_LONGO, comando="teste")
 
-    # Nenhuma vistoria da origem é de 2019: a escola ganha uma linha nova no fato anual.
-    inserir_vistoria_sem_item(dsn, datetime(2019, 6, 1, tzinfo=timezone.utc))
-
-    assert frescor.medir(dsn, SLA_LONGO, comando="teste").vistorias_pendentes == antes.vistorias_pendentes + 1
-
-
-def test_vistoria_sem_item_de_ano_que_o_fato_anual_ja_tem_nao_conta(dsn):
-    antes = frescor.medir(dsn, SLA_LONGO, comando="teste")
-
-    # A escola já tem a linha de 2024 no fato anual, da carga do Censo: nada muda na Gold.
-    inserir_vistoria_sem_item(dsn, datetime(2024, 6, 1, tzinfo=timezone.utc))
+    # Sem item não há evento na fonte canônica (ADR 0008): a vistoria nunca chega à Gold,
+    # nem num ano que o fato anual ainda não tem, e contá-la deixaria o SLA violado para sempre.
+    inserir_vistoria_sem_item(dsn, datetime(ano, 6, 1, tzinfo=timezone.utc))
 
     assert frescor.medir(dsn, SLA_LONGO, comando="teste").vistorias_pendentes == antes.vistorias_pendentes
 

@@ -90,7 +90,7 @@ def _inserir(conexao) -> int:
 
 
 def _inserir_com_ocorrido(conexao, expressao: str) -> int:
-    # Simula uma origem legada apenas neste banco descartável: a 0008 impede esses INSERTs.
+    # Simula uma origem legada apenas neste banco descartável: a 0009 impede esses INSERTs.
     conexao.execute("alter table vistoria drop constraint if exists vistoria_ocorrido_em_representavel")
     tecnico = conexao.execute(
         "insert into tecnico (matricula, nome, lotacao_uf) values (%s, 'Técnico', 'DF') "

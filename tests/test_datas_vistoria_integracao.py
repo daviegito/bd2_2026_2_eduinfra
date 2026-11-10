@@ -79,7 +79,7 @@ def test_origem_rejeita_datas_invalidas(banco, data):
 
 @pytest.mark.parametrize("data", ["0001-01-01 00:00:00+00", "1999-12-31 23:59:59+00", "2024-05-29", "9999-12-31 23:59:59.999999+00"])
 def test_limites_validos_e_historico_preservados_na_migracao(banco, data):
-    migrar("0007")
+    migrar("0008")
     semear(banco)
     inserir(banco, data, registro=data)
     antes = historico(banco)
@@ -98,7 +98,7 @@ def test_limites_validos_e_historico_preservados_na_migracao(banco, data):
 
 @pytest.mark.parametrize("data", INVALIDAS)
 def test_migracao_diagnostica_legado_sem_alterar_historico(banco, data):
-    migrar("0007")
+    migrar("0008")
     semear(banco)
     id = inserir(banco, data)
     antes = historico(banco)
@@ -106,7 +106,7 @@ def test_migracao_diagnostica_legado_sem_alterar_historico(banco, data):
         migrar()
     assert historico(banco) == antes
     with psycopg.connect(banco.dsn) as conn:
-        assert conn.execute("select version_num from alembic_version").fetchone() == ("0007",)
+        assert conn.execute("select version_num from alembic_version").fetchone() == ("0008",)
         assert conn.execute("select count(*) from pg_constraint where conname = %s", (REGRA,)).fetchone() == (0,)
 
 
@@ -116,7 +116,7 @@ def test_migracao_vazia_e_reversao_preservam_regra_temporal(banco):
     with pytest.raises(psycopg.errors.CheckViolation) as erro:
         inserir(banco, "2024-05-30", registro="2024-05-29")
     assert erro.value.diag.constraint_name == "vistoria_evento_antes_do_registro"
-    command.downgrade(Config(str(RAIZ / "alembic.ini")), "0007")
+    command.downgrade(Config(str(RAIZ / "alembic.ini")), "0008")
     inserir(banco, "-infinity")
     with psycopg.connect(banco.dsn) as conn:
         assert conn.execute("select count(*) from pg_constraint where conname = 'vistoria_evento_antes_do_registro'").fetchone() == (1,)
@@ -125,7 +125,7 @@ def test_migracao_vazia_e_reversao_preservam_regra_temporal(banco):
 @pytest.mark.parametrize("data", INVALIDAS)
 @pytest.mark.parametrize("delta_preexistente", [False, True])
 def test_forcar_rejeita_legado_sem_criar_particao_ou_mudar_delta(banco, data, delta_preexistente):
-    migrar("0007")
+    migrar("0008")
     semear(banco)
     inserir(banco, "2024-05-29", registro="2024-05-30")
     caminho = eventos.caminho_da_tabela(banco)
@@ -147,7 +147,7 @@ def test_forcar_rejeita_legado_sem_criar_particao_ou_mudar_delta(banco, data, de
 
 
 def test_validacao_e_exportacao_observam_o_mesmo_snapshot(banco, monkeypatch):
-    migrar("0007")
+    migrar("0008")
     semear(banco)
     inserir(banco, "2024-05-29", registro="2024-05-30")
     conectar = eventos.duckdb.connect

@@ -97,7 +97,7 @@ Escolhemos B, com estas regras:
 
 ## Revisão da validação de datas — issue #57
 
-A migração 0008 limita `ocorrido_em` a valores finitos nos anos 1 a 9999 em UTC:
+A migração 0009 limita `ocorrido_em` a valores finitos nos anos 1 a 9999 em UTC:
 `[0001-01-01 00:00:00+00, 10000-01-01 00:00:00+00)`. O motivo é a
 representação de datas pelo Python, não o ano do Censo Escolar ou do ENEM.
 O check anterior de evento anterior ou igual ao registro continua vigente.

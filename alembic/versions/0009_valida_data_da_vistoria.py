@@ -1,14 +1,14 @@
 """Limita ocorrido_em ao intervalo finito representável pelo Python, em UTC.
 
-Revision ID: 0008
-Revises: 0007
+Revision ID: 0009
+Revises: 0008
 """
 
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0008"
-down_revision = "0007"
+revision = "0009"
+down_revision = "0008"
 branch_labels = None
 depends_on = None
 
@@ -28,7 +28,7 @@ def upgrade() -> None:
     if invalidas:
         exemplos = "; ".join(f"id={id}, ocorrido_em={data} UTC" for id, data, _ in invalidas)
         raise RuntimeError(
-            f"Migração 0008 interrompida: {invalidas[0][2]} vistoria(s) com ocorrido_em "
+            f"Migração 0009 interrompida: {invalidas[0][2]} vistoria(s) com ocorrido_em "
             f"fora dos anos 0001 a 9999 UTC ou não finito. Exemplos: {exemplos}. "
             "Nenhuma linha foi corrigida ou removida; revise o histórico antes de migrar."
         )
