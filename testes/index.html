@@ -1668,6 +1668,10 @@ removem bancos próprios e precisam de permissão para isso.</p>
 <p>Sem <code>DATABASE_URL</code>, vários testes são ignorados. Alguns também exigem a origem
 populada. O comando para executar todos os testes é <code>uv run pytest -q -rs</code>,
 respeitando os mesmos pré-requisitos e a pausa do consumidor.</p>
+<p>Para verificar o sistema contra defeitos de dados sujos nas tabelas da camada Gold, execute o script interativo de demonstração:</p>
+<p><div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--entrypoint<span class="w"> </span>uv<span class="w"> </span>carga<span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>tests/rodar_demonstracao.py
+</span></code></pre></div>
+O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovará que a auditoria quebra a pipeline detectando o erro e, em seguida, fará o rollback automático.</p>
 <h2 id="testes-por-funcionalidade">Testes por funcionalidade<a class="headerlink" href="#testes-por-funcionalidade" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1729,21 +1733,21 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.</p>
 </table>
 <h2 id="verificacoes-opcionais">Verificações opcionais<a class="headerlink" href="#verificacoes-opcionais" title="Permanent link">&para;</a></h2>
 <p>Para testes baseados em propriedades e fuzzing, instale os extras:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev<span class="w"> </span>--extra<span class="w"> </span>dev_extra
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>tests/fuzz_example_atheris.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uv<span class="w"> </span>sync<span class="w"> </span>--group<span class="w"> </span>dev<span class="w"> </span>--extra<span class="w"> </span>dev_extra
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>tests/fuzz_example_atheris.py
 </span></code></pre></div>
 <p>O fuzzing executa continuamente até ser interrompido. Ele complementa a suíte;
 não é pré-requisito para consultar a documentação ou executar o projeto.</p>
 <h2 id="amostras-sinteticas">Amostras sintéticas<a class="headerlink" href="#amostras-sinteticas" title="Permanent link">&para;</a></h2>
 <p>Em banco de desenvolvimento com as migrações aplicadas:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>gerar_amostra<span class="w"> </span>--escolas<span class="w"> </span><span class="m">1000</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>gerar_amostra<span class="w"> </span>--escolas<span class="w"> </span><span class="m">1000</span>
 </span></code></pre></div>
 <p>O gerador acrescenta escolas e vistorias sintéticas, com até cinco itens por
 vistoria. Ele <strong>não é idempotente</strong>: repetir o comando acrescenta vistorias.
 Não use a amostra como se fosse uma medição da base real do Censo e não versione
 arquivos de dados gerados.</p>
 <h2 id="validar-a-documentacao">Validar a documentação<a class="headerlink" href="#validar-a-documentacao" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict<span class="w"> </span>--site-dir<span class="w"> </span>/tmp/eduinfra-site
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>uv<span class="w"> </span>run<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict<span class="w"> </span>--site-dir<span class="w"> </span>/tmp/eduinfra-site
 </span></code></pre></div>
 <p>A validação gera o site e acusa links internos quebrados. A renderização dos
 diagramas também deve ser conferida no navegador.</p>
