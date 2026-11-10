@@ -56,6 +56,7 @@ extra_css:
 
 nav:
   - Início: index.md
+  - Painel analítico: painel.html
   - Projeto:
       - Arquitetura: arquitetura.md
       - Modelo da origem: modelo-origem.md
@@ -87,3 +88,8 @@ nav:
   - Processo:
       - Diário de bordo: diario/diario-de-bordo.md
       - Uso de IA: https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md
+  - Granularidades: granularidades.md
+  - ADRs e Evidências:
+      - Template ADR: adr/0000-template.md
+      - Evidência ADR 0005: evidencias/adr-0005/README.md
+      - Evidência Retenção WAL: evidencias/issue-60/retencao-wal.md

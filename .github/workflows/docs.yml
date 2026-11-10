@@ -6,12 +6,26 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
+      - "src/eduinfra/painel.py"
+      - "tests/test_painel.py"
+      - "tests/test_e3_gold.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - "docker-compose.yml"
   push:
     branches: [main]
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
+      - "src/eduinfra/painel.py"
+      - "tests/test_painel.py"
+      - "tests/test_e3_gold.py"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "Dockerfile"
+      - "docker-compose.yml"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +39,15 @@ jobs:
   validar:
     name: Validar o site
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_USER: eduinfra
+      POSTGRES_PASSWORD: eduinfra
+      POSTGRES_DB: eduinfra
+      PORTA_POSTGRES: 5432
+      ANO_CENSO: 2024
+      ANO_ENEM: 2024
+      DATA_REFERENCIA_ENEM: "2024-11-03"
+      MAX_SLOT_WAL_KEEP_SIZE: 2GB
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -32,12 +55,31 @@ jobs:
           python-version: "3.12"
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
-      - name: Gerar o site e verificar links internos
-        run: mkdocs build --strict
+      - name: Construir e testar a Gold com as fontes reais
+        run: docker compose run --build --rm transformacao
+      - name: Conferir a auditoria e os testes do painel
+        run: |
+          docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
+          docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py -q
+      - name: Gerar o painel real
+        run: |
+          docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+          test -s docs/painel.html
+          grep -q 'Desempenho x ' docs/painel.html
+      - name: Mostrar logs do pipeline se houver falha
+        if: failure()
+        run: docker compose logs banco carga cdc
+      - name: Gerar o site e verificar a inclusão do painel
+        run: |
+          mkdocs build --strict
+          test -s site/painel.html
+          cmp docs/painel.html site/painel.html
+          cd site && sha256sum painel.html > painel.sha256
       - uses: actions/upload-artifact@v4
         with:
           name: site-documentacao
           path: site/
+          if-no-files-found: error
 
   publicar:
     name: Publicar no GitHub Pages
@@ -56,8 +98,17 @@ jobs:
           python-version: "3.12"
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
-      - name: Publicar na branch gh-pages
-        run: mkdocs gh-deploy --strict
+      - uses: actions/download-artifact@v4
+        with:
+          name: site-documentacao
+          path: site/
+      - name: Conferir o painel validado
+        run: cd site && sha256sum --check painel.sha256
+      - name: Publicar o mesmo site validado na branch gh-pages
+        env:
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+        run: python -m ghp_import --no-jekyll --push site
       - name: Solicitar atualização do Pages
         env:
           GH_TOKEN: ${{ github.token }}

@@ -275,6 +275,40 @@ interativo estão em [Transformação declarativa](docs/transformacao.md).
 A [comparação com SQL direto e as evidências](docs/evidencias/issue-48/comparacao.md)
 registram os tempos, os testes e a validação do fluxo completo.
 
+## Painel analítico (E3, issue #53)
+
+O [painel no GitHub Pages](https://daviegito.github.io/bd2_2026_2_eduinfra/painel.html)
+é atualizado pelo workflow de documentação. Ele usa HTML estático e Plotly para
+permitir interação no Pages, sem servidor de aplicação ou serviço pago.
+
+Para gerar localmente com Censo, ENEM e eventos canônicos reais:
+
+```bash
+docker compose run --build --rm transformacao
+docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+uv run mkdocs serve
+```
+
+Abra `http://127.0.0.1:8000/painel.html`. O arquivo gerado é `docs/painel.html`;
+ele não é versionado. `construir-gold` sozinho só entrega a infraestrutura e
+não substitui a transformação completa com ENEM exigida pelo painel.
+
+A visualização seleciona `ANO_ENEM` (2024 por padrão) e usa o vínculo
+`fato_desempenho_escola_ano.escola_infra_sk` com a dimensão SCD para comparar a
+infraestrutura na referência analítica da prova. Os itens vêm do JSON `itens`
+e seus nomes, do catálogo Gold. Estados desconhecidos, em obra e inutilizáveis
+permanecem separados da ausência confirmada. O painel mostra média simples das
+médias escolares válidas por rede/item, n e um desvio padrão; não estima efeito
+causal nem controla INSE, que não está disponível neste contrato. Grupos com
+menos de dez escolas com média válida são suprimidos e a regra é informada.
+
+Os gráficos leem exclusivamente fatos e dimensões Gold. A cobertura completa
+ENEM × Censo usa também o retrato `entrada_transformacao.enem_escola_ano`, pois
+o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
+com perfil temporal conhecido ficam explícitos, sem converter dados ausentes em
+zero. O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica
+o mesmo artefato validado; ausência do painel ou de dados obrigatórios falha.
+
 ## O que a carga produz
 
 Medido numa execução a partir de um clone limpo, em 26/09/2026, com o comando

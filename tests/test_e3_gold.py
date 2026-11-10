@@ -1,17 +1,20 @@
+import importlib.util
 import unittest
-import duckdb
-import pytest
 from eduinfra.configuracao import carregar_configuracao
+import psycopg
+
+# A imagem executa estes cenários por unittest, sem instalar pytest em produção.
+if importlib.util.find_spec("pytest") is not None:
+    import pytest
+
+    pytestmark = pytest.mark.integracao
+
 
 class GoldAuditor:
-    def __init__(self, configuracao: carregar_configuracao):
+    def __init__(self, configuracao):
         self.config = configuracao
-        self.conexao = duckdb.connect()
-        self.conexao.execute("LOAD postgres;")
-
-        # Mapeia a tabela Gold do PostgreSQL em vez do Delta Lake
-        self.conexao.execute(f"ATTACH '{configuracao.dsn}' AS pg (TYPE POSTGRES);")
-        self.conexao.execute("CREATE VIEW fato_vistoria_item AS SELECT * FROM pg.gold.fato_vistoria_item")
+        self.conexao = psycopg.connect(configuracao.dsn, autocommit=True)
+        self.conexao.execute("SET search_path TO gold, public")
 
     def query_count(self, sql: str) -> int:
         return self.conexao.execute(sql).fetchone()[0]
@@ -19,26 +22,27 @@ class GoldAuditor:
     def query_rows(self, sql: str):
         return self.conexao.execute(sql).fetchall()
 
-@pytest.mark.integracao
 class TestE3Gold(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config = carregar_configuracao()
         cls.auditor = GoldAuditor(cls.config)
 
-    # 1. ESQUEMA
+# 1. ESQUEMA
     def test_01_esquema(self):
-        colunas = [row[0] for row in self.auditor.conexao.execute("DESCRIBE fato_vistoria_item").fetchall()]
+        colunas = [row[0] for row in self.auditor.query_rows(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema = 'gold' AND table_name = 'fato_vistoria_item'"
+        )]
         esperadas = {"vistoria_id", "co_entidade", "item_codigo", "situacao"}
         for col in esperadas:
             self.assertIn(col, colunas, f"Coluna {col} ausente na Gold!")
 
-    # 2. VOLUME (Comparado à origem)
+    # 2. VOLUME (Dinâmico contra a origem)
     def test_02_volume(self):
         total_gold = self.auditor.query_count("SELECT COUNT(*) FROM fato_vistoria_item")
 
-        # Consulta diretamente o schema 'public' do PostgreSQL anexado via DuckDB
-        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM pg.public.vistoria_item")
+        # A conexão psycopg acessa o schema public diretamente.
+        total_origem = self.auditor.query_count("SELECT COUNT(*) FROM public.vistoria_item")
 
         self.assertEqual(
             total_gold,
@@ -46,35 +50,35 @@ class TestE3Gold(unittest.TestCase):
             f"Falha de volume: A Gold tem {total_gold} linhas, mas a origem possui {total_origem}."
         )
 
-    # 3. UNICIDADE (Grão da fato)
+    # 3. UNICIDADE (Grão da fato ajustado)
     def test_03_unicidade(self):
         duplicatas = self.auditor.query_count("""
             SELECT COUNT(*) FROM (
-            SELECT vistoria_id, item_codigo
-            FROM fato_vistoria_item
+                SELECT vistoria_id, item_codigo
+                FROM gold.fato_vistoria_item
                 GROUP BY 1, 2
                 HAVING COUNT(*) > 1
-            )
+            ) subquery_alias
         """)
         self.assertEqual(duplicatas, 0, f"Encontradas {duplicatas} chaves duplicadas na Gold!")
 
-    # 4. INTEGRIDADE REFERENCIAL
+    # 4. INTEGRIDADE REFERENCIAL (Sem prefixo 'pg.')
     def test_04_integridade_referencial(self):
         faltantes = self.auditor.query_count("""
             SELECT COUNT(DISTINCT g.co_entidade)
-            FROM fato_vistoria_item g
-            LEFT JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
+            FROM gold.fato_vistoria_item g
+            LEFT JOIN gold.dim_escola s ON g.co_entidade = s.co_entidade
             WHERE s.co_entidade IS NULL
         """)
         self.assertEqual(faltantes, 0, f"{faltantes} escolas na fato não existem na dimensão Gold!")
 
-   # 5. DISTRIBUIÇÃO (Erro Silencioso)
+    # 5. DISTRIBUIÇÃO (Sem prefixo 'pg.')
     def test_05_distribuicao(self):
         resultados = self.auditor.query_rows("""
             SELECT s.co_municipio,
                    CAST(SUM(CASE WHEN g.situacao = 'existente' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) as proporcao
-            FROM fato_vistoria_item g
-            JOIN pg.gold.dim_escola s ON g.co_entidade = s.co_entidade
+            FROM gold.fato_vistoria_item g
+            JOIN gold.dim_escola s ON g.co_entidade = s.co_entidade
             GROUP BY s.co_municipio
         """)
         for mun, proporcao in resultados:

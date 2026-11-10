@@ -566,3 +566,37 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   mudança, com um teste novo para a auditoria que falha. O status dos ADRs 0005 e 0008 não foi
   mudado, porque bate com os próprios arquivos
 - **Quem revisou:** pendente (PR)
+
+### 2026-11-10 — Correções e validação do painel (PR #65, issue #53)
+
+- **Ferramenta:** Codex, como assistente de diagnóstico, implementação e testes.
+- **Onde:** `src/eduinfra/painel.py`, testes do painel e da auditoria Gold, workflow
+  de documentação, README e navegação MkDocs. Os sete arquivos foram aprovados
+  previamente por Pedro; dependências e migrações só foram executadas em ambiente
+  de validação separado, sem alterar `pyproject.toml` ou `uv.lock`.
+- **O que foi pedido:** corrigir o erro do CI e os bloqueios confirmados na revisão,
+  preservando o trabalho local e sem publicar revisões antes de conversar com Pedro.
+- **O que foi aproveitado:** consulta psycopg com `public.vistoria_item`, itens
+  extraídos do JSON da SCD pela chave temporal do fato ENEM, seleção de ano,
+  separação de estados desconhecidos/em obra/inutilizáveis, n somente de escolas
+  com nota válida e cobertura incluindo as escolas ENEM sem Censo. O workflow usa
+  fontes reais e publica o mesmo artefato validado, com conferência do HTML.
+- **Como foi verificado:** dez testes do gerador/CLI passaram no host e no Docker;
+  os seis testes da auditoria Gold passaram contra dados reais. O Compose
+  `eduinfra65-aceite10`, com banco e volumes novos, baixou Censo e ENEM oficiais
+  e concluiu 13 modelos e 26 testes dbt (PASS=39, sem WARN/ERROR/SKIP). A base
+  contém 181.065 escolas do Censo, 29.400 escolas ENEM na entrada e 25.179 na Gold
+  (85,6% de cobertura, 4.221 sem Censo). Os oito gráficos foram gerados; contagens,
+  médias e desvios dos 51 grupos de desempenho dos sete itens coincidiram com
+  consultas independentes no PostgreSQL da Gold nacional. `mkdocs build --strict`,
+  inclusão do painel no menu, igualdade do HTML no site e checksum passaram.
+  O CDC permaneceu saudável, com slot `reserved`. O deploy externo não foi
+  executado nessa validação; depende da integração e execução do workflow.
+- **Quem revisou:** escopo e validação isolada aprovados por Pedro; alterações
+  preparadas para revisão humana.
+
+- **Limpeza de escopo aprovada posteriormente:** `docs/testes.md` e
+  `tests/rodar_demonstracao.py` restaurados exatamente à main para preservar
+  a entrega da #63. A demonstração restaurada detectou o defeito intencional
+  no banco descartável e removeu a linha; a Gold terminou com a mesma contagem
+  de 3.078.105 eventos e zero linhas com `ERRO_DE_DOMINIO`.

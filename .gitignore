@@ -11,11 +11,15 @@ __pycache__/
 .ruff_cache/
 .tmp_dagster_home_*/
 
+tests/docs
+
 # Protótipos do ADR 0005
 docs/evidencias/adr-0005/dbt/target/
 docs/evidencias/adr-0005/dbt/logs/
 docs/evidencias/adr-0005/sqlmesh/.cache/
 docs/evidencias/adr-0005/sqlmesh/logs/
+site/
+
 site/
 
 transformacao/target/
