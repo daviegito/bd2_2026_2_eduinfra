@@ -530,3 +530,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   execução em exportação sem ambiente/dados locais, grafo dbt e monitoramento do CDC.
   Resultados e limites em `docs/evidencias/issue-48/comparacao.md`.
 - **Quem revisou:** Pedro aprovou o escopo e a referência; revisão do código pendente.
+
+### 2026-11-09 — Testes de dados e execuções do orquestrador (issue #50)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório e ao ambiente Docker local)
+- **Onde:** `src/eduinfra/orquestrador.py` (asset `testar_gold`), `tests/test_orquestrador.py`,
+  `docs/orquestracao.md`, `docs/evidencias/orquestracao/` e o `uv.lock` do merge com a main, no PR #74
+- **O que foi pedido:** completar o PR #74 com o que faltava para a #50: resolver o conflito do
+  `uv.lock`, rodar no pipeline os testes de dados que só rodavam dentro do `construir-gold` e
+  exercitar de verdade o retry e o backfill
+- **O que foi aproveitado:** o asset `testar_gold`, sem retry, depois da Gold; o teste dele; o lock
+  refeito a partir do da main, que só acrescenta os 41 pacotes do Dagster sem mudar versão de
+  nenhum; as duas execuções e o texto que as registra
+- **Como foi verificado:** 10 testes do orquestrador e `dagster definitions validate` passando. O
+  retry e o backfill rodaram pelo Dagster num PostgreSQL descartável com amostra, e os logs estão em
+  `docs/evidencias/orquestracao/`. O backfill por intervalo de partições pela CLI falhou, porque
+  exige política de execução única, e foi feito com uma execução por mês. O pipeline completo, com o
+  dbt sobre o Censo, não foi executado nesta etapa
+- **Quem revisou:** pendente, no PR #74
