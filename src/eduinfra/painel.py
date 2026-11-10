@@ -30,8 +30,8 @@ def gerar_painel():
     conexao.execute("INSTALL postgres; LOAD postgres;")
     conexao.execute(f"ATTACH '{config.dsn}' AS pg (TYPE POSTGRES);")
 
-    # 1. Base da Infraestrutura usando a dimensão SCD (preserva o retrato temporal)
-    conexao.execute("CREATE VIEW infra AS SELECT * FROM pg.gold.dim_escola_infraestrutura;")
+    # 1. Base da Infraestrutura (Usando a Fato direta)
+    conexao.execute("CREATE VIEW infra AS SELECT * FROM pg.gold.fato_infra_escola_ano;")
     conexao.execute("CREATE VIEW escola AS SELECT * FROM pg.gold.dim_escola;")
 
     colunas_infra = [row[0] for row in conexao.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'infra'").fetchall()]
@@ -43,30 +43,17 @@ def gerar_painel():
             if p in c.lower() and c not in cols_itens:
                 cols_itens.append(c)
 
-    # 2. Prepara a Tabela do ENEM (Consumindo a tabela real definida no contrato da issue #48)
+    # 2. Prepara a Tabela do ENEM
     tabelas_gold = [row[0] for row in conexao.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'gold'").fetchall()]
-    tem_enem = "fato_desempenho_escola_ano" in tabelas_gold
+    tem_enem = "fato_enem" in tabelas_gold
 
-    if tem_enem:
-        conexao.execute("CREATE VIEW enem AS SELECT escola_infra_sk, media_geral AS nota_media FROM pg.gold.fato_desempenho_escola_ano;")
-        alerta_dados = ""
-    else:
-        # Modo de simulação explícito com base no vínculo temporal escola_infra_sk
-        conexao.execute("""
-            CREATE VIEW enem AS
-            SELECT
-                i.escola_infra_sk,
-                500 + ABS(HASH(e.co_entidade::VARCHAR) % 180) + (CASE WHEN e.tp_dependencia = 4 THEN 70 ELSE 0 END) AS nota_media
-            FROM pg.gold.dim_escola_infraestrutura i
-            JOIN pg.gold.dim_escola e ON i.co_entidade = e.co_entidade
-            WHERE (HASH(e.co_entidade::VARCHAR) % 10) < 7
-        """)
-        alerta_dados = """
-        <div class="alerta alerta-demo">
-            ℹ️ <strong>Modo de Demonstração:</strong> Tabela <code>gold.fato_desempenho_escola_ano</code> não detectada.
-            Exibindo projeção com base na dimensão SCD da Gold para validação do layout visual.
-        </div>
-        """
+    if not tem_enem:
+        # Aborta a execução em vez de gerar dados falsos (Ponto Crítico do Review)
+        print("⚠️ Tabela gold.fato_enem não detectada. Execução abortada para evitar publicação de dados falsos em produção.")
+        return
+
+    conexao.execute("CREATE VIEW enem AS SELECT * FROM pg.gold.fato_enem;")
+    alerta_dados = ""
 
     # 3. Métricas Principais (Agrupando pela chave substituta temporal)
     cobertura = conexao.execute("""
