@@ -64,6 +64,14 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 | Histórico insert-only | `tests/test_insert_only.py` |
 | Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |
 
+## Demonstração de Auditoria (E3)
+
+Para verificar na prática a eficácia dos testes contra dados sujos, você pode executar o script de demonstração. Ele injeta um defeito intencional (situação fora de domínio) na camada Gold, roda a auditoria para provar a detecção e, em seguida, limpa os dados corrompidos.
+
+```bash
+uv run python rodar_demonstracao.py
+```
+
 ## Verificações opcionais
 
 Para testes baseados em propriedades e fuzzing, instale os extras:
