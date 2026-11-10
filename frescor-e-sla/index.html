@@ -1691,8 +1691,9 @@ esperando. O <strong>SLA</strong> é de <strong>25 horas</strong>. Cada mediçã
 <code>monitoramento.frescor_gold</code>, e <code>medir-frescor</code> sai com código 1 quando o SLA é
 violado. Responde à issue #52.</p>
 <h2 id="o-que-se-mede">O que se mede<a class="headerlink" href="#o-que-se-mede" title="Permanent link">&para;</a></h2>
-<p>A Gold é reconstruída inteira por <code>construir-gold</code>, numa transação só, a partir de
-uma versão da fonte canônica de eventos (<a href="../modelo-analitico/">modelo analítico</a>).
+<p>A Gold é reconstruída inteira a partir de uma versão da fonte canônica de eventos,
+pelo dbt (<a href="../transformacao/">transformação declarativa</a>) ou, na opção nula, por
+<code>construir-gold</code>, numa transação só (<a href="../modelo-analitico/">modelo analítico</a>).
 O que a origem recebe depois só aparece na Gold quando chega à fonte, pelo CDC ou
 pelas janelas, e a Gold é construída de novo.</p>
 <table>
@@ -1794,6 +1795,9 @@ migrações.</p>
 </span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>construir-gold
 </span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>medir-frescor<span class="p">;</span><span class="w"> </span><span class="nb">echo</span><span class="w"> </span><span class="nv">$?</span>
 </span></code></pre></div>
+<p><code>construir-gold</code> apaga o schema <code>gold</code> inteiro antes de reconstruir, inclusive o
+<code>gold.fato_desempenho_escola_ano</code>, que só o dbt cria. Depois da demonstração, rode o
+serviço <code>transformacao</code> de novo.</p>
 <p><code>demonstrar-frescor</code> insere uma vistoria na origem, que é insert-only: ela fica no
 banco, marcada na observação. Rode num ambiente de desenvolvimento. Para não esperar
 25 h, a violação usa um SLA reduzido a segundos.</p>
@@ -1948,6 +1952,13 @@ comando inteiro leva cerca de 4 s, quase tudo na partida do Python.</p>
 <td>Squad EduInfra</td>
 <td></td>
 <td>8 de novembro de 2026</td>
+</tr>
+<tr>
+<td>1.3</td>
+<td>A Gold pelo dbt, com o construir-gold como opção nula, e o aviso de que ele apaga o fato de desempenho</td>
+<td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
+<td></td>
+<td>9 de novembro de 2026</td>
 </tr>
 </tbody>
 </table>

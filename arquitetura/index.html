@@ -538,10 +538,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#caminhos-implementados-na-e2" class="md-nav__link">
+  <a href="#caminhos-implementados-na-e2-e-na-e3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caminhos implementados na E2
+        Caminhos implementados na E2 e na E3
       
     </span>
   </a>
@@ -1499,10 +1499,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#caminhos-implementados-na-e2" class="md-nav__link">
+  <a href="#caminhos-implementados-na-e2-e-na-e3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Caminhos implementados na E2
+        Caminhos implementados na E2 e na E3
       
     </span>
   </a>
@@ -1537,13 +1537,13 @@ mostra a arquitetura geral proposta, incluindo integrações e componentes futur
 <pre class="mermaid"><code>flowchart LR
     INEP["INEP&lt;br/&gt;ENEM, Censo, INSE&lt;br/&gt;e dicionários"]
     IBGE["API do IBGE"]
-    APP["Aplicativo&lt;br/&gt;de vistorias"]
     BRONZE["Bronze&lt;br/&gt;Arquivos e respostas&lt;br/&gt;originais"]
     LOTE["Ingestão em lote&lt;br/&gt;Validação e padronização"]
     SILVER["Silver e destinos analíticos&lt;br/&gt;Dados tratados&lt;br/&gt;Parquet / Delta"]
     OLTP[("Origem OLTP&lt;br/&gt;PostgreSQL&lt;br/&gt;insert-only")]
     CDC["CDC&lt;br/&gt;Captura pelo WAL"]
     DUCK["DuckDB&lt;br/&gt;Consulta e processamento"]
+    DBT["dbt&lt;br/&gt;Transformação em camadas"]
     GOLD[("Gold&lt;br/&gt;PostgreSQL&lt;br/&gt;Dados para análise")]
     EMB["Geração de&lt;br/&gt;embeddings"]
     VET[("Banco vetorial&lt;br/&gt;pgvector")]
@@ -1555,11 +1555,11 @@ mostra a arquitetura geral proposta, incluindo integrações e componentes futur
     BRONZE --&gt; LOTE
     LOTE --&gt; SILVER
     LOTE --&gt;|carga da origem| OLTP
-    APP --&gt; OLTP
     OLTP --&gt; CDC
     CDC --&gt; SILVER
     SILVER --&gt; DUCK
-    DUCK -.-&gt;|transformação| GOLD
+    SILVER --&gt; DBT
+    DBT --&gt;|transformação| GOLD
     SILVER -.-&gt;|conteúdo selecionado| EMB
     EMB -.-&gt; VET
     GOLD -.-&gt; AGENTE
@@ -1569,8 +1569,8 @@ mostra a arquitetura geral proposta, incluindo integrações e componentes futur
 </div>
 <p><em>Deslize o diagrama horizontalmente para ver o fluxo completo.</em></p>
 <p>As setas pontilhadas indicam caminhos previstos. Das fontes do INEP, o Censo
-está integrado desde a E1 e o ENEM 2024 desde a E3 (<a href="../enem/">ENEM</a>). O aplicativo representa o produtor previsto das
-vistorias; a origem PostgreSQL já pode receber esses registros.</p>
+está integrado desde a E1 e o ENEM 2024 desde a E3 (<a href="../enem/">ENEM</a>). A Gold é construída pelo dbt
+(<a href="../transformacao/">transformação declarativa</a>).</p>
 <table>
 <thead>
 <tr>
@@ -1611,9 +1611,9 @@ vistorias; a origem PostgreSQL já pode receber esses registros.</p>
 <td>DuckDB</td>
 </tr>
 <tr>
-<td>Gold — prevista</td>
+<td>Gold</td>
 <td>Disponibilizar dados modelados e indicadores</td>
-<td>PostgreSQL</td>
+<td>PostgreSQL, construída pelo dbt</td>
 </tr>
 <tr>
 <td>Banco vetorial — previsto</td>
@@ -1641,9 +1641,9 @@ Censo e não recebe o CDC.
 Os detalhes estão em <a href="../camada-analitica/">camada analítica</a>,
 <a href="../cdc-e-semantica-de-entrega/">CDC</a> e <a href="../adr/0004-ingestao/">ADR 0004</a>.</p>
 <p>Na arquitetura prevista, o assistente usará ferramentas MCP para consultar a
-Gold por SQL e buscar conteúdos semelhantes no pgvector. Gold, geração de
+Gold por SQL e buscar conteúdos semelhantes no pgvector. Geração de
 embeddings, cache e assistente ainda não estão implementados.</p>
-<h2 id="caminhos-implementados-na-e2">Caminhos implementados na E2<a class="headerlink" href="#caminhos-implementados-na-e2" title="Permanent link">&para;</a></h2>
+<h2 id="caminhos-implementados-na-e2-e-na-e3">Caminhos implementados na E2 e na E3<a class="headerlink" href="#caminhos-implementados-na-e2-e-na-e3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>

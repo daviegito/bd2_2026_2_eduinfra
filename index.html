@@ -452,10 +452,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#estado-atual-e2" class="md-nav__link">
+  <a href="#estado-atual-e3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Estado atual — E2
+        Estado atual — E3
       
     </span>
   </a>
@@ -1503,10 +1503,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#estado-atual-e2" class="md-nav__link">
+  <a href="#estado-atual-e3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Estado atual — E2
+        Estado atual — E3
       
     </span>
   </a>
@@ -1552,7 +1552,7 @@ desempenho dos estudantes no ENEM?</p>
 <p>O projeto combina um histórico de vistorias escolares com uma camada analítica.
 O objetivo futuro é permitir que gestores e pesquisadores explorem esses dados
 por painéis e por um assistente em linguagem natural.</p>
-<h2 id="estado-atual-e2">Estado atual — E2<a class="headerlink" href="#estado-atual-e2" title="Permanent link">&para;</a></h2>
+<h2 id="estado-atual-e3">Estado atual — E3<a class="headerlink" href="#estado-atual-e3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1563,23 +1563,35 @@ por painéis e por um assistente em linguagem natural.</p>
 <tbody>
 <tr>
 <td>Origem PostgreSQL com vistorias insert-only</td>
-<td>Integração de ENEM, INSE e IBGE</td>
+<td>Integração do INSE e do IBGE</td>
 </tr>
 <tr>
 <td>Carga do Censo com manifesto e reexecução idempotente</td>
-<td>Modelagem e indicadores na Gold</td>
-</tr>
-<tr>
-<td>Captura de novas vistorias pelo CDC</td>
 <td>Painéis e assistente RAG</td>
 </tr>
 <tr>
-<td>Parquet, tabelas Delta e consultas DuckDB</td>
+<td>Captura de novas vistorias pelo CDC</td>
 <td>Busca vetorial e cache</td>
 </tr>
 <tr>
+<td>Parquet, tabelas Delta e consultas DuckDB</td>
+<td></td>
+</tr>
+<tr>
 <td>Tratamento de eventos atrasados e medições</td>
-<td>Integração dos caminhos analíticos (feita na E3, <a href="adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>)</td>
+<td></td>
+</tr>
+<tr>
+<td>Fonte única de eventos (<a href="adr/0008-fonte-canonica-de-eventos/">ADR 0008</a>)</td>
+<td></td>
+</tr>
+<tr>
+<td>ENEM 2024 na Silver e no fato de desempenho da Gold</td>
+<td></td>
+</tr>
+<tr>
+<td>Gold transformada pelo dbt, com testes de dados e frescor</td>
+<td></td>
 </tr>
 </tbody>
 </table>
