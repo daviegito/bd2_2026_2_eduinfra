@@ -1,0 +1,72 @@
+Finalize GroupAggregate  (cost=14568.60..14569.12 rows=4 width=10) (actual time=119.676..123.646 rows=4 loops=1)
+  Output: e.tp_dependencia, count(*)
+  Group Key: e.tp_dependencia
+  Buffers: shared hit=7125
+  ->  Gather Merge  (cost=14568.60..14569.06 rows=4 width=10) (actual time=119.670..123.639 rows=8 loops=1)
+        Output: e.tp_dependencia, (PARTIAL count(*))
+        Workers Planned: 1
+        Workers Launched: 1
+        Buffers: shared hit=7125
+        ->  Sort  (cost=13568.59..13568.60 rows=4 width=10) (actual time=117.714..117.719 rows=4 loops=2)
+              Output: e.tp_dependencia, (PARTIAL count(*))
+              Sort Key: e.tp_dependencia
+              Sort Method: quicksort  Memory: 25kB
+              Buffers: shared hit=7125
+              Worker 0:  actual time=116.171..116.176 rows=4 loops=1
+                Sort Method: quicksort  Memory: 25kB
+                Buffers: shared hit=3479
+              ->  Partial HashAggregate  (cost=13568.51..13568.55 rows=4 width=10) (actual time=117.699..117.704 rows=4 loops=2)
+                    Output: e.tp_dependencia, PARTIAL count(*)
+                    Group Key: e.tp_dependencia
+                    Batches: 1  Memory Usage: 24kB
+                    Buffers: shared hit=7118
+                    Worker 0:  actual time=116.149..116.154 rows=4 loops=1
+                      Batches: 1  Memory Usage: 24kB
+                      Buffers: shared hit=3472
+                    ->  Parallel Hash Join  (cost=9505.39..13344.93 rows=44716 width=2) (actual time=78.379..109.555 rows=55403 loops=2)
+                          Output: e.tp_dependencia
+                          Hash Cond: (e.co_entidade = f.co_entidade)
+                          Buffers: shared hit=7118
+                          Worker 0:  actual time=76.591..107.789 rows=52905 loops=1
+                            Buffers: shared hit=3472
+                          ->  Parallel Seq Scan on gold.dim_escola e  (cost=0.00..3177.09 rows=106509 width=6) (actual time=0.012..6.285 rows=90532 loops=2)
+                                Output: e.co_entidade, e.no_entidade, e.co_municipio, e.tp_dependencia, e.rede, e.localizacao, e.ano_censo_referencia
+                                Buffers: shared hit=2112
+                                Worker 0:  actual time=0.014..6.608 rows=86102 loops=1
+                                  Buffers: shared hit=991
+                          ->  Parallel Hash  (cost=8946.44..8946.44 rows=44716 width=4) (actual time=77.283..77.286 rows=55403 loops=2)
+                                Output: f.co_entidade
+                                Buckets: 131072  Batches: 1  Memory Usage: 5376kB
+                                Buffers: shared hit=4992
+                                Worker 0:  actual time=76.285..76.288 rows=110806 loops=1
+                                  Buffers: shared hit=2467
+                                ->  Parallel Hash Right Anti Join  (cost=4428.94..8946.44 rows=44716 width=4) (actual time=53.705..59.162 rows=55403 loops=2)
+                                      Output: f.co_entidade
+                                      Hash Cond: (posterior.co_entidade = f.co_entidade)
+                                      Join Filter: (posterior.ano > f.ano)
+                                      Rows Removed by Join Filter: 57248
+                                      Buffers: shared hit=4992
+                                      Worker 0:  actual time=52.768..63.680 rows=110806 loops=1
+                                        Buffers: shared hit=2467
+                                      ->  Parallel Seq Scan on gold.fato_infra_escola_ano posterior  (cost=0.00..3590.51 rows=109451 width=8) (actual time=0.003..5.868 rows=93033 loops=2)
+                                            Output: posterior.co_entidade, posterior.ano, posterior.escola_infra_sk, posterior.n_itens_conhecidos, posterior.n_existentes, posterior.n_inexistentes, posterior.n_em_obra, posterior.n_inutilizaveis, posterior.pct_existentes, posterior.acessibilidade_rampas, posterior.agua_potavel, posterior.almoxarifado, posterior.banheiro_pne, posterior.biblioteca, posterior.cozinha, posterior.energia_rede_publica, posterior.esgoto_rede_publica, posterior.internet, posterior.internet_alunos, posterior.lab_ciencias, posterior.lab_informatica, posterior.parque_infantil, posterior.patio_coberto, posterior.quadra_esportes, posterior.refeitorio, posterior.sala_leitura
+                                            Buffers: shared hit=2496
+                                            Worker 0:  actual time=0.003..5.865 rows=93516 loops=1
+                                              Buffers: shared hit=1247
+                                      ->  Parallel Hash  (cost=3590.51..3590.51 rows=67075 width=8) (actual time=26.421..26.422 rows=57248 loops=2)
+                                            Output: f.co_entidade, f.ano
+                                            Buckets: 131072  Batches: 1  Memory Usage: 5536kB
+                                            Buffers: shared hit=2496
+                                            Worker 0:  actual time=25.978..25.979 rows=56192 loops=1
+                                              Buffers: shared hit=1220
+                                            ->  Parallel Seq Scan on gold.fato_infra_escola_ano f  (cost=0.00..3590.51 rows=67075 width=8) (actual time=0.006..14.331 rows=57248 loops=2)
+                                                  Output: f.co_entidade, f.ano
+                                                  Filter: (f.biblioteca IS FALSE)
+                                                  Rows Removed by Filter: 35785
+                                                  Buffers: shared hit=2496
+                                                  Worker 0:  actual time=0.003..14.201 rows=56192 loops=1
+                                                    Buffers: shared hit=1220
+Planning:
+  Buffers: shared hit=32
+Planning Time: 0.318 ms
+Execution Time: 123.687 ms
