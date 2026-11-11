@@ -45,10 +45,10 @@ def config(monkeypatch, tmp_path):
             admin.execute(f'drop database "{nome}" with (force)')
 
 
-def inserir(config, data="2024-05-29"):
+def inserir(config, data="2024-05-29", situacao_biblioteca="existente"):
     with psycopg.connect(config.dsn) as conn:
         id = conn.execute("insert into vistoria (co_entidade, tecnico_id, origem, ocorrido_em, observacao) values (1, (select id from tecnico limit 1), 'vistoria_presencial', %s::timestamptz, 'TEXTO PESSOAL QUE NAO DEVE IR AO RECIBO') returning id", (data,)).fetchone()[0]
-        conn.execute("insert into vistoria_item (vistoria_id, item_codigo, situacao) values (%s, 'biblioteca', 'existente'), (%s, 'internet', 'existente')", (id, id))
+        conn.execute("insert into vistoria_item (vistoria_id, item_codigo, situacao) values (%s, 'biblioteca', %s), (%s, 'internet', 'existente')", (id, situacao_biblioteca, id))
     return id
 
 
@@ -124,6 +124,30 @@ def test_data_ainda_invalida_fica_pendente_sem_recibo(config):
     assert cli.main(["auditar-cdc"]) == 1
 
 
+def test_item_com_campo_obrigatorio_nulo_nao_bloqueia_os_itens_validos(config):
+    executar(config, "alter table vistoria_item alter column situacao drop not null")
+    invalida = inserir(config, situacao_biblioteca=None)
+    assert fluxo_cdc.passar_uma_vez(config).itens_rejeitados == 1
+    valida = fila_por_esquema(config)
+    entradas = [e for e in fila_de_erros.ler(config).to_pylist() if e["operacao"] == "insert"]
+    assert len(entradas) == 3
+    assert min(entradas, key=recuperacao.identidade)["vistoria_id"] == invalida
+
+    resultado = recuperacao.reprocessar(config, AUTOR, MOTIVO)
+
+    assert resultado == recuperacao.Resultado(recuperadas=2, ja_tratadas=0, pendentes=1, linhas_lidas=3)
+    _, linhas, _, recibos = fotografar(config)
+    assert {(linha["vistoria_id"], linha["item_codigo"]) for linha in linhas} == {
+        (invalida, "internet"), (valida, "biblioteca"), (valida, "internet"),
+    }
+    assert {recuperacao.identidade(r) for r in recibos} == {
+        recuperacao.identidade(e) for e in entradas if e["vistoria_id"] == valida
+    }
+    assert recuperacao.reprocessar(config, AUTOR, MOTIVO) == recuperacao.Resultado(
+        recuperadas=0, ja_tratadas=2, pendentes=1, linhas_lidas=1,
+    )
+
+
 @pytest.mark.parametrize("operacao", ["update", "delete", "truncate", "cabecalho"])
 def test_aceite_exato_libera_auditoria_e_nova_violacao_volta_a_falhar(config, operacao):
     id = inserir(config)
@@ -191,6 +215,22 @@ def test_recuperacao_nao_considera_sucesso_quando_delta_ja_diverge(config):
     resultado = recuperacao.reprocessar(config, AUTOR, MOTIVO)
     assert resultado.recuperadas == 0 and resultado.pendentes == 2
     assert recuperacao.ler_tratamentos(config).num_rows == 0
+
+
+def test_recuperacao_nao_duplica_chave_ja_publicada_em_outro_mes(config):
+    vistoria = fila_por_esquema(config)
+    eventos.carregar_da_origem(config)
+    destino = str(eventos.caminho_da_tabela(config))
+    antes = DeltaTable(destino)
+    desviar(config, "update vistoria set ocorrido_em = '2024-06-01 UTC' where id = %s", (vistoria,))
+
+    resultado = recuperacao.reprocessar(config, AUTOR, MOTIVO)
+
+    assert resultado == recuperacao.Resultado(recuperadas=0, ja_tratadas=0, pendentes=2, linhas_lidas=2)
+    assert recuperacao.ler_tratamentos(config).num_rows == 0
+    depois = DeltaTable(destino)
+    assert depois.version() == antes.version()
+    assert depois.to_pyarrow_table().num_rows == 2
 
 
 def test_ocorrencia_inexistente_e_parametros_incompletos_falham(config):

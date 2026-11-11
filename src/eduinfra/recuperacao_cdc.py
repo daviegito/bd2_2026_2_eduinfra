@@ -12,7 +12,7 @@ import pyarrow.dataset as ds
 from deltalake import DeltaTable, write_deltalake
 from psycopg.rows import dict_row
 
-from eduinfra import eventos, fila_de_erros
+from eduinfra import eventos, fila_de_erros, fluxo_cdc
 from eduinfra.configuracao import Configuracao
 
 NOME_DA_TABELA = "tratamentos_cdc"
@@ -156,6 +156,15 @@ def _conexao(config):
     return conn
 
 
+def _ler_evento_no_delta(config: Configuracao, evento: dict) -> list[dict]:
+    caminho_delta = str(eventos.caminho_da_tabela(config))
+    if not DeltaTable.is_deltatable(caminho_delta):
+        return []
+    item = ds.field("item_codigo").cast(pa.string())
+    filtro = (ds.field("vistoria_id") == evento["vistoria_id"]) & (item == evento["item_codigo"])
+    return DeltaTable(caminho_delta).to_pyarrow_dataset().to_table(filter=filtro).to_pylist()
+
+
 def reprocessar(config: Configuracao, responsavel: str, motivo: str, lsn=None, chave=None) -> Resultado:
     validar_operador(responsavel, motivo)
     entradas = [e for e in _selecionar(config, lsn, chave) if e["operacao"] == "insert"]
@@ -176,17 +185,22 @@ def reprocessar(config: Configuracao, responsavel: str, motivo: str, lsn=None, c
                     pendentes += 1
                     continue
                 lidas += 1
-                data = evento["ocorrido_em"].astimezone(timezone.utc)
-                evento["mes_ocorrencia"] = f"{data.year:04d}-{data.month:02d}"
+                if evento["ocorrido_em"] is not None:
+                    data = evento["ocorrido_em"].astimezone(timezone.utc)
+                    evento["mes_ocorrencia"] = f"{data.year:04d}-{data.month:02d}"
                 evento["lsn_origem"] = entrada["lsn_origem"]
+                if any(evento.get(coluna) is None for coluna in fluxo_cdc.COLUNAS_OBRIGATORIAS):
+                    pendentes += 1
+                    continue
                 tabela = pa.Table.from_pylist([evento], schema=eventos.ESQUEMA)
             except (psycopg.DataError, pa.ArrowException, ValueError, OverflowError, TypeError):
                 pendentes += 1
                 continue
-            eventos.gravar_sem_duplicar(config, tabela)
-            # Um merge insert-only não corrige uma linha divergente já existente.
-            filtro = (ds.field("vistoria_id") == evento["vistoria_id"]) & (ds.field("item_codigo").cast(pa.string()) == pa.scalar(evento["item_codigo"], type=pa.string()))
-            gravadas = DeltaTable(str(eventos.caminho_da_tabela(config))).to_pyarrow_dataset().to_table(filter=filtro).to_pylist()
+            # O merge só procura no mês do evento; a chave pode existir em outro mês.
+            gravadas = _ler_evento_no_delta(config, evento)
+            if not gravadas:
+                eventos.gravar_sem_duplicar(config, tabela)
+                gravadas = _ler_evento_no_delta(config, evento)
             colunas = [nome for nome in eventos.ESQUEMA.names if nome != "lsn_origem"]
             if len(gravadas) != 1 or any(gravadas[0][nome] != evento[nome] for nome in colunas):
                 pendentes += 1
