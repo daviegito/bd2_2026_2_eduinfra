@@ -410,6 +410,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
 - **Quem revisou:** Davi (PR #64)
 
+### 2026-11-03 — Prototipação e Conexão do Painel Analítico E4 à Camada Gold
+
+- **Ferramenta:** Gemini, como assistente de integração e desenvolvimento.
+- **O que foi pedido:** Conectar o gerador do painel analítico (`gerar-painel`) às tabelas do PostgreSQL no schema `gold`, corrigir a leitura via DuckDB para que não buscasse arquivos Delta inexistentes no disco e garantir a renderização dos gráficos de infraestrutura versus desempenho.
+- **Onde:** `src/eduinfra/painel.py` (conexão DuckDB ao PostgreSQL via extensão `postgres`, criação de views sobre `dim_escola` e `fato_infra_escola_ano`, fallback de demonstração para a `fato_enem`), `src/eduinfra/cli.py` (registro do subcomando `gerar-painel`) e `README.md` (documentação das instruções de execução local do painel).
+- **O que foi aproveitado:** A estrutura dimensional da Gold no PostgreSQL (`dim_escola`, `fato_infra_escola_ano`) e o layout estático responsivo com gráficos em Plotly exportados para a pasta `docs/`.
+- **Como foi verificado:** O comando `gerar-painel` foi executado via Docker Compose gerando a visualização gráfica por nível de infraestrutura (Baixa, Média e Alta) controlada por rede de ensino e exibindo o aviso do modo de demonstração enquanto a `fato_enem` real não estava disponível.
+- **Quem revisou:** Validação funcional da geração do painel pelo desenvolvedor e verificação dos critérios da entrega E4.
+
+### 2026-11-05 — Refatoração da Auditoria E3 e Limpeza da Demonstração de Defeitos
+
+- **Ferramenta:** Gemini, como assistente de integração e depuração.
+- **O que foi pedido:** Corrigir a auditoria E3 para consultar o modelo dimensional normalizado no PostgreSQL no schema `gold` (em vez das tabelas Delta desatualizadas), implementar a limpeza automática da linha injetada durante os testes de demonstração e ajustar as configurações do Docker.
+- **Onde:** `tests/test_e3_gold.py` (ajuste dos testes de esquema, unicidade e distribuição com `JOIN` em `dim_escola`, adição da marcação `@pytest.mark.integracao`), `tests/rodar_demonstracao.py` (adição de bloco `finally` com `DeltaTable.delete("situacao = 'ERRO_DE_DOMINIO'")`), `Dockerfile` (`COPY tests ./tests`), `docker-compose.yml` (remoção dos volumes montados de `./src` e `./tests`) e `docs/testes.md` (documentação do procedimento de teste).
+- **O que foi aproveitado:** As 6 verificações originais da auditoria E3 (esquema, volume, unicidade, integridade referencial, distribuição e casos sujos do domínio), adaptando as consultas SQL ao schema `gold` do PostgreSQL.
+- **Como foi verificado:** Execução da auditoria automática ao fim do `construir-gold` retornando `OK` nos 6 testes (1,569s), e execução do `rodar_demonstracao.py` que comprovou a falha esperada diante do defeito de domínio e executou o rollback limpo no `finally`.
+- **Quem revisou:** Apontamentos de revisão por Pedro Vargas (referentes à persistência da linha suja e incompatibilidade de colunas legadas no DuckDB); validação local e documentação atualizada em `docs/testes.md`.
 
 ### 2026-11-08 — Recuperação da fila de erros do CDC (issue #58)
 
@@ -583,6 +600,15 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   mudado, porque bate com os próprios arquivos
 - **Quem revisou:** pendente (PR)
 
+### 2026-11-09 — Resolução de Erros no CI/CD, Alinhamento do MkDocs e Ajustes na CLI
+
+- **Ferramenta:** Gemini, como assistente de integração e depuração.
+- **O que foi pedido:** Corrigir as falhas nos workflows do GitHub Actions (`.github/workflows/docs.yml`), resolver violações de restrições do PostgreSQL ao popular a base sintética de testes, solucionar o conflito de compilação do MkDocs em modo estrito, padronizar a CLI e remover arquivos de build commitados por engano.
+- **Onde:** `.github/workflows/docs.yml` (ajuste de `session_replication_role` de `DEFAULT` para `'origin'`, preenchimento das colunas `no_municipio`, `sg_uf` e `co_uf` na inserção do município 11 fictício), `src/eduinfra/painel.py` (alteração do destino do HTML de `index.html` para `painel.html`), `mkdocs.yml` (inclusão de `painel.html` no menu do site), `src/eduinfra/cli.py` (padronização do comando `gerar-painel` com hífen), `uv.lock` (reversão do upgrade indesejado do DuckDB para 1.5.5 via `git checkout`) e remoção da pasta `site/` e caches do rastreamento do Git.
+- **O que foi aproveitado:** Os jobs de validação e publicação do GitHub Actions, a CLI integrada da aplicação e o ecossistema de documentação estática do MkDocs.
+- **Como foi verificado:** O pipeline no GitHub Actions finalizou com sucesso (status verde), o MkDocs compilou em modo `--strict` sem conflitos e o artefato `docs/painel.html` foi exportado e publicado corretamente no site.
+- **Quem revisou:** Code review e apontamentos de integração por Pedrovargas10 e Davi Coelho; correções validadas diretamente nos logs de execução do GitHub Actions.
+
 ### 2026-11-10 — Correções e validação do painel (PR #65, issue #53)
 
 - **Ferramenta:** Codex, como assistente de diagnóstico, implementação e testes.
@@ -640,3 +666,12 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   sem flexibilizar o SLA. Fontes oficiais Silver foram reutilizadas localmente;
   a origem copiada contém resíduos sintéticos de testes.
 - **Quem revisou:** escopo aprovado por Pedro; publicação e revisão humana pendentes.
+
+### 2026-11-10 — Implementação do Painel Analítico E4 e Ajustes na Auditoria Gold
+
+* **Ferramenta:** Gemini, como assistente de integração e depuração.
+* **O que foi pedido:** implementar o gerador do painel analítico (E4) e corrigir a suíte de testes da auditoria Gold (E3), resolvendo os apontamentos da revisão sobre contratos de dados, dependência do PostgreSQL e quebras de pipeline no GitHub Actions.
+* **Onde:** `src/eduinfra/cli.py` (registro do comando `gerar-painel`), `.github/workflows/docs.yml` (injeção de `.env`, mock do município com `co_uf`, publicação analítica e ingestão do ENEM), `src/eduinfra/painel.py` (consumo da tabela `fato_desempenho_escola_ano` e exportação para `painel.html`), `tests/test_e3_gold.py` (DuckDB anexado ao PostgreSQL) e `tests/rodar_demonstracao.py` (injeção e limpeza de defeito com bloco `finally`).
+* **O que foi aproveitado:** a orquestração do Docker Compose e do MkDocs. A montagem local de volumes foi substituída pelo empacotamento (`COPY tests ./tests`) para espelhar o ambiente de produção, preservando os mesmos critérios originais da auditoria E3.
+* **Como foi verificado:** a auditoria E3 executou os 6 testes lendo diretamente o banco relacional (comparando volume com a origem OLTP). O script de demonstração injetou a situação `ERRO_DE_DOMINIO`, falhou o teste apropriado e limpou o banco em seguida. O GitHub Actions executou `validar` e `publicar` com sucesso após injeção das variáveis de ambiente simuladas, gerando o artefato `painel.html` aprovado no modo estrito do MkDocs.
+* **Quem revisou:** apontamentos técnicos e cenários de regressão levantados por `Pedrovargas10` e colaboradores; correções testadas, CI verde e merjado.
