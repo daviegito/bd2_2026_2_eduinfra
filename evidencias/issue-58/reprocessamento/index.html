@@ -1,0 +1,2248 @@
+
+<!doctype html>
+<html lang="pt" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Infraestrutura escolar e desempenho no ENEM — Sistemas de Banco de Dados 2 (UnB/FCTE)">
+      
+      
+        <meta name="author" content="Squad EduInfra (UnB / FCTE, 2026.2)">
+      
+      
+        <link rel="canonical" href="https://daviegito.github.io/bd2_2026_2_eduinfra/evidencias/issue-58/reprocessamento/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Issue #58 — Recuperação seletiva da fila do CDC - EduInfra AI</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#issue-58-recuperacao-seletiva-da-fila-do-cdc" class="md-skip">
+          Ir para o conteúdo
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Cabeçalho">
+    <a href="../../.." title="EduInfra AI" class="md-header__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            EduInfra AI
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Issue #58 — Recuperação seletiva da fila do CDC
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo escuro"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo escuro" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Mudar para modo claro"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Mudar para modo claro" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Buscar" placeholder="Buscar" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Pesquisar">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Limpar" aria-label="Limpar" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Inicializando a pesquisa
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Abas" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Início
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../painel.html" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Painel analítico
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../arquitetura/" class="md-tabs__link">
+          
+  
+  
+  Projeto
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../execucao/" class="md-tabs__link">
+          
+  
+  
+  Execução
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../caracterizacao/" class="md-tabs__link">
+          
+  
+  
+  Dados e ingestão
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../adr/" class="md-tabs__link">
+          
+  
+  
+  Decisões
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../diario/diario-de-bordo/" class="md-tabs__link">
+          
+  
+  
+  Processo
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../granularidades/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Granularidades
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../adr/0000-template/" class="md-tabs__link">
+          
+  
+  
+  ADRs e Evidências
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navegação" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="EduInfra AI" class="md-nav__button md-logo" aria-label="EduInfra AI" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    EduInfra AI
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra" title="Ir ao repositório" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    daviegito/bd2_2026_2_eduinfra
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Início
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../painel.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Painel analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projeto
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Projeto
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../arquitetura/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Arquitetura
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../modelo-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo da origem
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../modelo-analitico/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Modelo analítico
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../projeto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fontes, equipe e entregas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Execução
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Execução
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../execucao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Como executar e demonstrar
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transformação declarativa
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../testes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../orquestracao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Orquestração
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados e ingestão
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dados e ingestão
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../caracterizacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Caracterização da carga
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../enem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ENEM e junção com o Censo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../serializacao-compressao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compressão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cdc-e-semantica-de-entrega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CDC e semântica de entrega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../metricas-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas do CDC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../consulta-otimizada/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Consulta otimizada
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../dado-atrasado/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dados atrasados
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../camada-analitica/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Camada analítica
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../frescor-e-sla/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frescor e SLA da Gold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisões
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Decisões
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Índice dos ADRs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0001-modelagem-insert-only-do-sistema-de-origem/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0001 — Insert-only
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0002-cadeia-tls-incompleta-do-inep/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0002 — TLS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0004-ingestao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0004 — Ingestão
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0005-ferramenta-de-transformacao/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0005 — Transformação
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0007-telemetria-e-fila-de-erros-do-cdc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0007 — Telemetria e fila de erros
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0008-fonte-canonica-de-eventos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0008 — Fonte única de eventos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Processo
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Processo
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../diario/diario-de-bordo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diário de bordo
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/AI-USAGE.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Uso de IA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../granularidades/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Granularidades
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADRs e Evidências
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    ADRs e Evidências
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../adr/0000-template/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template ADR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../adr-0005/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidência ADR 0005
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../issue-60/retencao-wal/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidência Retenção WAL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Índice">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Índice
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#integracao-das-dependencias" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integração das dependências
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#decisoes-e-procedimento" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decisões e procedimento
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checklist-da-issue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checklist da issue
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#criterios-de-aceite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Critérios de aceite
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#medicao-nacional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medição nacional
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Medição nacional">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reproducao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reprodução
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#testes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#resultado-da-verificacao-inicial-08112026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resultado da verificação inicial (08/11/2026)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#limites-operacionais" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Limites operacionais
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#aceite-integrado-10112026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Aceite integrado — 10/11/2026
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Aceite integrado — 10/11/2026">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ambiente-e-preservacao-do-historico" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ambiente e preservação do histórico
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testes-da-integracao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testes da integração
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#medicao-repetida-apos-a-integracao" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Medição repetida após a integração
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="issue-58-recuperacao-seletiva-da-fila-do-cdc">Issue #58 — Recuperação seletiva da fila do CDC<a class="headerlink" href="#issue-58-recuperacao-seletiva-da-fila-do-cdc" title="Permanent link">&para;</a></h1>
+<p>Implementação local em 8 de novembro de 2026, branch <code>feat/recuperacao-fila-cdc</code>,
+base <code>e50f6a6</code>. PostgreSQL 16 dedicado, com <code>wal_level=logical</code>, e bancos/Delta
+descartáveis. A origem usada na medição é uma cópia da carga nacional do Censo
+Escolar 2024, com vistorias sintéticas de testes anteriores.</p>
+<h2 id="integracao-das-dependencias">Integração das dependências<a class="headerlink" href="#integracao-das-dependencias" title="Permanent link">&para;</a></h2>
+<p>Os PRs #61, #65, #66 e #67 foram integrados. A revalidação de 10/11/2026 usa
+<code>main</code> em <code>7912e44</code>, incluindo ENEM, fonte canônica, Gold dbt, datas, consulta
+otimizada, painel e orquestração. A CLI preserva esses comandos junto dos dois
+comandos de recuperação. Métricas e ADR mantêm a validação de datas da #57 e
+os procedimentos da #58. Todos os registros de uso de IA foram preservados.</p>
+<p>O Draft permanece até a autorização final de Pedro após a conferência das
+evidências. As medições e os resultados de 08/11 abaixo são históricos;
+a nova rodada integrada está registrada ao final.</p>
+<h2 id="decisoes-e-procedimento">Decisões e procedimento<a class="headerlink" href="#decisoes-e-procedimento" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>reprocessar-fila-cdc</code> recupera somente INSERTs rejeitados, consultando cada
+  chave primária <code>(vistoria_id, item_codigo)</code>. Não chama a publicação completa.</li>
+<li>O destino mantém o merge insert-only: se já houver conteúdo divergente,
+  o item permanece pendente. Ausência na origem e data ainda inválida também
+  não geram recibo de sucesso.</li>
+<li>O recibo só é escrito depois de confirmar o conteúdo no Delta. Falha entre
+  os dois passos permite nova tentativa sem duplicação.</li>
+<li>O registro <code>tratamentos_cdc</code> é separado da DLQ e da telemetria. Guarda LSN,
+  chave completa, ação, identificador <code>operador-NN</code>, instante UTC, motivo fixo,
+  chaves revisadas e impressões SHA-256 do estado analítico; não guarda nomes,
+  e-mails, observação ou texto livre. O identificador é declarado pelo executor,
+  sem autenticação embutida.</li>
+<li><code>tratar-desvio-cdc</code> aceita explicitamente uma ocorrência de UPDATE, DELETE
+  ou TRUNCATE e o estado revisado. Não altera a origem nem propaga essas
+  operações ao Delta. Não encerra manualmente um INSERT ainda rejeitado.</li>
+<li>A auditoria preserva os contadores históricos e distingue tratamentos de
+  pendências. Só dispensa o checksum das chaves cujo estado segue igual ao
+  revisado. Uma mudança na mesma chave ou nova ocorrência continua sendo acusada;
+  inserir legitimamente outra chave não invalida nem amplia o aceite anterior.</li>
+<li>A identidade do recibo é LSN + chave completa. Lotes legados podem ter
+  entradas repetidas para a mesma ocorrência: a seleção deduplica essa identidade
+  sem apagar o histórico. Quando há várias alterações na mesma transação, a
+  contagem histórica só é integralmente quitada após tratar todas as entradas
+  daquele LSN/operação.</li>
+</ul>
+<p>O <a href="../../../metricas-cdc/#recuperacao-e-tratamento-da-fila-issue-58">procedimento operacional</a>
+contém os comandos de seleção, reprocessamento e aceite.</p>
+<h2 id="checklist-da-issue">Checklist da issue<a class="headerlink" href="#checklist-da-issue" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] Comando que reprocessa somente itens da fila pela chave na origem.</li>
+<li>[x] Registro de quem tratou, quando e por quê, sem campos pessoais.</li>
+<li>[x] Auditoria dispensa ocorrências tratadas e continua acusando as demais.</li>
+<li>[x] Custo do reprocessamento medido contra a releitura completa.</li>
+<li>[x] Procedimento documentado em <code>docs/metricas-cdc.md</code>.</li>
+</ul>
+<h2 id="criterios-de-aceite">Critérios de aceite<a class="headerlink" href="#criterios-de-aceite" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[x] Item rejeitado volta ao Delta sem duplicar e sem reler a origem inteira,
+  com teste real de integração e falha injetada de esquema.</li>
+<li>[x] Reprocessar a mesma ocorrência duas vezes preserva conteúdo, versões Delta
+  e o primeiro recibo; não relê itens já tratados.</li>
+<li>[x] <code>auditar-cdc</code> retorna <code>0</code> após o tratamento e retorna <code>1</code> diante de nova
+  violação, inclusive na mesma chave; tratar só uma entrada mantém as demais
+  pendentes.</li>
+</ul>
+<h2 id="medicao-nacional">Medição nacional<a class="headerlink" href="#medicao-nacional" title="Permanent link">&para;</a></h2>
+<p>A base contém <strong>3.079.057 eventos</strong>, incluindo resíduos sintéticos anteriores.
+O script insere uma vistoria sintética de 17 itens na origem descartável e monta
+uma fila equivalente a uma rejeição por esquema. Não induz o desvio de coluna
+na medição; essa falha é induzida nos testes de integração.</p>
+<p>Cada caminho recebe a mesma cópia imutável da base Delta, por hardlinks. A ordem
+seletivo/completo alterna a cada rodada. O tempo inclui a leitura e escrita do
+caminho; o seletivo inclui os recibos. O completo mede <code>eventos.carregar_da_origem</code>,
+a leitura/merge usados na publicação completa, e <strong>não</strong> inclui a inicialização
+do slot/CLI nem o encerramento da fila. É uma comparação conservadora do custo
+de reler toda a origem, sem alegar equivalência operacional entre os comandos.</p>
+<table>
+<thead>
+<tr>
+<th>Rodada</th>
+<th style="text-align: right;">Seletivo (s)</th>
+<th style="text-align: right;">Completo (s)</th>
+<th style="text-align: right;">Eventos lidos: seletivo / completo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td style="text-align: right;">1,198</td>
+<td style="text-align: right;">2,786</td>
+<td style="text-align: right;">17 / 3.079.074</td>
+</tr>
+<tr>
+<td>2</td>
+<td style="text-align: right;">1,299</td>
+<td style="text-align: right;">3,158</td>
+<td style="text-align: right;">17 / 3.079.074</td>
+</tr>
+<tr>
+<td>3</td>
+<td style="text-align: right;">1,218</td>
+<td style="text-align: right;">3,243</td>
+<td style="text-align: right;">17 / 3.079.074</td>
+</tr>
+<tr>
+<td>Mediana</td>
+<td style="text-align: right;"><strong>1,218</strong></td>
+<td style="text-align: right;"><strong>3,158</strong></td>
+<td style="text-align: right;">17 / 3.079.074</td>
+</tr>
+</tbody>
+</table>
+<p>Nas três rodadas, os destinos terminaram com <strong>3.079.074 linhas e chaves distintas</strong>.
+O <code>bit_xor(hash(...))</code> de todas as colunas analíticas, exceto <code>lsn_origem</code>, foi
+<code>12985952026835883298</code> em ambos. O LSN distingue os caminhos e não é conhecido
+pela releitura completa. Contagem, unicidade e impressão são uma conferência
+adicional da medição; não equivalem a uma prova criptográfica linha a linha.
+Os testes de integração comparam o conteúdo real e verificam a ausência de duplicação.</p>
+<p>Cada repetição posterior retornou <code>recuperadas=0</code>, <code>ja_tratadas=17</code>,
+<code>pendentes=0</code>, <code>linhas_lidas=0</code>. O preparo inicial da base fica fora dos tempos.
+A máquina não estava dedicada, houve outras atividades locais e os caches foram
+reutilizados. São três amostras, sem promessa de ganho em outras cargas; o custo
+seletivo cresce com a fila e os merges/recibos individuais.</p>
+<p>O <code>EXPLAIN (ANALYZE, BUFFERS)</code> da consulta por chave retornou uma linha e usou
+<code>Index Scan</code> em <code>vistoria_item_pkey</code>, <code>vistoria_pkey</code>, <code>escola_pkey</code> e
+<code>municipio_pkey</code>, com <code>Nested Loop</code> entre eles. Na amostra, foram 17 blocos
+compartilhados em cache e um lido. Não houve varredura da tabela inteira de itens.</p>
+<h3 id="reproducao">Reprodução<a class="headerlink" href="#reproducao" title="Permanent link">&para;</a></h3>
+<p>Somente em uma cópia <strong>descartável e populada</strong> da origem, com dependências do
+projeto já instaladas e <code>DATABASE_URL</code> exportada:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src<span class="w"> </span>python<span class="w"> </span>docs/evidencias/issue-58/medir_reprocessamento.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>--confirmar-banco-de-teste<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">3</span><span class="w"> </span>--saida<span class="w"> </span>/tmp/issue58-medicao.json
+</span></code></pre></div>
+<p>O script grava uma vistoria sintética, preserva os diretórios temporários usados
+na comparação e imprime o JSON de cada rodada. O arquivo de saída inclui as
+amostras e o plano PostgreSQL, sem DSN ou valores pessoais. Ele não migra o banco
+nem instala dependências.</p>
+<h2 id="testes">Testes<a class="headerlink" href="#testes" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>tests/test_recuperacao_cdc.py<span class="w"> </span>tests/test_recuperacao_cdc_integracao.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>tests/test_auditoria_cdc.py<span class="w"> </span>tests/test_resiliencia_cdc_integracao.py<span class="w"> </span>-q
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">PYTHONPATH</span><span class="o">=</span>src<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>pytest<span class="w"> </span>--ignore<span class="o">=</span>tests/test_transformacao_property.py<span class="w"> </span>-q<span class="w"> </span>-rs
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>python<span class="w"> </span>-m<span class="w"> </span>mkdocs<span class="w"> </span>build<span class="w"> </span>--strict<span class="w"> </span>--site-dir<span class="w"> </span>/tmp/eduinfra-issue58-site
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>git<span class="w"> </span>diff<span class="w"> </span>--check
+</span></code></pre></div>
+<p>A integração cria e remove bancos exclusivos de teste, com falhas provocadas
+apenas nesses bancos. Cobre reentrega, falha após escrever no Delta e antes do
+recibo, rejeição ainda inválida, Delta divergente, seleção de uma ocorrência,
+aceite de UPDATE/DELETE/TRUNCATE/cabeçalho, duas alterações da mesma chave no
+mesmo LSN, nova violação na mesma chave, novas rejeições apesar de um estado
+anterior aceito, mudanças antes de nova passada do consumidor, preservação de
+outras pendências e identificação operacional sem texto livre.</p>
+<p>Na rodada inicial, a suíte opcional de propriedades não foi executada: <code>hypothesis</code> não está
+instalado e nenhuma dependência foi instalada nesta tarefa. Os testes de frescor
+que exigem Gold ficaram pendentes naquela rodada; foram executados na revalidação abaixo.</p>
+<h3 id="resultado-da-verificacao-inicial-08112026">Resultado da verificação inicial (08/11/2026)<a class="headerlink" href="#resultado-da-verificacao-inicial-08112026" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>236 passed, 5 skipped, 11 warnings in 68.93s
+</span></code></pre></div>
+<p>Os cinco skips são exclusivamente de <code>tests/test_frescor_integracao.py</code>, por
+Gold não construída nesse banco. As onze advertências são de APIs de particionamento
+já depreciadas em <code>comparacao_latencia.py</code>, fora do escopo desta entrega.
+<code>mkdocs build --strict</code> terminou sem erro; <code>git diff --check</code> também passou.</p>
+<p>A conferência direcionada anterior passou em 68 testes (recuperação, auditoria e
+resiliência); a suíte final acima inclui ainda o caso de nova rejeição em uma
+chave cujo desvio anterior já havia sido aceito.</p>
+<h2 id="limites-operacionais">Limites operacionais<a class="headerlink" href="#limites-operacionais" title="Permanent link">&para;</a></h2>
+<p>O histórico da DLQ e os recibos crescem e permanecem disponíveis. A recuperação
+não apaga ou corrige dados insert-only, não reconstrói conteúdo excluído e não
+converte datas inválidas silenciosamente. O aceite é uma decisão explícita de
+conviver com um estado divergente, sem mascarar mudanças futuras.</p>
+<p>A leitura dos estados de um cabeçalho/TRUNCATE pode ser ampla, e o recibo guarda
+as chaves revisadas. O tratamento deve ser serializado; uma disputa de criação/
+escrita Delta exige nova tentativa. Problemas de infraestrutura continuam falhando
+em vez de gerar recibo. Slot, frescor e desvios atuais de catálogo continuam sendo
+avaliados normalmente, mesmo após o tratamento da fila.</p>
+<h2 id="aceite-integrado-10112026">Aceite integrado — 10/11/2026<a class="headerlink" href="#aceite-integrado-10112026" title="Permanent link">&para;</a></h2>
+<p>Base integrada: <code>main</code> em <code>7912e44</code>, após os merges de #61, #65, #66 e #67.
+Os quatro conflitos foram resolvidos na CLI, uso de IA, métricas e ADR 0007.
+O código de recuperação e os testes não precisaram de alterações funcionais.</p>
+<h3 id="ambiente-e-preservacao-do-historico">Ambiente e preservação do histórico<a class="headerlink" href="#ambiente-e-preservacao-do-historico" title="Permanent link">&para;</a></h3>
+<p>A validação usou PostgreSQL 16 em instância/volume próprios. Uma cópia da origem
+de teste nacional, com resíduos sintéticos anteriores, foi restaurada nesse
+ambiente. O banco pessoal e o banco do painel não foram alterados. A Silver
+oficial do Censo/ENEM já disponível localmente foi copiada; não houve novo
+download do INEP. O runner recebeu <code>FONTE_ENEM</code> para consumir esse retrato.</p>
+<table>
+<thead>
+<tr>
+<th>Upgrade da origem copiada</th>
+<th>Antes (0007)</th>
+<th>Depois (0009)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vistorias</td>
+<td>181.148</td>
+<td>181.148</td>
+</tr>
+<tr>
+<td>Impressão integral do histórico</td>
+<td><code>e1650cf4f8494e89b368612e401a913e</code></td>
+<td><code>e1650cf4f8494e89b368612e401a913e</code></td>
+</tr>
+</tbody>
+</table>
+<p>Foram preservados o manifesto 0008 do ENEM e a regra de datas 0009. A cópia
+continha 181.065 escolas e a fonte canônica inicial teve 3.079.516 eventos.
+A Gold completa foi construída pelo runner dbt: <strong>13 modelos e 26 testes,
+PASS=39</strong>, sem WARN/ERROR/SKIP. O fato ENEM teve 25.179 escolas e o painel foi
+gerado pela CLI integrada. O frescor estava em dia antes dos cenários que
+inserem vistorias de propósito.</p>
+<h3 id="testes-da-integracao">Testes da integração<a class="headerlink" href="#testes-da-integracao" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Rodada direcionada de recuperação/auditoria/resiliência: <strong>69 passed in 31.08s</strong>.</li>
+<li>Suíte completa, com todos os arquivos <code>test_*.py</code>: <strong>360 passed, 12 warnings
+  in 168.62s</strong>, sem skips ou exclusão de arquivos.</li>
+<li>Inclui os cinco testes de frescor antes pendentes e a suíte de propriedades
+  com Hypothesis. A dependência opcional ficou no ambiente isolado de testes,
+  sem alteração dos arquivos de dependências.</li>
+</ul>
+<p>A auditoria da Gold foi executada primeiro, com origem e Gold no mesmo retrato;
+os cenários seguintes inserem vistorias deliberadamente e tornam esse retrato
+antigo. Essa ordenação permite conferir a auditoria e todos os cenários na
+mesma execução, sem ignorar testes. Reprodução após construir a Gold, com
+<code>DATABASE_URL</code> e <code>DIRETORIO_DADOS</code> apontando ao ambiente descartável:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>--group<span class="w"> </span>transformacao<span class="w"> </span>--with<span class="w"> </span>hypothesis<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'PYTEST'</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="s">from pathlib import Path</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="s">import pytest</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="s">auditoria = Path('tests/test_e3_gold.py')</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="s">arquivos = [str(auditoria)] + [</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="s">    str(p) for p in sorted(Path('tests').glob('test_*.py')) if p != auditoria</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="s">]</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="s">raise SystemExit(pytest.main([*arquivos, '-q', '-rs']))</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="s">PYTEST</span>
+</span></code></pre></div>
+<p>Uma primeira rodada direcionada, simultânea à preparação pesada dos dados,
+terminou com 68 aprovados e um erro: a recuperação ocorreu, mas a auditoria
+acusou frescor de 75 s, acima do SLA de 60 s. O cenário passou isolado e a
+rodada direcionada completa acima passou sem carga concorrente. O limite de
+produção e os testes foram preservados. As advertências finais são onze de
+APIs de particionamento existentes e uma de coleta de asset do Dagster;
+não foram corrigidas fora do escopo.</p>
+<h3 id="medicao-repetida-apos-a-integracao">Medição repetida após a integração<a class="headerlink" href="#medicao-repetida-apos-a-integracao" title="Permanent link">&para;</a></h3>
+<p>A suíte deixou vistorias sintéticas na origem descartável. A nova linha de base
+teve 3.079.992 eventos; a medição adicionou uma vistoria de 17 itens. Foram
+três rodadas, alternando a ordem, com as mesmas cópias Delta de partida:</p>
+<table>
+<thead>
+<tr>
+<th>Rodada</th>
+<th style="text-align: right;">Seletivo, com recibos (s)</th>
+<th style="text-align: right;">Leitura/merge completos (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td style="text-align: right;">1,339</td>
+<td style="text-align: right;">2,847</td>
+</tr>
+<tr>
+<td>2</td>
+<td style="text-align: right;">1,319</td>
+<td style="text-align: right;">2,884</td>
+</tr>
+<tr>
+<td>3</td>
+<td style="text-align: right;">1,315</td>
+<td style="text-align: right;">2,823</td>
+</tr>
+<tr>
+<td>Mediana</td>
+<td style="text-align: right;"><strong>1,319</strong></td>
+<td style="text-align: right;"><strong>2,847</strong></td>
+</tr>
+</tbody>
+</table>
+<p>O seletivo leu <strong>17 itens</strong>; o completo leu <strong>3.080.009 eventos</strong>. Os dois
+destinos tiveram 3.080.009 linhas e chaves distintas, com a mesma impressão
+das colunas analíticas, exceto LSN: <code>11910358003474991727</code>. Essa impressão é
+uma conferência adicional de 64 bits, não uma prova criptográfica de igualdade.
+O teste de integração confere os eventos efetivamente recuperados e sua
+repetição. Nas três repetições da medição houve 17 já tratados, zero linhas
+relidas, zero recuperações novas e zero pendências.</p>
+<p>O plano da consulta por chave continuou usando <code>Index Scan</code> nos índices
+<code>vistoria_item_pkey</code>, <code>vistoria_pkey</code>, <code>escola_pkey</code> e <code>municipio_pkey</code>, retornando
+uma linha e sem varrer a tabela inteira de itens. A máquina não estava dedicada,
+os caches estavam aquecidos e os números não garantem esse ganho em outras
+cargas. O escopo de custo continua sendo leitura/merge completos versus
+recuperação seletiva com recibos; não inclui inicialização de slot/CLI no completo.</p>
+<p>Após a suíte e a medição, a fonte canônica foi republicada com 3.080.009 eventos
+e a Gold foi reconstruída: <strong>PASS=39, WARN=0, ERROR=0, SKIP=0</strong>. Isso atualiza
+o retrato analítico após as inserções sintéticas da validação.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Voltar ao topo
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.top", "navigation.sections", "content.code.copy", "search.highlight", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copiado para \u00e1rea de transfer\u00eancia", "clipboard.copy": "Copiar para \u00e1rea de transfer\u00eancia", "search.result.more.one": "Mais 1 nesta p\u00e1gina", "search.result.more.other": "Mais # nesta p\u00e1gina", "search.result.none": "Nenhum resultado encontrado", "search.result.one": "1 resultado encontrado", "search.result.other": "# resultados encontrados", "search.result.placeholder": "Digite para iniciar a busca", "search.result.term.missing": "Ausente", "select.version": "Selecione a vers\u00e3o"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

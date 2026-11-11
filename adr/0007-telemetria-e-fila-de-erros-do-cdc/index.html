@@ -1532,6 +1532,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#revisao-da-recuperacao-issue-58" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão da recuperação — issue #58
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gatilho-de-revisao" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2036,6 +2047,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#revisao-da-recuperacao-issue-58" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisão da recuperação — issue #58
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#gatilho-de-revisao" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2226,12 +2248,12 @@
 <p><strong>O que perdemos:</strong></p>
 <ul>
 <li>Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar <code>auditar-cdc</code>, porque além dela só o log avisa.</li>
-<li>Não há reprocessamento automático. Após a #57, <code>publicar-analitico --forcar</code> rejeita datas inválidas no histórico antes de escrever no Delta; a recuperação da fila continua pendente na #58.</li>
+<li>A recuperação não é automática. A #58 adiciona reprocessamento pela chave com recibos; dados ainda inválidos permanecem pendentes. A #57 já impede datas inválidas na origem e rejeita o legado inválido antes da publicação completa.</li>
 <li><code>contrato_cdc.py</code> precisa mudar junto com toda migração de <code>vistoria</code> ou <code>vistoria_item</code>. Se o autor esquecer, a auditoria acusa desvio.</li>
-<li>Um desvio do insert-only fica como violação para sempre, porque a auditoria não o marca como tratado.</li>
+<li>O operador pode aceitar um desvio pela ocorrência exata, registrando o estado revisado; a auditoria mantém o histórico e volta a alertar para novas ocorrências ou mudanças não aceitas.</li>
 </ul>
 <p><strong>Riscos assumidos:</strong> a validação de datas foi tratada pela #57, conforme a revisão abaixo; outros erros de origem ainda podem chegar à fila. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.</p>
-<p><strong>O que se torna irreversível:</strong> avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre <code>eventos_vistoria</code>.</p>
+<p><strong>O que se torna irreversível:</strong> avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado. Antes da #58, recuperar exigia releitura completa; a recuperação seletiva e sua medição estão na revisão abaixo. As duas tabelas novas podem ser apagadas sem efeito sobre <code>eventos_vistoria</code>.</p>
 <h2 id="revisao-da-validacao-de-datas-issue-57">Revisão da validação de datas — issue #57<a class="headerlink" href="#revisao-da-validacao-de-datas-issue-57" title="Permanent link">&para;</a></h2>
 <p>A migração 0009 limita <code>ocorrido_em</code> a valores finitos nos anos 1 a 9999 em UTC:
 <code>[0001-01-01 00:00:00+00, 10000-01-01 00:00:00+00)</code>. O motivo é a
@@ -2245,8 +2267,31 @@ sobre o histórico antes de migrar uma origem legada inválida.</p>
 com leitura em UTC. Ao encontrar data inválida, falha antes de gravar no Delta;
 a versão e os arquivos existentes permanecem intactos. Os testes da fila ainda
 simulam datas legadas em bancos descartáveis, removendo explicitamente apenas
-o novo check nesses cenários. Isso não implementa a recuperação da fila da #58.</p>
+o novo check nesses cenários. Essa validação preventiva não substitui a recuperação da fila descrita na revisão da #58.</p>
 <p><a href="../../evidencias/issue-57/validacao-datas/">Evidências e checklist da #57</a>.</p>
+<h2 id="revisao-da-recuperacao-issue-58">Revisão da recuperação — issue #58<a class="headerlink" href="#revisao-da-recuperacao-issue-58" title="Permanent link">&para;</a></h2>
+<p><code>reprocessar-fila-cdc</code> consulta somente os itens rejeitados pela chave na origem.
+O merge continua insert-only no destino: não sobrescreve uma linha divergente e
+só registra sucesso após conferir o conteúdo gravado. Uma falha antes do recibo
+permite nova tentativa sem duplicação.</p>
+<p>Os recibos ficam em <code>tratamentos_cdc</code>, separados da fila e da telemetria. A
+identidade é <code>(lsn_origem, chave)</code>; o primeiro autor, motivo e instante são
+preservados. O responsável usa um identificador operacional numérico, sem
+nome/e-mail; o motivo vem de uma lista fixa. As impressões e chaves revisadas
+incluem apenas os campos analíticos, sem técnico ou observação.</p>
+<p><code>tratar-desvio-cdc</code> exige seleção exata de UPDATE, DELETE ou TRUNCATE e aceite
+explícito do estado divergente. O checksum só dispensa as chaves cujo estado
+continua igual ao revisado. A contagem de operações conserva o histórico e
+separa tratamentos de pendências. Nova ocorrência, mesmo com a mesma chave,
+continua sendo uma violação até seu próprio tratamento. Recibos não suprimem
+frescor, problemas de slot ou desvios atuais do catálogo.</p>
+<p>Não há exclusão da DLQ, alteração da origem, propagação automática de UPDATE/
+DELETE ao Delta nem encerramento manual de um INSERT que ainda não foi
+recuperado. TRUNCATE pode exigir comparação ampla; os recibos e seu conjunto
+de chaves também crescem com o escopo revisado. A identidade operacional é
+declarada pelo executor e não substitui controle de acesso.</p>
+<p><a href="../../metricas-cdc/#recuperacao-e-tratamento-da-fila-issue-58">Procedimento</a> e
+<a href="../../evidencias/issue-58/reprocessamento/">evidências da #58</a>.</p>
 <h2 id="gatilho-de-revisao">Gatilho de revisão<a class="headerlink" href="#gatilho-de-revisao" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Rever a fila se ela receber mais de <strong>0,1% dos itens em um mês</strong>: aí o problema é a validação da origem.</li>
@@ -2299,6 +2344,13 @@ o novo check nesses cenários. Isso não implementa a recuperação da fila da #
 <td><a href="https://github.com/ArtyMend07">Artur Mendonça Arruda</a></td>
 <td></td>
 <td>9 de novembro de 2026</td>
+</tr>
+<tr>
+<td>1.4</td>
+<td>Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR</td>
+<td><a href="https://github.com/Pedrovargas10">Pedro Vargas</a></td>
+<td>Pendente</td>
+<td>10 de novembro de 2026</td>
 </tr>
 </tbody>
 </table>

@@ -1210,6 +1210,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recuperacao-e-tratamento-da-fila-issue-58" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recuperação e tratamento da fila (issue #58)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recuperação e tratamento da fila (issue #58)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reprocessar-itens-rejeitados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reprocessar itens rejeitados
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revisar-um-desvio-do-insert-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisar um desvio do insert-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2070,6 +2109,45 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#recuperacao-e-tratamento-da-fila-issue-58" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recuperação e tratamento da fila (issue #58)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Recuperação e tratamento da fila (issue #58)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reprocessar-itens-rejeitados" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reprocessar itens rejeitados
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revisar-um-desvio-do-insert-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Revisar um desvio do insert-only
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#limites" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2636,6 +2714,65 @@ sem explicação. Foi um único evento acidental, com o consumidor parado.</p>
 <p>O desvio de tipo e o estouro de inteiro têm só teste unitário: a view <code>escola_estado_atual</code>
 depende de <code>vistoria_item.quantidade</code>, então <code>ALTER COLUMN ... TYPE</code> exigiria remover a view
 antes.</p>
+<h2 id="recuperacao-e-tratamento-da-fila-issue-58">Recuperação e tratamento da fila (issue #58)<a class="headerlink" href="#recuperacao-e-tratamento-da-fila-issue-58" title="Permanent link">&para;</a></h2>
+<p>A fila <code>fila_de_erros_cdc</code> é um histórico: nenhuma entrada é apagada ou alterada.
+Os recibos ficam em uma tabela Delta separada, <code>tratamentos_cdc</code>, identificados
+por <strong>LSN + chave completa da ocorrência</strong>. O primeiro recibo registra ação,
+identificador operacional (<code>operador-01</code>), instante UTC, motivo padronizado,
+chaves revisadas e impressões dos estados analíticos, sem nomes, e-mails,
+observação da vistoria ou texto livre. Repetir o comando preserva esse recibo.
+O identificador é informado por quem executa; ele não é uma autenticação.</p>
+<h3 id="reprocessar-itens-rejeitados">Reprocessar itens rejeitados<a class="headerlink" href="#reprocessar-itens-rejeitados" title="Permanent link">&para;</a></h3>
+<p>Primeiro corrija a causa operacional (por exemplo, restaure o contrato de uma
+coluna renomeada). Em seguida:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>reprocessar-fila-cdc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--responsavel<span class="w"> </span>operador-01<span class="w"> </span>--motivo<span class="w"> </span>esquema_corrigido
+</span></code></pre></div>
+<p>O comando busca cada item pela chave primária na origem, sem publicar a linha
+de base inteira. O merge insere apenas itens ausentes; uma linha já existente
+com conteúdo diferente não é sobrescrita nem considerada recuperada. O recibo
+só é gravado depois de confirmar o conteúdo no Delta. Se houver falha entre a
+escrita e o recibo, repetir é seguro. Datas ainda inválidas e itens ausentes na
+origem permanecem pendentes; o comando retorna <code>1</code> se alguma tentativa ficar
+pendente. Retorna <code>0</code> se todas as entradas selecionadas forem recuperadas ou
+já tiverem recibo. Entradas de UPDATE/DELETE/TRUNCATE exigem tratamento manual
+separado e continuam sendo acusadas pela auditoria.</p>
+<p>Para selecionar apenas uma ocorrência, use <code>--lsn &lt;decimal&gt; --chave &lt;chave&gt;</code>
+juntos. Para obter esses valores sem imprimir o conteúdo das linhas:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-T<span class="w"> </span>--entrypoint<span class="w"> </span>python<span class="w"> </span>carga<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'PYTHON'</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="s">from eduinfra.configuracao import carregar_configuracao</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="s">from eduinfra.fila_de_erros import ler</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="s">for entrada in ler(carregar_configuracao()).to_pylist():</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="s">    print(entrada["lsn_origem"], entrada["chave"], entrada["operacao"])</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="s">PYTHON</span>
+</span></code></pre></div>
+<h3 id="revisar-um-desvio-do-insert-only">Revisar um desvio do insert-only<a class="headerlink" href="#revisar-um-desvio-do-insert-only" title="Permanent link">&para;</a></h3>
+<p>Uma alteração indevida não é automaticamente propagada ao Delta. Depois de
+revisar a ocorrência e decidir aceitar explicitamente aquela divergência:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>tratar-desvio-cdc<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--lsn<span class="w"> </span>&lt;decimal&gt;<span class="w"> </span>--chave<span class="w"> </span>&lt;chave&gt;<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--responsavel<span class="w"> </span>operador-01<span class="w"> </span>--motivo<span class="w"> </span>desvio_revisado
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>auditar-cdc
+</span></code></pre></div>
+<p>O aceite se refere à ocorrência exata e ao estado analítico observado. A auditoria
+mantém o histórico das operações e informa os tratamentos e as chaves aceitas
+fora das contagens de divergência. Novos LSNs continuam pendentes, mesmo para
+a mesma chave. Se o estado de uma chave revisada mudar, o aceite anterior não
+suprime seu checksum. Inserções legítimas de outras chaves não são suprimidas
+nem invalidam o aceite das chaves anteriores. Uma entrada de INSERT rejeitado
+não pode ser encerrada por aceite manual.</p>
+<p>UPDATE/DELETE sem chave suficiente são recusados. Para TRUNCATE, o escopo revisado
+inclui as chaves existentes na origem e no Delta; a comparação pode custar uma
+leitura ampla, enquanto a recuperação de INSERT continua seletiva. O tratamento
+não dispensa problemas de contrato no catálogo, slot inválido, frescor estourado,
+pendências novas ou divergências não revisadas. O código <code>0</code> só volta se não houver
+outras violações. Execute os comandos de tratamento em série para evitar disputa
+na criação inicial das tabelas Delta; conflitos de escrita exigem nova tentativa.</p>
+<p>Os motivos permitidos são <code>esquema_corrigido</code>, <code>falha_transitoria_resolvida</code>,
+<code>desvio_revisado</code> e <code>legado_revisado</code>. O tratamento não corrige a origem insert-only,
+não reconstrói valores apagados e não recupera automaticamente todos os erros.
+As <a href="../evidencias/issue-58/reprocessamento/">evidências da #58</a> registram os testes
+e a comparação de custo com a carga completa.</p>
 <h2 id="limites">Limites<a class="headerlink" href="#limites" title="Permanent link">&para;</a></h2>
 <ul>
 <li>A migração 0009 exige <code>ocorrido_em</code> finito entre <code>0001-01-01 00:00:00+00</code>
@@ -2652,12 +2789,15 @@ antes.</p>
   Os cenários históricos de falha acima continuam reproduzíveis apenas simulando uma
   origem sem o check em banco descartável. Veja as
   <a href="../evidencias/issue-57/validacao-datas/">evidências da #57</a>.</li>
-<li>Um desvio do insert-only segue como violação para sempre, porque a auditoria não tem como
-  marcá-lo como tratado.</li>
+<li>A recuperação da fila é operacional e seletiva, pelos comandos acima. Dados
+  ainda inválidos permanecem pendentes; o aceite de desvios exige revisão explícita.
+  A validação preventiva das datas e da publicação completa já foi integrada pela #57.</li>
+<li>O aceite manual de um desvio conserva a divergência revisada e seu histórico;
+  o operador assume explicitamente esse estado. Ele não altera a origem ou o Delta.</li>
 <li>A taxa de entrega sob carga sustentada e o crescimento de arquivos ao longo de meses não
   foram medidos.</li>
-<li>Os testes de integração não rodam em CI: o único fluxo do repositório publica a
-  documentação.</li>
+<li>O CI valida a carga nacional, a Gold e o painel. Os cenários operacionais de
+  recuperação e tratamento do CDC são validados separadamente em bancos descartáveis.</li>
 </ul>
 <h2 id="evidencias">Evidências<a class="headerlink" href="#evidencias" title="Permanent link">&para;</a></h2>
 <p>Saídas brutas dos comandos, sem alteração. Nenhuma traz valor de linha da origem.</p>
@@ -2705,7 +2845,7 @@ antes.</p>
 </table>
 <p>Os scripts de falhas criam e removem um banco próprio. O de custo do checksum só lê, e roda
 no contêiner porque usa <code>resource</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-T<span class="w"> </span>-e<span class="w"> </span><span class="nv">LINHA_A_LINHA</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>--entrypoint<span class="w"> </span>uv<span class="w"> </span>carga<span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span>&lt;<span class="w"> </span>docs/evidencias/metricas-cdc/custo_do_checksum.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>-T<span class="w"> </span>-e<span class="w"> </span><span class="nv">LINHA_A_LINHA</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>--entrypoint<span class="w"> </span>uv<span class="w"> </span>carga<span class="w"> </span>run<span class="w"> </span>--no-sync<span class="w"> </span>python<span class="w"> </span>-<span class="w"> </span>&lt;<span class="w"> </span>docs/evidencias/metricas-cdc/custo_do_checksum.py
 </span></code></pre></div>
 <h2 id="historico-de-versoes">Histórico de Versões<a class="headerlink" href="#historico-de-versoes" title="Permanent link">&para;</a></h2>
 <table>
