@@ -1,67 +1,75 @@
 # EduInfra AI
 
-Assistente RAG de infraestrutura escolar e desempenho no ENEM. Projeto
-Integrado da Squad EduInfra na disciplina Sistemas de Banco de Dados 2
-(UnB/FCTE, 2026/2).
+Infraestrutura escolar e desempenho no ENEM. Projeto Integrado da Squad
+EduInfra na disciplina Sistemas de Banco de Dados 2 (UnB/FCTE, 2026/2).
 
-**O que o sistema faz:** um sistema transacional (OLTP) de vistorias de
-infraestrutura escolar, acoplado a um pipeline analítico e a um banco vetorial
-que alimentam um assistente RAG.
+**O que o sistema faz:** mantém uma origem transacional de vistorias e um
+pipeline analítico com ingestão do Censo e do ENEM, captura contínua de novas
+vistorias, transformação da Gold pelo dbt e painel de análise. O Dagster
+coordena o pipeline em lote, os testes de dados e a verificação de frescor.
 
-**Problema que resolve:** extrair respostas rápidas e visuais dos microdados do
-ENEM e do Censo Escolar exige, hoje, conhecimento técnico de SQL e de engenharia
-de dados. O EduInfra AI permite que gestores educacionais e pesquisadores façam
-essas perguntas em linguagem natural, pelo chat.
+**Problema que resolve:** reunir os dados públicos de infraestrutura e
+desempenho por escola, com histórico, rastreabilidade e verificação de
+qualidade, para apoiar a análise de gestores e pesquisadores. O assistente
+RAG em linguagem natural integra a arquitetura prevista para a próxima entrega.
 
-**Pergunta de gestão:** a infraestrutura de uma escola se reflete no desempenho
-dos seus alunos no ENEM?
+**Pergunta de gestão:** como a infraestrutura de uma escola se relaciona com
+o desempenho dos seus alunos no ENEM? As comparações do painel são
+associações observadas, sem interpretação causal ou controle de INSE.
 
 ## Arquitetura
 
-O fluxo separa a origem transacional, as camadas de dados e os componentes de consumo. A Bronze preserva os dados recebidos; a Silver contém dados validados e padronizados; e a Gold prepara os dados para consultas de negócio.
+A Bronze preserva os dados recebidos, a Silver contém dados validados e
+padronizados e a Gold prepara os dados para consultas de negócio. O diagrama
+é o mesmo da [página de arquitetura](docs/arquitetura.md), publicada no
+[GitHub Pages](https://daviegito.github.io/bd2_2026_2_eduinfra/arquitetura/).
+As setas pontilhadas representam integrações previstas.
 
 ```mermaid
 flowchart LR
     INEP["INEP<br/>ENEM, Censo, INSE<br/>e dicionários"]
     IBGE["API do IBGE"]
-
     BRONZE["Bronze<br/>Arquivos e respostas<br/>originais"]
     LOTE["Ingestão em lote<br/>Validação e padronização"]
-    SILVER["Silver<br/>Dados tratados<br/>Parquet / Delta"]
-
+    SILVER["Silver e destinos analíticos<br/>Dados tratados<br/>Parquet / Delta"]
     OLTP[("Origem OLTP<br/>PostgreSQL<br/>insert-only")]
     CDC["CDC<br/>Captura pelo WAL"]
     DUCK["DuckDB<br/>Consulta e processamento"]
     DBT["dbt<br/>Transformação em camadas"]
     GOLD[("Gold<br/>PostgreSQL<br/>Dados para análise")]
-
     EMB["Geração de<br/>embeddings"]
     VET[("Banco vetorial<br/>pgvector")]
     AGENTE["Assistente RAG<br/>ferramentas MCP"]
     CACHE[("Cache<br/>Redis")]
     USER["Gestor / pesquisador"]
-
     INEP -->|extração anual| BRONZE
-    IBGE -->|extração para enriquecimento| BRONZE
+    IBGE -.->|enriquecimento previsto| BRONZE
     BRONZE --> LOTE
     LOTE --> SILVER
-
+    LOTE -->|carga da origem| OLTP
     OLTP --> CDC
     CDC --> SILVER
-
     SILVER --> DUCK
     SILVER --> DBT
     DBT -->|transformação| GOLD
-    SILVER -->|conteúdo selecionado| EMB
-    EMB --> VET
-
-    GOLD --> AGENTE
-    VET --> AGENTE
-    CACHE <--> AGENTE
-    AGENTE --> USER
+    SILVER -.->|conteúdo selecionado| EMB
+    EMB -.-> VET
+    GOLD -.-> AGENTE
+    VET -.-> AGENTE
+    CACHE <-.-> AGENTE
+    AGENTE -.-> USER
 ```
 
-Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silver e a captura de novas vistorias para tabelas Delta. Na E3, o ENEM 2024 passou a ser ingerido na Silver, agregado por escola, e a Gold é construída pelo dbt ([transformação declarativa](docs/transformacao.md)). A integração das demais fontes, o banco vetorial, o cache e o assistente estão previstos para as próximas entregas.
+Na E3, Censo e ENEM 2024 alimentam a análise por escola. A linha de base,
+o CDC e as janelas mensais completam a fonte Delta canônica
+`warehouse/eventos_vistoria`, pela chave `(vistoria_id, item_codigo)`. O dbt
+consome um retrato dessa fonte e das Silver para construir a Gold no
+PostgreSQL. O painel lê os fatos e dimensões da Gold.
+
+INSE, IBGE, embeddings, busca vetorial, Redis e assistente RAG são componentes
+previstos. O diagrama geral inclui essas partes futuras, enquanto o
+[grafo do Dagster](docs/orquestracao.md) detalha as dependências executáveis
+já implementadas.
 
 | Componente | Responsabilidade | Tecnologia ou formato | Justificativa |
 | --- | --- | --- | --- |
@@ -71,9 +79,12 @@ Até a E2, estão implementadas a origem OLTP, a ingestão do Censo para a Silve
 | CDC | Capturar novas vistorias pelo log do banco | WAL e slot lógico do PostgreSQL | Propagar mudanças e permitir retomada após interrupções |
 | Silver | Armazenar dados tratados para análise | Parquet com compressão zstd e tabelas Delta | Permitir leitura colunar eficiente e, nas tabelas Delta, controle transacional |
 | Consulta e processamento | Consultar e transformar os dados analíticos | DuckDB | Executar SQL diretamente sobre os arquivos, sem exigir um cluster |
-| Gold — camada de serviço | Disponibilizar dados modelados e indicadores para análise | PostgreSQL | Atender consultas estruturadas do painel e do assistente |
-| Banco vetorial | Armazenar embeddings de conteúdos selecionados | pgvector | Permitir buscas por similaridade usando distância entre vetores |
-| Cache | Reutilizar respostas e resultados válidos | Redis | Reduzir processamento repetido e tempo de resposta |
+| Transformação | Construir modelos em staging, intermediate e marts e executar testes de dados | dbt com PostgreSQL | Versionar SQL, dependências, documentação e contratos da Gold |
+| Gold — camada de serviço | Disponibilizar fatos e dimensões para análise | PostgreSQL | Atender consultas estruturadas do painel |
+| Orquestração | Coordenar dependências, agenda, retry, testes e frescor | Dagster | Registrar e acompanhar as execuções do pipeline |
+| Painel | Explorar infraestrutura e desempenho por escola | HTML estático e Plotly | Disponibilizar a análise localmente e no GitHub Pages |
+| Banco vetorial — previsto | Armazenar embeddings de conteúdos selecionados | pgvector | Permitir buscas por similaridade usando distância entre vetores |
+| Cache — previsto | Reutilizar respostas e resultados válidos | Redis | Reduzir processamento repetido e tempo de resposta |
 
 Bronze e Silver representam camadas de organização dos dados. Parquet é um formato de arquivo, e Delta acrescenta um log de transações aos arquivos Parquet. O DuckDB atua como mecanismo de consulta e processamento; ele não define, sozinho, um Data Lake.
 
@@ -81,10 +92,35 @@ Na arquitetura prevista, o assistente acessará os dados por ferramentas MCP. Pe
 
 O Redis poderá reutilizar resultados conforme as regras de validade e atualização do cache.
 
-## Estado atual: Entrega 2
+## Estado atual: Entrega 3
 
-A E2 pede ingestão em lote e captura de mudanças sobre a origem da E1. Este
-repositório entrega, além da E1:
+A E3 acrescenta a transformação, os testes e a orquestração da camada analítica:
+
+- **ENEM 2024 na Silver**, agregado por escola, com manifesto por fonte e ano
+  e [cobertura da junção com o Censo](docs/enem.md) medida;
+- **Gold declarativa em dbt**, com dimensões, perfis históricos de infraestrutura
+  e fatos de vistoria, infraestrutura anual e desempenho por escola/ano;
+- **13 modelos e 26 testes dbt** na validação nacional registrada, com
+  [comparação com SQL direto](docs/evidencias/issue-48/comparacao.md);
+- **testes de dados da Gold**, cobrindo esquema, volume, unicidade, referências,
+  distribuição e domínio, descritos em [Testes](docs/testes.md);
+- **frescor da Gold com SLA de 25 horas**, medido contra os itens pendentes
+  da origem, e [SLA do CDC de 60 segundos](docs/frescor-e-sla.md);
+- **Dagster**, com grafo de dependências, agenda configurável, retry e
+  [demonstrações registradas de retry e backfill](docs/orquestracao.md);
+- **painel analítico** publicado no [GitHub Pages](https://daviegito.github.io/bd2_2026_2_eduinfra/painel.html),
+  com perfil temporal da infraestrutura, cobertura e limites da comparação;
+- **recuperação seletiva da fila do CDC**, com recibos e aceite explícito de
+  desvios, conforme o [procedimento operacional](docs/metricas-cdc.md);
+- **consulta otimizada**, com [planos e medições](docs/consulta-otimizada.md).
+
+Na orquestração, ainda falta formalizar a comparação que levou ao Dagster e
+registrar uma execução completa disparada pela agenda a partir de clone limpo
+([issue #50](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/50)). Os logs
+existentes comprovam o retry e o backfill exercitados manualmente em ambiente
+isolado. A disponibilidade da interface do Dagster não comprova esse aceite.
+
+Da E2, permanecem implementados:
 
 - **ingestão em lote idempotente**: cada execução fica registrada num manifesto
   com o SHA-256 do arquivo, e a Silver em Parquet é trocada inteira, só depois
@@ -171,8 +207,11 @@ erDiagram
 Pré-requisitos:
 
 - Docker com Docker Compose v2 (`docker compose`, sem hífen);
-- acesso à internet, porque a carga baixa cerca de 34 MB do INEP;
-- cerca de 1 GB livre em disco: o banco ocupa 445 MB depois de populado.
+- acesso à internet para os pacotes oficiais e as imagens Docker. O Censo tem
+  cerca de 34 MB compactados e o ENEM cerca de 526 MB;
+- espaço em disco para os arquivos extraídos, o PostgreSQL, as tabelas Delta
+  e o WAL. Os 445 MB registrados na E1 se referem apenas à origem daquela
+  medição e não dimensionam o pipeline completo da E3.
 
 O resto vem nas imagens: PostgreSQL 16 (`pgvector/pgvector:pg16`) e Python 3.12
 com [uv](https://docs.astral.sh/uv/).
@@ -187,10 +226,24 @@ docker compose up --build
 O serviço `carga` roda as migrações, baixa e ingere o Censo 2024, publica a
 linha de base nas tabelas Delta, imprime a caracterização da base e termina com
 código 0. Em seguida, o serviço `cdc` sobe e fica consumindo o slot lógico a
-cada 2 segundos. Os serviços `banco` e `cdc` continuam no ar. Na E1, numa
-máquina limpa, o processo levava de 3 a 4 minutos.
+cada 2 segundos. O `orquestrador` aguarda a carga e o CDC saudável e disponibiliza
+o Dagster em <http://localhost:3000>. A agenda padrão é `0 3 * * *`, diariamente
+às 3h no fuso `America/Sao_Paulo`, configurável por `AGENDA_ORQUESTRADOR`.
 
-Se a porta 5432 já estiver em uso, mude `PORTA_POSTGRES` no `.env`.
+Para construir e testar imediatamente a Gold completa da E3, execute também:
+
+```bash
+docker compose run --build --rm transformacao
+```
+
+Esse serviço ingere o ENEM, prepara as fontes, executa `dbt build`, mede o
+frescor e gera a documentação dbt. Na primeira execução, há download e
+processamento dos dados nacionais; o tempo de 3 a 4 minutos medido na E1
+não representa esse fluxo completo. A agenda posterior depende de manter o
+serviço do Dagster em execução.
+
+Se as portas estiverem ocupadas, ajuste `PORTA_POSTGRES` e `PORTA_DAGSTER`
+no `.env`.
 
 Para conferir a base populada:
 
@@ -229,7 +282,11 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
-| `docker compose run --rm carga construir-gold` | copia uma versão da fonte canônica de eventos para `fonte.eventos_vistoria`, confere com a origem e recria o schema `gold` (dimensões, dimensão de variação lenta e dois fatos); ver [modelo analítico](docs/modelo-analitico.md) |
+| `docker compose run --build --rm transformacao` | prepara Censo, ENEM e eventos canônicos, constrói e testa a Gold com dbt e gera sua documentação; fluxo completo da E3 |
+| `docker compose run --rm carga construir-gold` | construtor SQL de infraestrutura, mantido para comparação com dbt; não entrega o fato ENEM exigido pelo painel |
+| `docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel` | exporta `docs/painel.html` a partir da Gold completa |
+| `docker compose run --rm carga auditar-cdc` | confere consistência, fila, contrato e saúde do slot |
+| `docker compose run --rm carga reprocessar-fila-cdc --responsavel operador-01 --motivo esquema_corrigido` | recupera os INSERTs rejeitados pela chave, mantendo itens inválidos pendentes e registrando recibos ([procedimento](docs/metricas-cdc.md)) |
 | `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
 | `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
@@ -521,12 +578,45 @@ select sg_uf, count(*) from delta_scan('dados/warehouse/vistoria_item') group by
 
 O serviço `orquestrador` sobe o [Dagster](https://docs.dagster.io/) em
 <http://localhost:3000>, com o pipeline em lote agendado, retry e backfill.
-Detalhes e demonstrações em [docs/orquestracao.md](docs/orquestracao.md).
+A agenda padrão é diária às 3h, no horário de Brasília, e pode ser alterada
+por `AGENDA_ORQUESTRADOR`. A Gold é construída pelo runner dbt e depois são
+executados os testes da Gold e a medição de frescor. O backfill por mês atua
+nas janelas da fonte de eventos; a Gold incorpora esse resultado na construção
+seguinte. Detalhes, procedimentos e logs em
+[docs/orquestracao.md](docs/orquestracao.md).
+
+## Validar a E3
+
+Com a Gold completa construída, execute a auditoria de dados:
+
+```bash
+docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
+```
+
+Para os testes sem banco, com Python e uv disponíveis:
+
+```bash
+uv run --group dev --group transformacao --with hypothesis pytest -m "not integracao" -q
+```
+
+Os testes de integração exigem PostgreSQL descartável, configuração de WAL
+lógico e os demais pré-requisitos de [docs/testes.md](docs/testes.md). Alguns
+cenários inserem vistorias de propósito. A auditoria da Gold deve observar o
+mesmo retrato de origem usado em sua construção.
+
+| Evidência | Documento |
+| --- | --- |
+| Construção nacional, modelos, testes e comparação dbt × SQL | [Transformação da Gold](docs/evidencias/issue-48/comparacao.md) |
+| Junção ENEM × Censo e códigos mascarados | [ENEM 2024](docs/enem.md) |
+| Modelo dimensional, grãos e perfis históricos | [Modelo analítico](docs/modelo-analitico.md) |
+| Limite de WAL durante a construção | [Retenção do CDC](docs/evidencias/issue-60/retencao-wal.md) |
+| Retry e backfill exercitados | [Orquestração](docs/orquestracao.md#execucoes-registradas) |
+| Recuperação seletiva e repetição idempotente | [Recuperação da fila CDC](docs/evidencias/issue-58/reprocessamento.md) |
 
 ## Estrutura do repositório
 
 ```
-alembic/versions/   migrações do esquema, em ordem (0001 a 0008)
+alembic/versions/   migrações do esquema, em ordem (0001 a 0009)
 src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   microdados.py     download retomável do pacote do INEP
   tls.py            completa a cadeia de certificados do INEP (ADR 0002)
@@ -545,12 +635,19 @@ src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   caracterizacao.py contagens e tamanhos da base populada
   comparacao_*.py   medições citadas nos ADRs e em docs/
   demonstracao_*.py demonstrações do CDC e do dado atrasado
-  orquestrador.py   pipeline em lote no Dagster (E3)
+  orquestrador.py   pipeline em lote, agenda, retry e backfill no Dagster
+  fontes_transformacao.py prepara e confere as sources PostgreSQL do dbt
+  modelo_analitico.py construtor SQL e consultas de comparação
+  frescor.py        medição do SLA da Gold
+  painel.py         geração do painel HTML a partir da Gold
+  auditoria_cdc.py  conferência da origem, Delta, fila e slot
+  recuperacao_cdc.py reprocessamento seletivo e recibos do CDC
+transformacao/      projeto dbt: modelos, contratos, testes e runners
 tests/              testes unitários e de integração (ver docs/testes.md)
-docs/               medições e decisões de cada tema da E2
+docs/               guias, decisões e evidências da E1, E2 e E3
 docs/adr/           registros de decisão de arquitetura
 docs/diario/        diário de bordo semanal
-docker-compose.yml  banco PostgreSQL, serviço de carga, consumidor do CDC e Dagster
+docker-compose.yml  PostgreSQL, carga, CDC, transformação dbt e Dagster
 Dockerfile          imagem da carga, com uv
 .env.example        variáveis de ambiente; copie para .env
 AI-USAGE.md         registro de uso de IA
@@ -560,9 +657,9 @@ AI-USAGE.md         registro de uso de IA
 
 | Documento | Onde | Estado |
 | --- | --- | --- |
-| Decisões de arquitetura | [docs/adr/](docs/adr/README.md) | ADRs 0001, 0002 e 0004; 0003, 0005 e 0006 a escrever |
+| Decisões de arquitetura | [docs/adr/](docs/adr/README.md) | ADRs 0001, 0002, 0004 e 0007 aceitos; 0005 e 0008 propostos; 0003 e 0006 a escrever |
 | Diário de bordo semanal | [docs/diario/diario-de-bordo.md](docs/diario/diario-de-bordo.md) | Semanas 1 a 10, atualizado a cada Semana |
-| Registro de uso de IA | [AI-USAGE.md](AI-USAGE.md) | E1 e E2, atualizado a cada uso |
+| Registro de uso de IA | [AI-USAGE.md](AI-USAGE.md) | E1, E2 e E3, atualizado a cada uso |
 
 ## Fontes de dados
 
@@ -576,9 +673,15 @@ AI-USAGE.md         registro de uso de IA
 | Histórico de interação (prompts) | o próprio assistente | uso da plataforma |
 | Sistema de vistorias | aplicativo da secretaria | origem transacional (OLTP) |
 
-O projeto usa o ENEM de 2024 porque é a edição em que o INEP devolveu o código
-da escola aos microdados, o que permite cruzar desempenho e infraestrutura no
-grão escola.
+Na E3, Censo e ENEM 2024 estão integrados. INSE e IBGE permanecem previstos,
+portanto as comparações atuais não controlam o nível socioeconômico. O histórico
+de interação será produzido quando o assistente estiver implementado.
+
+O código `CO_ESCOLA` do ENEM 2024 permite a junção com o Censo no grão escola.
+Na medição registrada, 25.179 das 29.400 escolas da entrada foram encontradas
+no Censo (85,6%). As 4.221 restantes têm código mascarado pelo INEP por terem
+menos de dez participantes. Isso corresponde a 100% de junção entre os códigos
+reais. Critérios de notas, participantes e cobertura em [ENEM](docs/enem.md).
 
 Os microdados do INEP são anonimizados na origem. Na E1, o único dado pessoal é o
 do técnico que registra a vistoria, na tabela `tecnico`, e ele não sai da origem
@@ -591,6 +694,9 @@ sem pseudonimização.
 | [0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem |
 | [0002](docs/adr/0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação |
 | [0004](docs/adr/0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL |
+| [0005](docs/adr/0005-ferramenta-de-transformacao.md) | Usar dbt para as transformações da Gold; status proposto |
+| [0007](docs/adr/0007-telemetria-e-fila-de-erros-do-cdc.md) | Telemetria transacional, fila de erros e tratamento das ocorrências do CDC |
+| [0008](docs/adr/0008-fonte-canonica-de-eventos.md) | Fonte Delta única de eventos para linha de base, CDC e janelas; status proposto |
 
 ## Entregas
 
