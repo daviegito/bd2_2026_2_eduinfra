@@ -390,6 +390,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   ao normal depois da reconstrução); 10 testes de unidade e 3 de integração
   passando, além da suíte de unidade inteira e dos testes do modelo analítico;
   `mkdocs build --strict` sem erro
+- **Quem revisou:** Davi (PR #62)
 
 ### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
 
@@ -407,7 +408,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   soma dos hashes das linhas) e saíram iguais; os 12 testes passaram nas duas
   ferramentas; três rodadas de medição sobre o recorte SP + Centro-Oeste do Censo 2024,
   com as saídas brutas em `docs/evidencias/adr-0005/resultados.txt`
-- **Quem revisou:** pendente (PR)
+- **Quem revisou:** Davi (PR #64)
 
 
 ### 2026-11-08 — Recuperação da fila de erros do CDC (issue #58)
@@ -452,7 +453,7 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** o teste novo falhou sem a correção e passou com ela; os 17
   testes das janelas e os 142 de unidade passaram, e a suíte de integração das janelas
   passou duas vezes seguidas com a vistoria sem item dentro da margem
-- **Quem revisou:** pendente (PR)
+- **Quem revisou:** Pedro Vargas (PR #71)
 
 ### 2026-11-08 — Ingestão do ENEM 2024 e junção com o Censo
 
