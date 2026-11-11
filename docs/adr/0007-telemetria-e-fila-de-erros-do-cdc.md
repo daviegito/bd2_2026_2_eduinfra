@@ -87,13 +87,13 @@ Escolhemos B, com estas regras:
 **O que perdemos:**
 
 - Um item pode ficar fora do Delta até alguém olhar a fila. Quem opera precisa rodar `auditar-cdc`, porque além dela só o log avisa.
-- Não há reprocessamento automático. Após a #57, `publicar-analitico --forcar` rejeita datas inválidas no histórico antes de escrever no Delta; a recuperação da fila continua pendente na #58.
+- A recuperação não é automática. A #58 adiciona reprocessamento pela chave com recibos; dados ainda inválidos permanecem pendentes. A #57 já impede datas inválidas na origem e rejeita o legado inválido antes da publicação completa.
 - `contrato_cdc.py` precisa mudar junto com toda migração de `vistoria` ou `vistoria_item`. Se o autor esquecer, a auditoria acusa desvio.
-- Um desvio do insert-only fica como violação para sempre, porque a auditoria não o marca como tratado.
+- O operador pode aceitar um desvio pela ocorrência exata, registrando o estado revisado; a auditoria mantém o histórico e volta a alertar para novas ocorrências ou mudanças não aceitas.
 
 **Riscos assumidos:** a validação de datas foi tratada pela #57, conforme a revisão abaixo; outros erros de origem ainda podem chegar à fila. Os p95 vieram de uma máquina não dedicada. O merge de 50,38 s depois de religar o consumidor não foi investigado.
 
-**O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado, então recuperar custa uma releitura da origem inteira, sem medição recente. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
+**O que se torna irreversível:** avançar o slot além de uma linha rejeitada não tem volta, porque o CDC não a entrega de novo. A origem continua com o dado. Antes da #58, recuperar exigia releitura completa; a recuperação seletiva e sua medição estão na revisão abaixo. As duas tabelas novas podem ser apagadas sem efeito sobre `eventos_vistoria`.
 
 ## Revisão da validação de datas — issue #57
 
@@ -111,9 +111,38 @@ A publicação completa valida todas as vistorias e exporta no mesmo snapshot,
 com leitura em UTC. Ao encontrar data inválida, falha antes de gravar no Delta;
 a versão e os arquivos existentes permanecem intactos. Os testes da fila ainda
 simulam datas legadas em bancos descartáveis, removendo explicitamente apenas
-o novo check nesses cenários. Isso não implementa a recuperação da fila da #58.
+o novo check nesses cenários. Essa validação preventiva não substitui a recuperação da fila descrita na revisão da #58.
 
 [Evidências e checklist da #57](../evidencias/issue-57/validacao-datas.md).
+
+## Revisão da recuperação — issue #58
+
+`reprocessar-fila-cdc` consulta somente os itens rejeitados pela chave na origem.
+O merge continua insert-only no destino: não sobrescreve uma linha divergente e
+só registra sucesso após conferir o conteúdo gravado. Uma falha antes do recibo
+permite nova tentativa sem duplicação.
+
+Os recibos ficam em `tratamentos_cdc`, separados da fila e da telemetria. A
+identidade é `(lsn_origem, chave)`; o primeiro autor, motivo e instante são
+preservados. O responsável usa um identificador operacional numérico, sem
+nome/e-mail; o motivo vem de uma lista fixa. As impressões e chaves revisadas
+incluem apenas os campos analíticos, sem técnico ou observação.
+
+`tratar-desvio-cdc` exige seleção exata de UPDATE, DELETE ou TRUNCATE e aceite
+explícito do estado divergente. O checksum só dispensa as chaves cujo estado
+continua igual ao revisado. A contagem de operações conserva o histórico e
+separa tratamentos de pendências. Nova ocorrência, mesmo com a mesma chave,
+continua sendo uma violação até seu próprio tratamento. Recibos não suprimem
+frescor, problemas de slot ou desvios atuais do catálogo.
+
+Não há exclusão da DLQ, alteração da origem, propagação automática de UPDATE/
+DELETE ao Delta nem encerramento manual de um INSERT que ainda não foi
+recuperado. TRUNCATE pode exigir comparação ampla; os recibos e seu conjunto
+de chaves também crescem com o escopo revisado. A identidade operacional é
+declarada pelo executor e não substitui controle de acesso.
+
+[Procedimento](../metricas-cdc.md#recuperacao-e-tratamento-da-fila-issue-58) e
+[evidências da #58](../evidencias/issue-58/reprocessamento.md).
 
 ## Gatilho de revisão
 
@@ -136,3 +165,4 @@ o novo check nesses cenários. Isso não implementa a recuperação da fila da #
 | 1.1 | Inclui padrões de acesso, riscos assumidos e evidências brutas; reduz o texto | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.2 | Validação das datas na origem e na publicação completa (#57) | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente de PR | 8 de novembro de 2026 |
 | 1.3 | Passa de proposto a aceito, com a aprovação no PR #59 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
+| 1.4 | Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 10 de novembro de 2026 |

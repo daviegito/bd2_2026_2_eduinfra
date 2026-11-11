@@ -410,6 +410,21 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Quem revisou:** pendente (PR)
 
 
+### 2026-11-08 — Recuperação da fila de erros do CDC (issue #58)
+
+- **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
+- **Onde:** `recuperacao_cdc.py`, CLI, auditoria, testes de recuperação e evidências
+  da issue #58, métricas do CDC e ADR 0007.
+- **O que foi pedido:** concluir o checklist e os critérios de aceite da #58,
+  preservando os PRs abertos e o trabalho da #48, com aprovação prévia dos dez arquivos.
+- **O que foi aproveitado:** reprocessamento pela chave, recibos separados da DLQ,
+  aceite explícito por LSN/chave e estado revisado, teste de reentrega e medição
+  comparativa com a leitura completa sobre cópia nacional descartável.
+- **Como foi verificado:** PostgreSQL e Delta descartáveis; resultados e limites
+  em `docs/evidencias/issue-58/reprocessamento.md`.
+- **Quem revisou:** Pedro aprovou o escopo; revisão de código pendente. O PR deve
+  permanecer Draft até a integração dos PRs #61, #65, #66 e #67 e nova autorização.
+
 ### 2026-11-08 — Validação de datas de vistoria (issue #57)
 
 - **Ferramenta:** Codex, como assistente de implementação, testes e documentação.
@@ -600,3 +615,27 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   a entrega da #63. A demonstração restaurada detectou o defeito intencional
   no banco descartável e removeu a linha; a Gold terminou com a mesma contagem
   de 3.078.105 eventos e zero linhas com `ERRO_DE_DOMINIO`.
+
+
+### 2026-11-10 — Integração final da recuperação CDC (PR #68, issue #58)
+
+- **Ferramenta:** Codex, como assistente de integração e validação.
+- **O que foi pedido:** concluir a #58 após as integrações de #61, #65, #66
+  e #67, preservando os critérios de aceite e aguardando autorização para publicar.
+- **Onde:** resolução dos conflitos em `src/eduinfra/cli.py`, `docs/metricas-cdc.md`,
+  ADR 0007 e este registro; atualização das evidências da #58. Os cinco arquivos
+  e a validação isolada foram aprovados previamente por Pedro.
+- **O que foi aproveitado:** integração da main `7912e44`, preservando os comandos
+  do painel/ENEM/otimização e a regra de datas. A recuperação e seus testes não
+  precisaram de alterações funcionais.
+- **Como foi verificado:** 69 testes direcionados e 360 testes da suíte completa
+  passaram, sem skips, incluindo Hypothesis e frescor. A auditoria Gold foi
+  executada antes dos cenários que inserem vistorias. A cópia PostgreSQL isolada
+  preservou as 181.148 vistorias no upgrade 0007→0009. Gold: 13 modelos e 26 testes,
+  PASS=39, sem WARN/ERROR/SKIP; painel gerado. A medição repetida leu 17 itens
+  no seletivo contra 3.080.009 no completo, medianas de 1,319 s e 2,847 s;
+  repetição sem novas recuperações e sem pendências. Evidências registram também
+  a falha inicial de frescor sob carga concorrente e as repetições aprovadas,
+  sem flexibilizar o SLA. Fontes oficiais Silver foram reutilizadas localmente;
+  a origem copiada contém resíduos sintéticos de testes.
+- **Quem revisou:** escopo aprovado por Pedro; publicação e revisão humana pendentes.

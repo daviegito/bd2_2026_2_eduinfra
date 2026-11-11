@@ -276,6 +276,82 @@ O desvio de tipo e o estouro de inteiro têm só teste unitário: a view `escola
 depende de `vistoria_item.quantidade`, então `ALTER COLUMN ... TYPE` exigiria remover a view
 antes.
 
+## Recuperação e tratamento da fila (issue #58)
+
+A fila `fila_de_erros_cdc` é um histórico: nenhuma entrada é apagada ou alterada.
+Os recibos ficam em uma tabela Delta separada, `tratamentos_cdc`, identificados
+por **LSN + chave completa da ocorrência**. O primeiro recibo registra ação,
+identificador operacional (`operador-01`), instante UTC, motivo padronizado,
+chaves revisadas e impressões dos estados analíticos, sem nomes, e-mails,
+observação da vistoria ou texto livre. Repetir o comando preserva esse recibo.
+O identificador é informado por quem executa; ele não é uma autenticação.
+
+### Reprocessar itens rejeitados
+
+Primeiro corrija a causa operacional (por exemplo, restaure o contrato de uma
+coluna renomeada). Em seguida:
+
+```bash
+docker compose run --rm carga reprocessar-fila-cdc \
+  --responsavel operador-01 --motivo esquema_corrigido
+```
+
+O comando busca cada item pela chave primária na origem, sem publicar a linha
+de base inteira. O merge insere apenas itens ausentes; uma linha já existente
+com conteúdo diferente não é sobrescrita nem considerada recuperada. O recibo
+só é gravado depois de confirmar o conteúdo no Delta. Se houver falha entre a
+escrita e o recibo, repetir é seguro. Datas ainda inválidas e itens ausentes na
+origem permanecem pendentes; o comando retorna `1` se alguma tentativa ficar
+pendente. Retorna `0` se todas as entradas selecionadas forem recuperadas ou
+já tiverem recibo. Entradas de UPDATE/DELETE/TRUNCATE exigem tratamento manual
+separado e continuam sendo acusadas pela auditoria.
+
+Para selecionar apenas uma ocorrência, use `--lsn <decimal> --chave <chave>`
+juntos. Para obter esses valores sem imprimir o conteúdo das linhas:
+
+```bash
+docker compose run --rm -T --entrypoint python carga - <<'PYTHON'
+from eduinfra.configuracao import carregar_configuracao
+from eduinfra.fila_de_erros import ler
+for entrada in ler(carregar_configuracao()).to_pylist():
+    print(entrada["lsn_origem"], entrada["chave"], entrada["operacao"])
+PYTHON
+```
+
+### Revisar um desvio do insert-only
+
+Uma alteração indevida não é automaticamente propagada ao Delta. Depois de
+revisar a ocorrência e decidir aceitar explicitamente aquela divergência:
+
+```bash
+docker compose run --rm carga tratar-desvio-cdc \
+  --lsn <decimal> --chave <chave> \
+  --responsavel operador-01 --motivo desvio_revisado
+docker compose run --rm carga auditar-cdc
+```
+
+O aceite se refere à ocorrência exata e ao estado analítico observado. A auditoria
+mantém o histórico das operações e informa os tratamentos e as chaves aceitas
+fora das contagens de divergência. Novos LSNs continuam pendentes, mesmo para
+a mesma chave. Se o estado de uma chave revisada mudar, o aceite anterior não
+suprime seu checksum. Inserções legítimas de outras chaves não são suprimidas
+nem invalidam o aceite das chaves anteriores. Uma entrada de INSERT rejeitado
+não pode ser encerrada por aceite manual.
+
+UPDATE/DELETE sem chave suficiente são recusados. Para TRUNCATE, o escopo revisado
+inclui as chaves existentes na origem e no Delta; a comparação pode custar uma
+leitura ampla, enquanto a recuperação de INSERT continua seletiva. O tratamento
+não dispensa problemas de contrato no catálogo, slot inválido, frescor estourado,
+pendências novas ou divergências não revisadas. O código `0` só volta se não houver
+outras violações. Execute os comandos de tratamento em série para evitar disputa
+na criação inicial das tabelas Delta; conflitos de escrita exigem nova tentativa.
+
+Os motivos permitidos são `esquema_corrigido`, `falha_transitoria_resolvida`,
+`desvio_revisado` e `legado_revisado`. O tratamento não corrige a origem insert-only,
+não reconstrói valores apagados e não recupera automaticamente todos os erros.
+As [evidências da #58](evidencias/issue-58/reprocessamento.md) registram os testes
+e a comparação de custo com a carga completa.
+
 ## Limites
 
 - A migração 0009 exige `ocorrido_em` finito entre `0001-01-01 00:00:00+00`
@@ -292,12 +368,15 @@ antes.
   Os cenários históricos de falha acima continuam reproduzíveis apenas simulando uma
   origem sem o check em banco descartável. Veja as
   [evidências da #57](evidencias/issue-57/validacao-datas.md).
-- Um desvio do insert-only segue como violação para sempre, porque a auditoria não tem como
-  marcá-lo como tratado.
+- A recuperação da fila é operacional e seletiva, pelos comandos acima. Dados
+  ainda inválidos permanecem pendentes; o aceite de desvios exige revisão explícita.
+  A validação preventiva das datas e da publicação completa já foi integrada pela #57.
+- O aceite manual de um desvio conserva a divergência revisada e seu histórico;
+  o operador assume explicitamente esse estado. Ele não altera a origem ou o Delta.
 - A taxa de entrega sob carga sustentada e o crescimento de arquivos ao longo de meses não
   foram medidos.
-- Os testes de integração não rodam em CI: o único fluxo do repositório publica a
-  documentação.
+- O CI valida a carga nacional, a Gold e o painel. Os cenários operacionais de
+  recuperação e tratamento do CDC são validados separadamente em bancos descartáveis.
 
 ## Evidências
 
