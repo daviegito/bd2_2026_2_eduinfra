@@ -754,7 +754,7 @@ Registros complementares, fora do portfólio avaliado:
 | --- | --- | --- | --- |
 | E1 | Fonte transacional modelada e populada | 28/09/2026 | [e1](https://github.com/daviegito/bd2_2026_2_eduinfra/releases/tag/e1) |
 | E2 | Ingestão em lote e captura de mudanças | 19/10/2026 | [e2](https://github.com/daviegito/bd2_2026_2_eduinfra/releases/tag/e2) |
-| E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 | a publicar |
+| E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 | [e3](https://github.com/daviegito/bd2_2026_2_eduinfra/releases/tag/e3) |
 | E4 | Plataforma completa, governada e defendida | 24/11/2026 | — |
 
 Datas do [cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/).
