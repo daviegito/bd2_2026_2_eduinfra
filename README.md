@@ -114,11 +114,11 @@ A E3 acrescenta a transformação, os testes e a orquestração da camada analí
   desvios, conforme o [procedimento operacional](docs/metricas-cdc.md);
 - **consulta otimizada**, com [planos e medições](docs/consulta-otimizada.md).
 
-Na orquestração, ainda falta formalizar a comparação que levou ao Dagster e
-registrar uma execução completa disparada pela agenda a partir de clone limpo
-([issue #50](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/50)). Os logs
-existentes comprovam o retry e o backfill exercitados manualmente em ambiente
-isolado. A disponibilidade da interface do Dagster não comprova esse aceite.
+Limites conhecidos da orquestração: a escolha do Dagster não tem comparação
+formal registrada em ADR, e ainda não há registro de uma execução completa
+disparada pela agenda a partir de clone limpo. Os logs existentes comprovam o
+retry e o backfill, exercitados em ambiente isolado com amostra sintética. A
+disponibilidade da interface do Dagster não substitui esse registro.
 
 Da E2, permanecem implementados:
 
@@ -272,6 +272,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga ingerir-enem` | baixa o ENEM 2024, se preciso, e publica a Silver agregada por escola; idempotente pelo mesmo manifesto ([ENEM](docs/enem.md)) |
 | `docker compose run --rm carga medir-cobertura-enem` | mede a junção das escolas do ENEM com as do Censo; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga caracterizar` | imprime contagens e tamanhos em disco, em Markdown |
+| `docker compose run --rm carga comparar-modelagem` | mede CRUD contra insert-only com a carga real, comparação do [ADR 0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md) |
 | `docker compose run --rm carga comparar-compressao` | mede CSV e Parquet (sem compressão, snappy, zstd) sobre a camada Silver ([resultado](docs/serializacao-compressao.md)) |
 | `docker compose run --rm carga processar-janelas` | reconcilia com a origem as janelas mensais tocadas pelas vistorias registradas desde a última execução, completando a fonte canônica de eventos ([dado atrasado](docs/dado-atrasado.md)) |
 | `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
@@ -280,6 +281,8 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
 | `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
+| `docker compose run --rm carga medir-cdc` | mede a latência do commit até o Delta com o consumidor contínuo no ar e termina com a auditoria do CDC; insere vistorias de teste ([métricas do CDC](docs/metricas-cdc.md)) |
+| `docker compose run --rm carga medir-recarga` | mede a recarga periódica com o consumidor parado; insere vistorias de teste |
 | `docker compose run --rm carga publicar-analitica` | grava a tabela Delta da camada analítica e confere a contagem com o OLTP |
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
 | `docker compose run --build --rm transformacao` | prepara Censo, ENEM e eventos canônicos, constrói e testa a Gold com dbt e gera sua documentação; fluxo completo da E3 |
@@ -287,10 +290,17 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel` | exporta `docs/painel.html` a partir da Gold completa |
 | `docker compose run --rm carga auditar-cdc` | confere consistência, fila, contrato e saúde do slot |
 | `docker compose run --rm carga reprocessar-fila-cdc --responsavel operador-01 --motivo esquema_corrigido` | recupera os INSERTs rejeitados pela chave, mantendo itens inválidos pendentes e registrando recibos ([procedimento](docs/metricas-cdc.md)) |
+| `docker compose run --rm carga tratar-desvio-cdc --lsn <decimal> --chave <chave> --responsavel operador-01 --motivo desvio_revisado` | registra o aceite explícito de uma alteração fora do insert-only (`UPDATE`, `DELETE`, `TRUNCATE`) que está na fila, pela ocorrência exata |
+| `docker compose run --rm carga comparar-consulta` | captura e compara os planos de execução da consulta otimizada em `docs/explain/`; exige a Gold construída ([consulta otimizada](docs/consulta-otimizada.md)) |
 | `docker compose run --rm carga comparar-granularidades` | mede os dois fatos (fino e largo) com a mesma pergunta; `--saida` grava o resultado em Markdown |
 | `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
 | `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
+| `docker compose run --rm carga gerar_amostra --escolas 200` | popula a origem com uma amostra sintética de escolas e vistorias, para testes em banco descartável |
 | `docker compose run --rm carga tudo` | migrar, ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
+
+No Compose, a opção `--saida` grava dentro do contêiner. Para o arquivo
+aparecer no repositório, monte a pasta, por exemplo
+`docker compose run --rm -v "$PWD/docs:/app/docs" carga medir-cobertura-enem --saida docs/cobertura.md`.
 
 Para rodar fora do Docker, com [uv](https://docs.astral.sh/uv/) e o banco do
 compose publicado na porta do `.env`:
@@ -585,6 +595,23 @@ nas janelas da fonte de eventos; a Gold incorpora esse resultado na construção
 seguinte. Detalhes, procedimentos e logs em
 [docs/orquestracao.md](docs/orquestracao.md).
 
+Para repetir as demonstrações, com o ambiente no ar:
+
+- **Retry:** pare o banco com `docker compose stop banco`, abra o job
+  `pipeline` na interface e clique em *Materialize all*. O passo `migrar`
+  falha e o Dagster agenda nova tentativa em 30 s. Religue o banco com
+  `docker compose start banco`; a tentativa seguinte passa.
+- **Backfill:** abra o asset `reprocessar_janela`, clique em *Materialize*,
+  escolha os meses (por exemplo, 2024-01 a 2024-12) e lance o backfill. Em
+  *Runs* › *Backfills* aparece uma execução por mês.
+- **Agenda:** no `.env`, use `AGENDA_ORQUESTRADOR="*/5 * * * *"` e recrie o
+  serviço com `docker compose up -d orquestrador`. As execuções disparadas pela
+  agenda aparecem em *Runs*. Depois, volte para `"0 3 * * *"`, porque cada
+  execução reconstrói a Gold inteira.
+
+Os registros de retry e backfill estão em
+[docs/evidencias/orquestracao/](docs/evidencias/orquestracao/).
+
 ## Validar a E3
 
 Com a Gold completa construída, execute a auditoria de dados:
@@ -618,6 +645,8 @@ mesmo retrato de origem usado em sua construção.
 ```
 alembic/versions/   migrações do esquema, em ordem (0001 a 0009)
 src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
+  cli.py            comandos da CLI eduinfra
+  configuracao.py   variáveis de ambiente, URLs e anos das fontes
   microdados.py     download retomável do pacote do INEP
   tls.py            completa a cadeia de certificados do INEP (ADR 0002)
   transformacao.py  valida o cabeçalho e gera a Silver em Parquet
@@ -629,12 +658,18 @@ src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   cdc.py            leitura do slot de replicação lógica da origem
   pgoutput.py       decodificação das mensagens do plugin pgoutput
   fluxo_cdc.py      consumidor do CDC: do slot à tabela Delta de eventos
+  contrato_cdc.py   colunas que o consumidor espera da origem (ADR 0007)
+  telemetria_cdc.py telemetria por transação entregue (ADR 0007)
+  fila_de_erros.py  fila do que o CDC leu e não aplicou (ADR 0007)
   eventos.py        tabela Delta de eventos de vistoria
   janelas.py        eventos em janelas mensais, com dado atrasado tratado
   camada_analitica.py tabela Delta da camada analítica e conferência com o OLTP
   caracterizacao.py contagens e tamanhos da base populada
   comparacao_*.py   medições citadas nos ADRs e em docs/
   demonstracao_*.py demonstrações do CDC e do dado atrasado
+  vistorias_de_teste.py vistorias sintéticas para medições e demonstrações
+  sample_generator.py amostra sintética da origem (gerar_amostra)
+  otimizacao_consulta.py planos de execução da consulta otimizada
   orquestrador.py   pipeline em lote, agenda, retry e backfill no Dagster
   fontes_transformacao.py prepara e confere as sources PostgreSQL do dbt
   modelo_analitico.py construtor SQL e consultas de comparação
@@ -642,11 +677,15 @@ src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
   painel.py         geração do painel HTML a partir da Gold
   auditoria_cdc.py  conferência da origem, Delta, fila e slot
   recuperacao_cdc.py reprocessamento seletivo e recibos do CDC
-transformacao/      projeto dbt: modelos, contratos, testes e runners
+transformacao/      projeto dbt: modelos, contratos e testes
+  scripts/          executar.py (fluxo completo) e comparar.py (dbt × SQL)
 tests/              testes unitários e de integração (ver docs/testes.md)
 docs/               guias, decisões e evidências da E1, E2 e E3
 docs/adr/           registros de decisão de arquitetura
 docs/diario/        diário de bordo semanal
+docs/evidencias/    medições, logs e scripts citados nos documentos
+mkdocs.yml          site de documentação publicado no GitHub Pages
+.github/workflows/  CI: constrói a Gold, gera o painel e publica o site
 docker-compose.yml  PostgreSQL, carga, CDC, transformação dbt e Dagster
 Dockerfile          imagem da carga, com uv
 .env.example        variáveis de ambiente; copie para .env
@@ -658,7 +697,7 @@ AI-USAGE.md         registro de uso de IA
 | Documento | Onde | Estado |
 | --- | --- | --- |
 | Decisões de arquitetura | [docs/adr/](docs/adr/README.md) | ADRs 0001, 0002, 0004 e 0007 aceitos; 0005 e 0008 propostos; 0003 e 0006 a escrever |
-| Diário de bordo semanal | [docs/diario/diario-de-bordo.md](docs/diario/diario-de-bordo.md) | Semanas 1 a 10, atualizado a cada Semana |
+| Diário de bordo semanal | [docs/diario/diario-de-bordo.md](docs/diario/diario-de-bordo.md) | Semanas 1 a 13, atualizado a cada Semana |
 | Registro de uso de IA | [AI-USAGE.md](AI-USAGE.md) | E1, E2 e E3, atualizado a cada uso |
 
 ## Fontes de dados
@@ -689,26 +728,38 @@ sem pseudonimização.
 
 ## Decisões de arquitetura
 
-| ADR | Decisão |
-| --- | --- |
-| [0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem |
-| [0002](docs/adr/0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação |
-| [0004](docs/adr/0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL |
-| [0005](docs/adr/0005-ferramenta-de-transformacao.md) | Usar dbt para as transformações da Gold; status proposto |
-| [0007](docs/adr/0007-telemetria-e-fila-de-erros-do-cdc.md) | Telemetria transacional, fila de erros e tratamento das ocorrências do CDC |
-| [0008](docs/adr/0008-fonte-canonica-de-eventos.md) | Fonte Delta única de eventos para linha de base, CDC e janelas; status proposto |
+O índice completo está em [docs/adr/](docs/adr/README.md).
+
+Portfólio avaliado, com os 5 ADRs obrigatórios da disciplina:
+
+| ADR | Decisão | Entrega | Status |
+| --- | --- | --- | --- |
+| [0001](docs/adr/0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem | E1 | Aceito |
+| 0003 | Armazenamento analítico em formato aberto ([issue #4](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/4)) | Tema livre | A escrever |
+| [0004](docs/adr/0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL | E2 | Aceito |
+| [0005](docs/adr/0005-ferramenta-de-transformacao.md) | Usar dbt para as transformações da Gold | E3 | Proposto |
+| 0006 | Consumo (painel e camada semântica) e ETL reverso ([issue #7](https://github.com/daviegito/bd2_2026_2_eduinfra/issues/7)) | E4 | A escrever |
+
+Registros complementares, fora do portfólio avaliado:
+
+| ADR | Decisão | Status |
+| --- | --- | --- |
+| [0002](docs/adr/0002-cadeia-tls-incompleta-do-inep.md) | Completar a cadeia TLS do INEP por AIA em vez de relaxar a verificação | Aceito |
+| [0007](docs/adr/0007-telemetria-e-fila-de-erros-do-cdc.md) | Telemetria transacional, fila de erros e tratamento das ocorrências do CDC | Aceito |
+| [0008](docs/adr/0008-fonte-canonica-de-eventos.md) | Fonte Delta única de eventos para linha de base, CDC e janelas | Proposto |
 
 ## Entregas
 
-| Entrega | Tema | Data prevista |
-| --- | --- | --- |
-| E1 | Fonte transacional modelada e populada | 28/09/2026 |
-| E2 | Ingestão em lote e captura de mudanças | 19/10/2026 |
-| E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 |
-| E4 | Plataforma completa, governada e defendida | 24/11/2026 |
+| Entrega | Tema | Data | Release |
+| --- | --- | --- | --- |
+| E1 | Fonte transacional modelada e populada | 28/09/2026 | [e1](https://github.com/daviegito/bd2_2026_2_eduinfra/releases/tag/e1) |
+| E2 | Ingestão em lote e captura de mudanças | 19/10/2026 | [e2](https://github.com/daviegito/bd2_2026_2_eduinfra/releases/tag/e2) |
+| E3 | Camada analítica transformada, testada e orquestrada | 03/11/2026 | a publicar |
+| E4 | Plataforma completa, governada e defendida | 24/11/2026 | — |
 
-Datas do [cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/),
-ainda provisórias.
+Datas do [cronograma da disciplina](https://unb-bd2.github.io/PlanoEnsino/cronograma/).
+As releases de [todas as entregas](https://github.com/daviegito/bd2_2026_2_eduinfra/releases)
+trazem o Release Notes de cada uma.
 
 ## Equipe
 
