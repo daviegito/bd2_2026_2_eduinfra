@@ -314,3 +314,81 @@ tolerância de 7 dias.
       Delta) antes de construir a transformação sobre eles
 - [ ] Escrever o ADR 0003 (armazenamento analítico em formato aberto), ainda
       "a escrever"
+
+## Semana 11 — Modelagem dimensional da Gold e SCD Tipo 2 (22–28/10)
+
+**O que foi medido**
+
+* Testes automatizados executados contra PostgreSQL 16 com base sintética no volume do Censo Escolar (181.065 escolas e 3.078.105 itens de vistoria).
+* 11 novos testes de unidade e integração validados (totalizando 32 testes cobrindo ingestão, transformação, insert-only e modelo analítico).
+
+**O que surpreendeu**
+
+* Tratar `nao_informado` como estado alterava indevidamente a versão temporal da escola.
+* A chave substituta (*surrogate key*) necessitou ser um hash estável de `(co_entidade, data_inicio)` para evitar mutabilidade entre reprocessamentos.
+
+**O que foi decidido**
+
+* Implementação da dimensão de variação lenta (SCD Tipo 2) em `dim_escola` alimentada pelos eventos insert-only.
+* Criação de duas tabelas fato de granularidades distintas: `fato_vistoria_item` (no grão atômico por item) e `fato_infra_escola_ano` (no grão anual para consumo analítico).
+
+**Pendências para a Semana seguinte**
+
+* [ ] Implementar telemetria transacional e fila de erros (DLQ) para o CDC (ADR 0007)
+* [ ] Desenvolver a medição de frescor da Gold e definir o SLA da camada analítica
+
+---
+
+## Semana 12 — Telemetria CDC, Frescor/SLA da Gold e Seleção da Ferramenta de Transformação (29/10–04/11)
+
+**O que foi medido**
+
+* Telemetria do CDC: latência ponta a ponta mediana de 1,62 s a 1,90 s para eventos recentes e ~4,10 s para eventos atrasados.
+* Checksum de integridade validou 3.174.801 linhas idênticas entre origem e Delta Lake sem divergências.
+* Medição de frescor da Gold: tempo de reconstrução medido entre 60,3 s e 85,8 s.
+* Benchmark ADR 0005: dbt, SQLMesh e opção nula geraram 6 tabelas analíticas idênticas em contagem e hashes.
+
+**O que surpreendeu**
+
+* A decisão de medir a tabela inteira por checksum custou apenas 17,4 s sobre 3,16 milhões de linhas, mostrando-se viável sem amostragem.
+* O SLA de frescor da Gold foi definido em 25 horas para cobrir o ciclo diário com folga para uma nova tentativa (*retry*) sem onerar o banco com reconstruções contínuas custosas.
+
+**O que foi decidido**
+
+* Adoção da Opção B no ADR 0007: telemetria por transação e desvio de dados com erro para a `fila_de_erros_cdc` (DLQ) sem parar o consumidor.
+* Fixação do SLA de frescor da Gold em 25h, medido a partir da vistoria pendente mais antiga na origem.
+* Escolha do **dbt** como ferramenta oficial de transformação analítica (ADR 0005).
+* Integração automática da auditoria E3 ao comando `construir-gold`.
+
+**Pendências para a Semana seguinte**
+
+* [ ] Ingerir dados do ENEM 2024 e realizar o cruzamento por código INEP com o Censo Escolar
+* [ ] Definir a fonte única de eventos analíticos (ADR 0008)
+* [ ] Implementar mecanismo de recuperação e tratamento da fila de erros do CDC
+
+---
+
+## Semana 13 — Fonte Única de Eventos, Validação de Datas, Recuperação do CDC e Painel E4 (05–11/11)
+
+**O que foi medido**
+
+* Ingestão do ENEM 2024: 29.400 escolas no arquivo do ENEM, alcançando 25.179 escolas no fato analítico conjunto (cobertura de 85,6%) e 4.221 escolas auditadas sem junção.
+* Medição de recuperação do CDC (Issue #58): recuperação seletiva por chave leu apenas 17 itens (mediana de 1,319 s) contra 3.080.009 eventos na releitura completa (mediana de 2,847 s).
+* Auditoria e testes de integração: 360 testes passando na suíte completa sem skips, 39 verificações dbt (`PASS=39`) e 6 verificações nativas da auditoria Gold E3.
+
+**O que surpreendeu**
+
+* A recuperação por chave no CDC utilizou busca por índice primário (`Index Scan`), eliminando a necessidade de varredura completa da tabela e reduzindo o tempo de processamento pela metade em relação ao merge completo.
+* A ordenação da suíte de testes exigiu executar a auditoria Gold antes dos cenários de teste de integração que inserem vistorias sintéticas, evitando falsos positivos de violação de SLA de frescor.
+
+**O que foi decidido**
+
+* ADR 0008: Definida a tabela Delta `eventos_vistoria` como fonte única e canônica de eventos analíticos, unificando carga inicial, CDC e janelas de dado atrasado.
+* Migração 0009 / Issue #57: Restrição de datas finitas em UTC (anos 1 a 9999) na origem, rejeitando dados inconsistentes antes da escrita na camada analítica.
+* Issue #58: Criados os comandos `reprocessar-fila-cdc` e `tratar-desvio-cdc` com registro de recibos em `tratamentos_cdc` sem dados pessoais.
+* Entrega 4: Finalizado o Painel Analítico E4 estático gerado via Python/Plotly (`docs/painel.html`), integrado ao MkDocs e workflow do GitHub Actions.
+
+**Pendências para a Semana seguinte**
+
+* [ ] Revisão humana final e autorização do merge dos PRs integrados na branch main
+* [ ] Preparação dos materiais e slides da defesa da Entrega 3 e 4
