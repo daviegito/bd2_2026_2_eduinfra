@@ -19,6 +19,6 @@ with escolas as (
 select
     *,
     case when media_geral is not null then
-        ntile({{ var('faixas_de_desempenho') }}) over (partition by ano, rede, media_geral is null order by media_geral)
+        ntile({{ var('faixas_de_desempenho') }}) over (partition by ano, rede, media_geral is null order by media_geral, co_entidade)
     end as faixa_na_rede
 from escolas

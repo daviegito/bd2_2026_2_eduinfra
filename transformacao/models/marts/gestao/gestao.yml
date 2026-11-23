@@ -29,6 +29,9 @@ models:
     - accepted_values:
         arguments:
           values: [alto, intermediario, baixo, sem_nota]
+  - name: itens_existentes
+    description: Códigos dos itens com situação existente, em ordem alfabética. É o que a lista de escolas do
+      painel mostra e exporta em CSV.
 
 - name: desempenho_por_recorte
   description: Média das médias escolares por UF, rede e área da prova. uf BR é o Brasil e rede todas soma as
@@ -67,10 +70,26 @@ models:
     enabled: '{{ var(''com_enem'', false) }}'
 
 - name: perfil_alto_baixo_desempenho
-  description: Para cada rede e item, o percentual de escolas com o item na faixa alta e na faixa baixa de
-    desempenho, a diferença em pontos percentuais e a ordem do que mais diferencia as duas faixas.
+  description: Para cada rede, área da prova e característica, o percentual de escolas com a característica
+    na faixa alta e na faixa baixa de desempenho, a diferença em pontos percentuais e a ordem do que mais
+    diferencia as duas faixas. As características são cada item, a localização urbana, a UF e ter pelo
+    menos metade dos itens informados.
   config:
     enabled: '{{ var(''com_enem'', false) }}'
+  columns:
+  - name: area
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [media_geral, media_cn, media_ch, media_lc, media_mt, media_redacao]
+  - name: tipo
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [item, localizacao, uf, conjunto_de_itens]
+  - name: pct_alto
+    description: Percentual das escolas da faixa alta com a característica, entre as que têm a
+      característica conhecida. Nulo quando a faixa alta ou a baixa tem menos de var('minimo_escolas').
 
 - name: infra_por_uf
   description: Situação de cada item em todas as escolas do Censo, com ou sem ENEM, por UF e rede, na data de

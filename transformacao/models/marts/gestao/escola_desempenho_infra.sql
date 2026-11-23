@@ -20,6 +20,10 @@ select
     data_referencia_infraestrutura, escola_infra_sk,
     n_itens_conhecidos, n_existentes,
     round(100.0 * n_existentes / nullif(n_itens_conhecidos, 0), 1) as pct_itens_existentes,
+    array(
+        select chave from jsonb_each_text(itens) as situacoes(chave, situacao)
+        where situacao = 'existente' order by chave
+    ) as itens_existentes,
     -- Situação em texto, e não booleano, para não confundir "não possui" com "não informado".
     {%- for codigo in itens %}
     coalesce(itens ->> '{{ codigo }}', 'nao_informado') as {{ codigo }}{{ "," if not loop.last }}
