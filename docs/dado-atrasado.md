@@ -40,7 +40,7 @@ elas tocam. A marca diz *o que é novo*; `ocorrido_em` diz *onde o novo entra*.
   por dia, que é o problema dos arquivos pequenos.
 - **Tolerância de 7 dias** porque é o prazo razoável para um técnico digitar
   uma vistoria feita em campo, e porque o planejamento da secretaria olha o mês
-  depois que ele termina. A constante é `TOLERANCIA` em `src/eduinfra/janelas.py`.
+  depois que ele termina. A constante é `TOLERANCIA` em `src/eduinfra/cdc/janelas.py`.
 
 ### 3. O que chega depois da tolerância reabre a janela, e fica registrado
 
@@ -135,7 +135,7 @@ elas ficam lá, marcadas na observação. Rode num ambiente de desenvolvimento.
 Os testes sem banco rodam direto:
 
 ```bash
-uv run pytest tests/test_janelas.py tests/test_fonte_de_eventos.py
+uv run pytest tests/cdc/test_janelas.py tests/cdc/test_fonte_de_eventos.py
 ```
 
 O de integração da fonte única cria um banco e um slot próprios. Ele mostra o
@@ -145,10 +145,10 @@ atrasado:
 ```bash
 docker compose up -d banco
 set -a && source .env && set +a              # exporta DATABASE_URL
-uv run pytest tests/test_fonte_de_eventos_integracao.py tests/test_janelas_integracao.py
+uv run pytest tests/cdc/test_fonte_de_eventos_integracao.py tests/cdc/test_janelas_integracao.py
 ```
 
-`tests/test_janelas_integracao.py` usa o banco carregado e, como a demonstração,
+`tests/cdc/test_janelas_integracao.py` usa o banco carregado e, como a demonstração,
 insere vistorias de teste na origem.
 
 ## Demonstração

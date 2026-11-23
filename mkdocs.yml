@@ -67,6 +67,7 @@ nav:
       - Transformação declarativa: transformacao.md
       - Testes: testes.md
       - Orquestração: orquestracao.md
+      - Estrutura do código: estrutura-do-codigo.md
   - Dados e ingestão:
       - Caracterização da carga: caracterizacao.md
       - ENEM e junção com o Censo: enem.md
