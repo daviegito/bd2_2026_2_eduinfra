@@ -20,15 +20,30 @@ pytestmark = pytest.mark.integracao
 PRIMEIRA = 101
 # 60 escolas: cada quinto tem 12, acima do mínimo de 10 que libera a comparação.
 ESCOLAS = range(PRIMEIRA, PRIMEIRA + 60)
+ESCOLAS_POR_FAIXA = 12
 PARTICIPANTES_POR_ESCOLA = 10
+URBANA, RURAL = 1, 2
 
 
 def nota_da(escola: int) -> int:
     return 400 + 5 * (escola - PRIMEIRA + 1)
 
 
+def nota_de_matematica(escola: int) -> int:
+    return nota_da(2 * PRIMEIRA + len(ESCOLAS) - 1 - escola)
+
+
+def nota_de_redacao(escola: int) -> int:
+    # Compensa a Matemática invertida: a média geral continua sendo nota_da(escola).
+    return 2 * nota_da(escola) - nota_de_matematica(escola)
+
+
 def tem_biblioteca(escola: int) -> bool:
     return escola >= PRIMEIRA + 30
+
+
+def localizacao(escola: int) -> int:
+    return RURAL if escola < PRIMEIRA + ESCOLAS_POR_FAIXA else URBANA
 
 
 def semear_escolas(dsn: str) -> None:
@@ -36,7 +51,7 @@ def semear_escolas(dsn: str) -> None:
         for escola in ESCOLAS:
             conexao.execute(
                 "insert into escola (co_entidade, no_entidade, co_municipio, tp_dependencia, tp_localizacao, ano_censo_referencia) "
-                "values (%s, %s, 5300108, 2, 1, 2024)", (escola, f"ESCOLA {escola}"))
+                "values (%s, %s, 5300108, 2, %s, 2024)", (escola, f"ESCOLA {escola}", localizacao(escola)))
     for escola in ESCOLAS:
         situacao = "existente" if tem_biblioteca(escola) else "inexistente"
         vistoria(dsn, escola, "2024-05-29", {"biblioteca": situacao, "internet": "nao_informado"}, origem="censo_escolar")
@@ -50,9 +65,10 @@ def entradas_com_enem(dsn: str, pasta) -> Entradas:
     gravar_consulta(dsn, "select v.id as vistoria_id, i.item_codigo, v.co_entidade, v.origem, v.ocorrido_em, v.registrado_em, i.situacao::text, i.quantidade from vistoria v join vistoria_item i on i.vistoria_id = v.id", eventos)
     linhas = []
     for escola in ESCOLAS:
-        nota = str(nota_da(escola))
+        nota, matematica = str(nota_da(escola)), str(nota_de_matematica(escola))
         for _ in range(PARTICIPANTES_POR_ESCOLA):
-            linhas.append(linha(len(linhas) + 1, escola, ("1", "1", "1", "1"), (nota, nota, nota, nota), "1", nota))
+            linhas.append(linha(len(linhas) + 1, escola, ("1", "1", "1", "1"), (nota, nota, nota, matematica),
+                                "1", str(nota_de_redacao(escola))))
     configuracao = replace(configuracao_de(dsn), diretorio_dados=pasta)
     _, preparo = silver_enem.montar_silver_enem(configuracao, escrever_resultados(pasta, linhas), "fixture-gestao")
     enem = silver_enem.publicar_silver_enem(configuracao, preparo) / "desempenho_escola.parquet"
@@ -83,12 +99,27 @@ def test_faixas_alta_e_baixa_sao_quintis_dentro_da_rede(gold):
         ("alto", 12, 645.0, 700.0), ("baixo", 12, 405.0, 460.0), ("intermediario", 36, 465.0, 640.0)]
 
 
-def test_perfil_alto_baixo_ordena_o_que_mais_diferencia_e_suprime_o_desconhecido(gold):
-    perfil = consultar(gold, """select item_codigo, pct_alto_com_item, pct_baixo_com_item, diferenca_pp, suprimido, ordem
-        from gold.perfil_alto_baixo_desempenho where rede = 'estadual' and item_codigo in ('biblioteca', 'internet')
+def test_perfil_alto_baixo_ordena_todas_as_caracteristicas_pelo_que_mais_diferencia(gold):
+    perfil = consultar(gold, """select tipo, caracteristica, pct_alto, pct_baixo, diferenca_pp, ordem
+        from gold.perfil_alto_baixo_desempenho where rede = 'estadual' and area = 'media_geral' and not suprimido
         order by ordem""")
-    assert perfil[0] == ("biblioteca", 100.0, 0.0, 100.0, False, 1)
-    assert perfil[1][:5] == ("internet", None, None, None, True)
+    assert perfil == [
+        ("conjunto_de_itens", "metade_dos_itens", 100.0, 0.0, 100.0, 1),
+        ("item", "biblioteca", 100.0, 0.0, 100.0, 2),
+        ("localizacao", "urbana", 100.0, 0.0, 100.0, 3),
+        ("uf", "DF", 100.0, 100.0, 0.0, 4),
+    ]
+
+
+def test_perfil_suprime_item_sem_situacao_informada(gold):
+    assert consultar(gold, """select pct_alto, pct_baixo, diferenca_pp, suprimido from gold.perfil_alto_baixo_desempenho
+        where rede = 'estadual' and area = 'media_geral' and caracteristica = 'internet'""") == [(None, None, None, True)]
+
+
+@pytest.mark.parametrize(("area", "diferenca"), [("media_mt", -100.0), ("media_redacao", 100.0)])
+def test_perfil_calcula_a_faixa_de_cada_area_da_prova(gold, area, diferenca):
+    assert consultar(gold, """select diferenca_pp from gold.perfil_alto_baixo_desempenho
+        where rede = 'estadual' and area = %s and caracteristica = 'biblioteca'""", [area]) == [(diferenca,)]
 
 
 def test_grupo_com_menos_de_dez_escolas_nao_publica_media(gold):
@@ -104,7 +135,7 @@ def test_infraestrutura_conta_escolas_do_censo_sem_enem(gold):
     assert total == [(len(ESCOLAS) + 3,)]
 
 
-def test_painel_le_so_as_tabelas_de_consumo_e_nao_exporta_escola_por_escola(gold, tmp_path, monkeypatch):
+def test_painel_exporta_so_as_escolas_das_faixas_alta_e_baixa(gold, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     configuracao = replace(configuracao_de(gold), ano_enem=2024)
     with painel.conectar(configuracao) as conexao:
@@ -112,6 +143,8 @@ def test_painel_le_so_as_tabelas_de_consumo_e_nao_exporta_escola_por_escola(gold
     html = painel.renderizar_html(dados)
     exportado = json.loads(re.search(r'id="dados-painel">(.*?)</script>', html, re.S).group(1))
     assert exportado["cobertura"]["n_identificadas_no_censo"] == len(ESCOLAS)
-    assert "ESCOLA 101" not in html
-    biblioteca = next(p for p in exportado["perfil"] if p["rede"] == "estadual" and p["item_codigo"] == "biblioteca")
+    nomes = {escola[0] for escola in exportado["escolas_alto_baixo"]}
+    assert {"ESCOLA 101", "ESCOLA 160"} <= nomes and "ESCOLA 131" not in html
+    biblioteca = next(p for p in exportado["perfil"]
+                      if p["rede"] == "estadual" and p["area"] == "media_geral" and p["caracteristica"] == "biblioteca")
     assert biblioteca["diferenca_pp"] == 100.0
