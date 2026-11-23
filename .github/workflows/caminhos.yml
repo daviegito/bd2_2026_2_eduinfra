@@ -1,0 +1,21 @@
+name: Caminhos citados
+
+# O workflow de documentação só roda quando docs/ muda; este pega o código movido sem o documento acompanhar.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    name: Documentos citam só caminhos que existem
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/verificar_caminhos.py
