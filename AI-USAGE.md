@@ -675,3 +675,22 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 * **O que foi aproveitado:** a orquestração do Docker Compose e do MkDocs. A montagem local de volumes foi substituída pelo empacotamento (`COPY tests ./tests`) para espelhar o ambiente de produção, preservando os mesmos critérios originais da auditoria E3.
 * **Como foi verificado:** a auditoria E3 executou os 6 testes lendo diretamente o banco relacional (comparando volume com a origem OLTP). O script de demonstração injetou a situação `ERRO_DE_DOMINIO`, falhou o teste apropriado e limpou o banco em seguida. O GitHub Actions executou `validar` e `publicar` com sucesso após injeção das variáveis de ambiente simuladas, gerando o artefato `painel.html` aprovado no modo estrito do MkDocs.
 * **Quem revisou:** apontamentos técnicos e cenários de regressão levantados por `Pedrovargas10` e colaboradores; correções testadas, CI verde e merjado.
+
+### 2026-11-23 — Reorganização do src/ e dos testes em pacotes (issues #96 e #97)
+
+- **Ferramenta:** Claude Code, como assistente de refatoração.
+- **O que foi pedido:** executar o mapa de pacotes da #96 e a verificação da #97: mover os módulos de
+  `src/eduinfra` e de `tests/`, reescrever os imports, dividir a CLI por pacote e checar os caminhos
+  citados nos documentos.
+- **Onde:** pacotes `nucleo`, `origem`, `ingestao`, `lake`, `cdc`, `gold`, `consumo` e `experimentos`;
+  `cli.py` e um `comandos.py` por pacote; `scripts/verificar_caminhos.py`; workflows `docs.yml` e
+  `caminhos.yml`; `docs/estrutura-do-codigo.md`, README e caminhos citados em `docs/`.
+- **O que foi aproveitado:** a movimentação com `git mv`, a reescrita dos imports, a divisão da CLI e os
+  testes de CLI, de dependência entre pacotes e de caminhos. Artur aprovou os ajustes ao mapa da #96
+  (pontos de entrada na raiz, sufixo `_cdc` mantido, `docs/` no mesmo lugar) e definiu a entrega em duas
+  branches. As entradas antigas deste registro e do diário não foram alteradas.
+- **Como foi verificado:** `eduinfra --help` idêntico ao da main; suíte sem banco com o resultado da main
+  mais os testes novos; os 160 testes de integração num PostgreSQL descartável iguais aos da main, teste
+  a teste (130 passaram; as 14 falhas de ambiente são as mesmas); `mkdocs build --strict` e script de
+  caminhos sem acusação. `docker compose up --build` não executado.
+- **Quem revisou:** Artur (plano e resultados das verificações); revisão de outro membro da squad pendente.
