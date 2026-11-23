@@ -694,3 +694,28 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   a teste (130 passaram; as 14 falhas de ambiente são as mesmas); `mkdocs build --strict` e script de
   caminhos sem acusação. `docker compose up --build` não executado.
 - **Quem revisou:** Artur (plano e resultados das verificações); revisão de outro membro da squad pendente.
+
+### 2026-11-23 — Tabelas de consumo da Gold e painel (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de modelagem e implementação.
+- **O que foi pedido:** publicar na Gold tabelas já agregadas para a pergunta de gestão, fazer o painel
+  ler só essas tabelas, sem cálculo no navegador, e levantar antes as práticas de referência para a
+  camada Gold e para a estrutura de projetos dbt.
+- **Onde:** `transformacao/models/intermediate/int_desempenho_escola*.sql`,
+  `transformacao/models/marts/gestao/` (sete tabelas de consumo e a exposição do painel), variáveis
+  `minimo_escolas` e `faixas_de_desempenho` em `transformacao/dbt_project.yml`, seis testes de dados em
+  `transformacao/tests/`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, workflow de documentação, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** os modelos de `marts/gestao`, os testes e o painel reescrito, seguindo o
+  padrão de estrela como núcleo e tabelas de consumo por cima (guia de estrutura do dbt e documentação
+  de medallion da Databricks). Artur definiu o que o painel precisa responder a partir da crítica da
+  docência e aprovou o desenho das tabelas. A faixa alta e a baixa usam o quintil dentro da rede,
+  sugerido na #94, e ainda precisam de confirmação do grupo. Pendentes: na #94, comparação por área e
+  localização e UF como características; na #95, lista de escolas com CSV e teste de uso com duas pessoas.
+- **Como foi verificado:** `dbt parse` com e sem ENEM; `dbt build` num PostgreSQL descartável com 60
+  escolas sintéticas de resultado conhecido, conferindo a diferença com e sem biblioteca, os quintis,
+  o perfil das faixas e a supressão de grupos pequenos; painel gerado dessa Gold sem nome de escola;
+  integração completa com 136 testes passando, contra 130 na main, e as mesmas 14 falhas de ambiente;
+  suíte sem banco e `mkdocs build --strict` passando. O painel ainda não foi gerado com os dados reais.
+- **Quem revisou:** Artur (desenho das tabelas e resultados das verificações); revisão de outro membro da
+  squad pendente.
