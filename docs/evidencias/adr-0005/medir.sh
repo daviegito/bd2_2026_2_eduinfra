@@ -31,7 +31,7 @@ medir() {
     done
 }
 
-nula() { $NULA "import sys; from eduinfra import modelo_analitico; modelo_analitico.construir(sys.argv[1])" "$DSN"; }
+nula() { $NULA "import sys; from eduinfra.experimentos import modelo_analitico; modelo_analitico.construir(sys.argv[1])" "$DSN"; }
 dbt_run() { $DBT run --project-dir "$AQUI/dbt" --profiles-dir "$AQUI/dbt"; }
 dbt_build() { $DBT build --project-dir "$AQUI/dbt" --profiles-dir "$AQUI/dbt"; }
 sqlmesh_restate() { (cd "$AQUI/sqlmesh" && $SQLMESH plan --restate-model 'gold_sqlmesh.*' --auto-apply --no-prompts); }

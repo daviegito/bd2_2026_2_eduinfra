@@ -17,10 +17,10 @@ from pathlib import Path
 import duckdb
 import psycopg
 
-from eduinfra import eventos, fila_de_erros, recuperacao_cdc
-from eduinfra.configuracao import carregar_configuracao
-from eduinfra.pgoutput import interpretar_lsn
-from eduinfra.vistorias_de_teste import inserir_vistoria
+from eduinfra.cdc import eventos, fila_de_erros, recuperacao_cdc
+from eduinfra.nucleo.configuracao import carregar_configuracao
+from eduinfra.cdc.pgoutput import interpretar_lsn
+from eduinfra.origem.vistorias_de_teste import inserir_vistoria
 
 
 def resumo(config):

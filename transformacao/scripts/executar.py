@@ -12,9 +12,11 @@ from pathlib import Path
 import psycopg
 from psycopg import sql
 
-from eduinfra import cdc, frescor, ingestao_enem, telemetria_cdc
-from eduinfra.configuracao import carregar_configuracao
-from eduinfra.fontes_transformacao import Entradas, bloquear, preparar
+from eduinfra.cdc import replicacao, telemetria_cdc
+from eduinfra.gold import frescor
+from eduinfra.ingestao import enem
+from eduinfra.nucleo.configuracao import carregar_configuracao
+from eduinfra.gold.fontes_dbt import Entradas, bloquear, preparar
 
 PROJETO = Path(__file__).resolve().parents[1]
 
@@ -26,11 +28,11 @@ def verificar_slot(conexao: psycopg.Connection, configuracao=None) -> None:
     ).fetchall()
     if not slots:
         return
-    if configuracao is None or not hasattr(cdc, "posicao_persistida"):
+    if configuracao is None or not hasattr(replicacao, "posicao_persistida"):
         raise RuntimeError("construção bloqueada: integre a correção #60 e mantenha o consumidor ativo")
     # O teste nacional usa um slot da origem. Outros consumidores precisam de
     # dimensionamento próprio; não os avançamos nem os removemos pelo job dbt.
-    if len(slots) != 1 or slots[0][0] != cdc.SLOT_PADRAO or not slots[0][1]:
+    if len(slots) != 1 or slots[0][0] != replicacao.SLOT_PADRAO or not slots[0][1]:
         raise RuntimeError("há slots de outros consumidores no cluster; valide a retenção antes da construção")
     _, _, estado, margem = slots[0]
     limite = conexao.execute("select pg_size_bytes(current_setting('max_slot_wal_keep_size'))").fetchone()[0]
@@ -87,7 +89,7 @@ def executar() -> None:
             verificar_slot(conexao, configuracao)
             if com_enem and not os.environ.get("FONTE_ENEM"):
                 # Usa o protocolo de manifesto e recuperação da Silver já entregue pela #44.
-                ingestao_enem.ingerir_enem(configuracao)
+                enem.ingerir_enem(configuracao)
             entradas = Entradas.do_ambiente(configuracao)
             if not com_enem:
                 if tem_desempenho:

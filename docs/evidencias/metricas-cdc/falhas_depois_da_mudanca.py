@@ -13,10 +13,10 @@ import psycopg
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import auditoria_cdc, fluxo_cdc
-from eduinfra import cdc
-from eduinfra.configuracao import carregar_configuracao
-from eduinfra.vistorias_de_teste import inserir_vistoria
+from eduinfra.cdc import auditoria_cdc, fluxo_cdc
+from eduinfra.cdc import replicacao
+from eduinfra.nucleo.configuracao import carregar_configuracao
+from eduinfra.origem.vistorias_de_teste import inserir_vistoria
 
 BANCO = "eduinfra_demonstracao_falhas"
 SLOT = "eduinfra_demonstracao_falhas"
@@ -50,7 +50,7 @@ def main() -> int:
                 "insert into escola (co_entidade, no_entidade, co_municipio, tp_dependencia, tp_localizacao, ano_censo_referencia) "
                 "values (100001, 'Escola', 1, 1, 1, 2024)"
             )
-            cdc.garantir_slot(c, SLOT)
+            replicacao.garantir_slot(c, SLOT)
             evento = datetime.now(timezone.utc) - timedelta(minutes=1)
 
             vistoria_boa = inserir_vistoria(c, MATRICULA, "Demonstração", evento)

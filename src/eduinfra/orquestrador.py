@@ -69,7 +69,7 @@ def construir_gold() -> None:
 # Sem retry: um teste que falha aponta defeito na Gold, e repetir não corrige.
 @asset(deps=[construir_gold])
 def testar_gold() -> None:
-    _executar([sys.executable, "-m", "unittest", "tests.test_e3_gold"], "testes de dados da Gold")
+    _executar([sys.executable, "-m", "unittest", "tests.gold.test_e3_gold"], "testes de dados da Gold")
 
 
 @asset(deps=[construir_gold])

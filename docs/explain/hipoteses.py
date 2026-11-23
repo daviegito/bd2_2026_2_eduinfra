@@ -11,7 +11,7 @@ import statistics
 
 import psycopg
 
-from eduinfra.otimizacao_consulta import CONSULTA_NA_VIEW, _explicar_em_json, resumir_execucao
+from eduinfra.experimentos.otimizacao_consulta import CONSULTA_NA_VIEW, _explicar_em_json, resumir_execucao
 
 AQUECIMENTOS = 2
 REPETICOES = 5

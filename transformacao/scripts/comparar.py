@@ -18,11 +18,12 @@ from psycopg import sql
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import eventos, modelo_analitico
-from eduinfra.configuracao import Configuracao, carregar_configuracao
-from eduinfra.fontes_transformacao import Entradas, bloquear, preparar
-from eduinfra.ingestao import ingerir
-from eduinfra.microdados import garantir_microdados
+from eduinfra.cdc import eventos
+from eduinfra.experimentos import modelo_analitico
+from eduinfra.nucleo.configuracao import Configuracao, carregar_configuracao
+from eduinfra.gold.fontes_dbt import Entradas, bloquear, preparar
+from eduinfra.ingestao.censo import ingerir
+from eduinfra.ingestao.microdados import garantir_microdados
 from executar import PROJETO, dbt, verificar_slot
 
 
