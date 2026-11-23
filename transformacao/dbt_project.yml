@@ -3,6 +3,11 @@ version: '1.0'
 config-version: 2
 profile: eduinfra
 model-paths: [models]
+vars:
+  # Mesmo limite do painel da E3: grupo com menos escolas com nota tem a média suprimida.
+  minimo_escolas: 10
+  # Quintis: a faixa 1 é a de menor média geral dentro da rede e a última é a de maior.
+  faixas_de_desempenho: 5
 test-paths: [tests]
 models:
   eduinfra_gold:

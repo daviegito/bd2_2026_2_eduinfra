@@ -1,0 +1,105 @@
+version: 2
+
+models:
+- name: escola_desempenho_infra
+  description: Uma linha por escola do ENEM e ano, com notas, rede, município, faixa de desempenho dentro da rede
+    e uma coluna por item de infraestrutura. Consulta por escola sem JOIN nem leitura de JSON.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+  columns:
+  - name: co_entidade
+    data_tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_escola')
+          field: co_entidade
+  - name: ano
+    data_tests:
+    - not_null
+  - name: rede
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [federal, estadual, municipal, privada]
+  - name: faixa_desempenho
+    description: alto é o quinto de maior média geral dentro da rede, baixo é o de menor; sem_nota quando a
+      escola não tem média geral válida.
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [alto, intermediario, baixo, sem_nota]
+
+- name: desempenho_por_recorte
+  description: Média das médias escolares por UF, rede e área da prova. uf BR é o Brasil e rede todas soma as
+    redes. Média e desvio ficam nulos quando o recorte tem menos escolas com nota que var('minimo_escolas').
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+  columns:
+  - name: area
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [media_geral, media_cn, media_ch, media_lc, media_mt, media_redacao]
+
+- name: desempenho_por_item
+  description: Média das médias escolares por UF, rede, item, situação do item e área da prova, com a mesma
+    regra de supressão de desempenho_por_recorte.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+  columns:
+  - name: situacao
+    data_tests:
+    - accepted_values:
+        arguments:
+          values: [existente, inexistente, em_obra, inutilizavel, nao_informado]
+  - name: item_codigo
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_item')
+          field: item_codigo
+
+- name: comparacao_com_sem_item
+  description: Para cada UF, rede, item e área, a média das escolas que têm o item, a das que declararam não
+    ter e a diferença. É associação, sem controle socioeconômico.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+
+- name: perfil_alto_baixo_desempenho
+  description: Para cada rede e item, o percentual de escolas com o item na faixa alta e na faixa baixa de
+    desempenho, a diferença em pontos percentuais e a ordem do que mais diferencia as duas faixas.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+
+- name: infra_por_uf
+  description: Situação de cada item em todas as escolas do Censo, com ou sem ENEM, por UF e rede, na data de
+    referência da infraestrutura do ano.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+
+- name: cobertura_enem
+  description: Códigos de escola do ENEM, quantos foram identificados no Censo e quantos ficaram sem junção.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+
+exposures:
+- name: painel_analitico
+  label: Painel de infraestrutura e desempenho
+  type: dashboard
+  maturity: medium
+  url: https://daviegito.github.io/bd2_2026_2_eduinfra/painel.html
+  description: Painel estático gerado por eduinfra gerar-painel. Lê somente as tabelas de consumo abaixo e não
+    calcula estatística no navegador.
+  config:
+    enabled: '{{ var(''com_enem'', false) }}'
+  depends_on:
+  - ref('desempenho_por_recorte')
+  - ref('comparacao_com_sem_item')
+  - ref('perfil_alto_baixo_desempenho')
+  - ref('infra_por_uf')
+  - ref('cobertura_enem')
+  - ref('escola_desempenho_infra')
+  - ref('dim_item')
+  owner:
+    name: Squad EduInfra
