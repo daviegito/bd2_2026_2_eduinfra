@@ -73,7 +73,7 @@ models:
   description: Para cada rede, área da prova e característica, o percentual de escolas com a característica
     na faixa alta e na faixa baixa de desempenho, a diferença em pontos percentuais e a ordem do que mais
     diferencia as duas faixas. As características são cada item, a localização urbana, a UF e ter pelo
-    menos metade dos itens informados.
+    menos metade dos itens com situação informada marcados como existentes.
   config:
     enabled: '{{ var(''com_enem'', false) }}'
   columns:

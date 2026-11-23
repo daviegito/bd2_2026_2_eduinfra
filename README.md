@@ -361,10 +361,15 @@ ele não é versionado.
 
 O painel lê só as tabelas de consumo da Gold, em `transformacao/models/marts/gestao`.
 O dbt já entrega cada número pronto, por UF, rede e item: a média das escolas com e
-sem cada item, o percentual de escolas com o item entre as de maior e as de menor
-desempenho da rede, a situação da infraestrutura de todas as escolas do Censo e a
-cobertura da junção ENEM x Censo. O navegador só escolhe as linhas do recorte e
-escreve as frases do topo da página. Ele não calcula média, desvio nem grupo.
+sem cada item, o percentual de escolas com cada característica (item, localização,
+UF e quantidade de itens) entre as de maior e as de menor desempenho da rede em cada
+área da prova, a situação da infraestrutura de todas as escolas do Censo e a cobertura
+da junção ENEM x Censo. O navegador só escolhe as linhas do recorte e escreve as frases
+do topo da página. Ele não calcula média, desvio nem grupo.
+
+A página também lista as escolas das faixas de maior e de menor desempenho pela média
+geral, com os itens que cada uma declarou, e baixa essa lista em CSV. A faixa com menos
+de dez escolas no recorte não é listada.
 
 Grupos com menos de dez escolas com nota não têm média publicada, e essa regra está
 no `dbt_project.yml`, valendo para todo consumidor. As comparações são associações:

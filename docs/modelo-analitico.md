@@ -108,25 +108,35 @@ respondem à pergunta de gestão sem JOIN e sem cálculo no consumidor.
 | `gold.desempenho_por_recorte` | UF, rede e área da prova | como está a nota do recorte |
 | `gold.desempenho_por_item` | UF, rede, item, situação do item e área | a nota das escolas em cada situação do item |
 | `gold.comparacao_com_sem_item` | UF, rede, item e área | quanto a nota das escolas com o item difere da das sem |
-| `gold.perfil_alto_baixo_desempenho` | rede e item | o que as escolas de maior desempenho têm e as de menor não |
+| `gold.perfil_alto_baixo_desempenho` | rede, área da prova e característica | o que as escolas de maior desempenho têm e as de menor não |
 | `gold.infra_por_uf` | UF, rede, item e situação | onde falta infraestrutura, contando todas as escolas do Censo |
 | `gold.cobertura_enem` | ano | quantas escolas do ENEM chegaram à análise |
-| `gold.escola_desempenho_infra` | escola do ENEM e ano | a mesma informação por escola, uma coluna por item, para consulta e ETL reverso |
+| `gold.escola_desempenho_infra` | escola do ENEM e ano | a mesma informação por escola, uma coluna por item e a lista `itens_existentes`, para consulta, para a lista de escolas do painel e para o ETL reverso |
 
 `uf = 'BR'` é o total do Brasil e `rede = 'todas'` soma as redes. O total sai do
 `grouping sets` do PostgreSQL e não de uma soma no consumidor. Grupos com menos de
 `minimo_escolas` (10) escolas com nota têm média e desvio nulos e `suprimido = true`.
-A faixa de desempenho é o quintil da média geral dentro de cada rede (`faixas_de_desempenho`),
+A faixa de desempenho é o quintil da nota dentro de cada rede (`faixas_de_desempenho`),
 para não confundir rede com infraestrutura. As duas variáveis ficam no `dbt_project.yml`.
+Em `escola_desempenho_infra` a faixa usa a média geral. No perfil, `int_faixa_por_area`
+calcula a faixa em cada área da prova, porque as escolas do topo em Matemática não são
+as mesmas do topo em Redação.
+
+O perfil compara quatro tipos de característica (`tipo`): cada item de infraestrutura,
+a localização urbana, a UF e ter como existentes pelo menos metade dos itens com
+situação informada. Cada uma tem o seu denominador. Nos itens só entram as escolas que
+informaram a situação do item, e `ordem` classifica todas as características da rede e
+da área pela diferença absoluta entre as duas faixas.
+
 Os testes `supressao_de_grupos_pequenos`, `desempenho_por_item_grao_unico`,
 `perfil_alto_baixo_coerente`, `cobertura_bate_com_o_fato`, `infra_conta_todas_as_escolas`
 e `consumo_cobre_o_fato_de_desempenho` rodam no `dbt build`.
 
 ```sql
 -- Em que itens a rede estadual mais separa as escolas de maior e de menor desempenho?
-select item_descricao, pct_alto_com_item, pct_baixo_com_item, diferenca_pp
+select tipo, descricao, pct_alto, pct_baixo, diferenca_pp
 from gold.perfil_alto_baixo_desempenho
-where ano = 2024 and rede = 'estadual' and not suprimido
+where ano = 2024 and rede = 'estadual' and area = 'media_geral' and not suprimido
 order by ordem
 limit 5;
 ```
