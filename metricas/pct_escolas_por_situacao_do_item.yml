@@ -1,0 +1,54 @@
+nome: pct_escolas_por_situacao_do_item
+titulo: Percentual de escolas por situação do item
+versao: 1.0.0
+status: ativa
+historico:
+  - versao: 1.0.0
+    data: 2026-11-22
+    mudanca: primeira definição
+dono: lucasarruda9
+
+descricao: Percentual das escolas do grupo em cada situação de um item.
+grao: uma linha por escola
+
+formula: |
+  -- exemplo com biblioteca; troque o código do item.
+  -- escolas sem informação entram no total, então as situações somam 100%.
+  with referencia as (
+    select max(data_referencia_infraestrutura)::timestamp at time zone 'UTC' as em
+    from gold.fato_desempenho_escola_ano
+    where ano = 2024
+  )
+  select coalesce(d.itens ->> 'biblioteca', 'nao_informado') as situacao,
+         count(*)                                             as n_escolas,
+         round(100.0 * count(*) / sum(count(*)) over (), 1)   as percentual
+  from gold.dim_escola e
+  cross join referencia r
+  left join gold.dim_municipio m using (co_municipio)
+  left join gold.dim_escola_infraestrutura d
+    on d.co_entidade = e.co_entidade
+   and d.valid_from <= r.em and r.em < d.valid_to
+  where e.ano_censo_referencia = 2024
+    -- filtros do grupo, por exemplo: and m.sg_uf = 'DF' and e.rede = 'municipal'
+  group by 1
+
+fonte:
+  - gold.dim_escola
+  - gold.dim_municipio
+  - gold.dim_escola_infraestrutura
+  - gold.fato_desempenho_escola_ano
+
+filtros:
+  - item
+  - UF
+  - município
+  - rede
+  - localização
+
+supressao:
+  minimo: 0
+  regra: sem supressão
+
+consumidores:
+  - painel
+  - consulta otimizada

@@ -1,0 +1,41 @@
+nome: cobertura_enem_censo
+titulo: Cobertura da junção ENEM e Censo
+versao: 1.0.0
+status: ativa
+historico:
+  - versao: 1.0.0
+    data: 2026-11-22
+    mudanca: primeira definição
+dono: lucasarruda9
+
+descricao: Percentual das escolas do ENEM encontradas no Censo.
+grao: uma linha por escola do ENEM e ano
+
+formula: |
+  -- mascaradas: escolas com menos de 10 participantes, código escondido pelo INEP
+  select count(*)                                    as escolas_enem,
+         count(c.co_entidade)                        as encontradas,
+         count(*) - count(c.co_entidade)             as nao_encontradas,
+         count(*) filter (where c.co_entidade is null
+                            and e.poucos_participantes) as mascaradas,
+         round(100.0 * count(c.co_entidade) / count(*), 1) as percentual
+  from entrada_transformacao.enem_escola_ano e
+  left join gold.dim_escola c
+    on c.co_entidade = e.co_entidade
+   and c.ano_censo_referencia = 2024
+  where e.ano = 2024
+
+fonte:
+  - entrada_transformacao.enem_escola_ano
+  - gold.dim_escola
+
+filtros:
+  - ano
+
+supressao:
+  minimo: 0
+  regra: sem supressão
+
+consumidores:
+  - painel
+  - comando cobertura-enem
