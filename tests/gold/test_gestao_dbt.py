@@ -1,10 +1,13 @@
 """Tabelas de consumo da Gold construídas pelo dbt a partir de escolas com resultado conhecido."""
 
+import json
+import re
 from dataclasses import replace
 
 import psycopg
 import pytest
 
+from eduinfra.consumo import painel
 from eduinfra.gold.fontes_dbt import Entradas, bloquear, preparar
 from eduinfra.lake import silver_enem
 from tests.experimentos.test_modelo_analitico import configuracao_de, consultar, dsn, vistoria
@@ -100,3 +103,15 @@ def test_infraestrutura_conta_escolas_do_censo_sem_enem(gold):
         where uf = 'BR' and rede = 'todas' and item_codigo = 'biblioteca'""")
     assert total == [(len(ESCOLAS) + 3,)]
 
+
+def test_painel_le_so_as_tabelas_de_consumo_e_nao_exporta_escola_por_escola(gold, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    configuracao = replace(configuracao_de(gold), ano_enem=2024)
+    with painel.conectar(configuracao) as conexao:
+        dados = painel.ler_dados(conexao, 2024)
+    html = painel.renderizar_html(dados)
+    exportado = json.loads(re.search(r'id="dados-painel">(.*?)</script>', html, re.S).group(1))
+    assert exportado["cobertura"]["n_identificadas_no_censo"] == len(ESCOLAS)
+    assert "ESCOLA 101" not in html
+    biblioteca = next(p for p in exportado["perfil"] if p["rede"] == "estadual" and p["item_codigo"] == "biblioteca")
+    assert biblioteca["diferenca_pp"] == 100.0

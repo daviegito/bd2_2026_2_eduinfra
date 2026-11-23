@@ -7,6 +7,7 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/consumo/painel.py"
+      - "transformacao/**"
       - "tests/consumo/test_painel.py"
       - "tests/gold/test_e3_gold.py"
       - "scripts/verificar_caminhos.py"
@@ -21,6 +22,7 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/consumo/painel.py"
+      - "transformacao/**"
       - "tests/consumo/test_painel.py"
       - "tests/gold/test_e3_gold.py"
       - "scripts/verificar_caminhos.py"
@@ -69,7 +71,7 @@ jobs:
         run: |
           docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
           test -s docs/painel.html
-          grep -q 'Desempenho x ' docs/painel.html
+          grep -q 'O que as escolas de melhor desempenho' docs/painel.html
       - name: Mostrar logs do pipeline se houver falha
         if: failure()
         run: docker compose logs banco carga cdc
