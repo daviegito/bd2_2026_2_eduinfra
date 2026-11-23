@@ -719,3 +719,25 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   suíte sem banco e `mkdocs build --strict` passando. O painel ainda não foi gerado com os dados reais.
 - **Quem revisou:** Artur (desenho das tabelas e resultados das verificações); revisão de outro membro da
   squad pendente.
+
+### 2026-11-23 — Perfil por área, características além dos itens e lista de escolas (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de implementação.
+- **O que foi pedido:** fechar o que faltava nas duas issues antes de abrir a PR. Na #94, comparar o perfil
+  por área da prova e incluir localização, UF e número de itens como características. Na #95, a lista de
+  escolas das duas faixas com CSV, a frase de onde olhar primeiro, um glossário e cores que não dependam só
+  do matiz.
+- **Onde:** `transformacao/models/intermediate/int_faixa_por_area.sql`, `perfil_alto_baixo_desempenho.sql` e
+  `escola_desempenho_infra.sql` em `transformacao/models/marts/gestao/`, `gestao.yml`, o teste
+  `perfil_alto_baixo_coerente`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** o perfil com grão de rede, área e característica, a lista com supressão da faixa
+  pequena e o CSV com proteção contra fórmula. Artur decidiu que a PR só fecha as issues com esses itens
+  feitos. "Pelo menos metade dos itens" como medida de quantidade de itens foi escolha nossa e entra na
+  revisão do grupo. Ficam fora do código o teste de uso com duas pessoas (#95) e a leitura pela camada
+  semântica (#94, depende das #82 e #83).
+- **Como foi verificado:** testes do painel com Node (13 passando), incluindo ordem e supressão da lista, CSV
+  com acento e nome começando por sinal de igual, e perfil seguindo a área do filtro; `dbt build` no
+  PostgreSQL descartável com Matemática invertida em relação à média geral, conferindo que o perfil de
+  Matemática dá a diferença oposta.
+- **Quem revisou:** Artur; revisão de outro membro da squad pendente.
