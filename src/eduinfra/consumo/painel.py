@@ -99,7 +99,6 @@ CALCULOS = r"""
 const EduInfra = (() => {
     const redes = {todas: 'todas as redes', federal: 'rede federal', estadual: 'rede estadual', municipal: 'rede municipal', privada: 'rede privada'};
     const naRede = {todas: 'em todas as redes', federal: 'na rede federal', estadual: 'na rede estadual', municipal: 'na rede municipal', privada: 'na rede privada'};
-    const maiuscula = texto => texto.charAt(0).toUpperCase() + texto.slice(1);
     const decimal = new Intl.NumberFormat('pt-BR', {minimumFractionDigits: 1, maximumFractionDigits: 1});
     const inteiro = new Intl.NumberFormat('pt-BR');
     const pontos = valor => `${decimal.format(Math.abs(valor))} ${Math.abs(valor) === 1 ? 'ponto' : 'pontos'}`;
@@ -126,7 +125,7 @@ const EduInfra = (() => {
         const lista = [];
         const diferenciam = r.perfil.filter(p => !p.suprimido && p.diferenca_pp > 0).slice(0, limite);
         diferenciam.forEach(p => lista.push({
-            texto: `${maiuscula(rede)}, ${decimal.format(p.pct_alto_com_item)}% das escolas de maior desempenho têm ${nomeDoItem(dados, p.item_codigo).toLowerCase()}, contra ${decimal.format(p.pct_baixo_com_item)}% das de menor desempenho.`,
+            texto: `No Brasil, ${rede}, ${decimal.format(p.pct_alto_com_item)}% das escolas de maior desempenho têm ${nomeDoItem(dados, p.item_codigo).toLowerCase()}, contra ${decimal.format(p.pct_baixo_com_item)}% das de menor desempenho.`,
             ressalva: 'Isso mostra o que as escolas de nota alta costumam ter. Não quer dizer que instalar o item, sozinho, eleve a nota.'
         }));
         const comparavel = r.comparacoes.filter(c => c.diferenca !== null);

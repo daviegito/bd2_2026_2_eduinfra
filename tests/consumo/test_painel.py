@@ -108,7 +108,7 @@ def test_conclusoes_usam_o_perfil_e_trazem_o_que_nao_quer_dizer(ambiente):
     conexao, _ = ambiente
     dados = painel.ler_dados(conexao, 2024)
     conclusoes = executar_js("conclusoes", dados, {})
-    assert conclusoes[0]["texto"] == ("Em todas as redes, 72,5% das escolas de maior desempenho têm biblioteca, "
+    assert conclusoes[0]["texto"] == ("No Brasil, em todas as redes, 72,5% das escolas de maior desempenho têm biblioteca, "
                                       "contra 30,0% das de menor desempenho.")
     assert "Não quer dizer" in conclusoes[0]["ressalva"]
     assert not any("acesso à internet" in c["texto"] and "%" in c["texto"] for c in conclusoes)
@@ -141,3 +141,12 @@ def test_json_nao_permite_que_nome_da_fonte_execute_script(ambiente):
     assert ataque not in html
     serializado = re.search(r'id="dados-painel">(.*?)</script>', html, re.S).group(1)
     assert ataque in [item[1] for item in json.loads(serializado)["itens"]]
+
+
+def test_perfil_das_faixas_e_nacional_mesmo_com_estado_no_filtro(ambiente):
+    conexao, _ = ambiente
+    conexao.execute("""insert into pg.gold.desempenho_por_recorte values
+        (2024, 'DF', 'todas', 'media_geral', 12, 12, 505.0, 3.0)""")
+    dados = painel.ler_dados(conexao, 2024)
+    conclusoes = executar_js("conclusoes", dados, {"uf": "DF"})
+    assert conclusoes[0]["texto"].startswith("No Brasil, em todas as redes, 72,5%")
