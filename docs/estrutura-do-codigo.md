@@ -14,7 +14,7 @@ nome e o `eduinfra --help` saiu idêntico ao de antes.
 | Bronze e Silver | [`lake/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/lake/) | Silver do Censo e do ENEM em Parquet e a tabela Delta da camada analítica |
 | CDC | [`cdc/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/cdc/) | slot lógico, decodificação do pgoutput, fonte canônica de eventos, janelas, fila de erros, telemetria, auditoria e recuperação |
 | Gold | [`transformacao/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/transformacao/) e [`gold/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/gold/) | os modelos dbt ficam em `transformacao/models`; o pacote Python prepara as fontes do dbt e mede o SLA de frescor |
-| Consumo | [`consumo/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/consumo/) | painel HTML gerado a partir da Gold |
+| Consumo | [`consumo/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/consumo/) | painel HTML gerado a partir das tabelas de consumo da Gold |
 | Experimentos | [`experimentos/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/experimentos/) | medições, comparações e demonstrações citadas nos ADRs; nada aqui roda no pipeline agendado |
 
 [`cli.py`](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/cli.py) e [`orquestrador.py`](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py)
@@ -24,6 +24,24 @@ configuração por variável de ambiente e a gravação da saída dos comandos e
 
 O `cli.py` monta o parser e despacha. Cada pacote registra os próprios comandos no seu `comandos.py`, e o
 [teste da CLI](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/tests/test_cli.py) falha se um comando aceito pelo parser não tiver quem o execute.
+
+## Camadas da Gold no dbt
+
+O projeto dbt segue o [guia de estrutura do dbt](https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview):
+staging como views, intermediate e marts como tabelas.
+
+| Pasta | Modelos | Para quem |
+| --- | --- | --- |
+| `models/staging/` | `stg_*` | uma view por fonte, sem regra de negócio |
+| `models/intermediate/` | `int_mudanca_item`, `int_desempenho_escola`, `int_desempenho_escola_item` | passos internos; nenhum consumidor lê daqui |
+| `models/marts/` | `dim_*` e `fato_*` | a estrela: núcleo da Gold, com histórico (SCD tipo 2) |
+| `models/marts/gestao/` | `desempenho_por_recorte`, `desempenho_por_item`, `comparacao_com_sem_item`, `perfil_alto_baixo_desempenho`, `infra_por_uf`, `cobertura_enem`, `escola_desempenho_infra` | tabelas de consumo, já agregadas por UF, rede e item, que o painel lê |
+
+As tabelas de `gestao/` seguem o padrão usual de Gold: a estrela fica como modelo central, e por cima dela
+saem tabelas largas e agregadas para quem consome. A regra de supressão (menos de 10 escolas com nota não
+publica média) e a faixa de desempenho ficam no `dbt_project.yml` como `minimo_escolas` e
+`faixas_de_desempenho`, num lugar só. O painel está declarado como exposição do dbt, então aparece na
+linhagem da documentação gerada.
 
 ## Dependências entre pacotes
 
@@ -166,3 +184,4 @@ python scripts/verificar_caminhos.py
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Mapa de pacotes de `src/` e `tests/`, regra de dependência e verificação de caminhos (issues #96 e #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 23 de novembro de 2026 |
+| 1.1 | Camadas da Gold no dbt e tabelas de consumo da gestão (issues #94 e #95) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 23 de novembro de 2026 |

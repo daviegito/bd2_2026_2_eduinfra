@@ -95,6 +95,42 @@ a decisão e define os gatilhos de revisão.
 Revisar a decisão se surgir pergunta que precise de item por instante no grão do
 evento como caminho principal, ou se o fato largo deixar de caber nas consultas.
 
+## Tabelas de consumo da gestão
+
+Na E3 o painel lia a estrela, abria o JSON de itens de cada escola e calculava as
+médias no navegador. Quem abria o painel recebia escolas soltas e precisava cruzar
+filtros para chegar à resposta. Na E4 a estrela continua como núcleo, e por cima dela
+o dbt publica em `transformacao/models/marts/gestao` tabelas já agregadas, que
+respondem à pergunta de gestão sem JOIN e sem cálculo no consumidor.
+
+| Tabela | Grão (uma linha por...) | O que responde |
+| --- | --- | --- |
+| `gold.desempenho_por_recorte` | UF, rede e área da prova | como está a nota do recorte |
+| `gold.desempenho_por_item` | UF, rede, item, situação do item e área | a nota das escolas em cada situação do item |
+| `gold.comparacao_com_sem_item` | UF, rede, item e área | quanto a nota das escolas com o item difere da das sem |
+| `gold.perfil_alto_baixo_desempenho` | rede e item | o que as escolas de maior desempenho têm e as de menor não |
+| `gold.infra_por_uf` | UF, rede, item e situação | onde falta infraestrutura, contando todas as escolas do Censo |
+| `gold.cobertura_enem` | ano | quantas escolas do ENEM chegaram à análise |
+| `gold.escola_desempenho_infra` | escola do ENEM e ano | a mesma informação por escola, uma coluna por item, para consulta e ETL reverso |
+
+`uf = 'BR'` é o total do Brasil e `rede = 'todas'` soma as redes. O total sai do
+`grouping sets` do PostgreSQL e não de uma soma no consumidor. Grupos com menos de
+`minimo_escolas` (10) escolas com nota têm média e desvio nulos e `suprimido = true`.
+A faixa de desempenho é o quintil da média geral dentro de cada rede (`faixas_de_desempenho`),
+para não confundir rede com infraestrutura. As duas variáveis ficam no `dbt_project.yml`.
+Os testes `supressao_de_grupos_pequenos`, `desempenho_por_item_grao_unico`,
+`perfil_alto_baixo_coerente`, `cobertura_bate_com_o_fato`, `infra_conta_todas_as_escolas`
+e `consumo_cobre_o_fato_de_desempenho` rodam no `dbt build`.
+
+```sql
+-- Em que itens a rede estadual mais separa as escolas de maior e de menor desempenho?
+select item_descricao, pct_alto_com_item, pct_baixo_com_item, diferenca_pp
+from gold.perfil_alto_baixo_desempenho
+where ano = 2024 and rede = 'estadual' and not suprimido
+order by ordem
+limit 5;
+```
+
 ## Dimensão de variação lenta: `dim_escola_infraestrutura`
 
 Cada versão é o perfil de infraestrutura de uma escola durante um intervalo

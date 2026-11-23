@@ -71,6 +71,8 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Compressão | `tests/experimentos/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/origem/test_insert_only.py` |
 | Frescor e SLA da Gold | `tests/gold/test_frescor.py`, `tests/gold/test_frescor_integracao.py` (exige `construir-gold` antes) |
+| Tabelas de consumo da Gold, construídas pelo dbt com 60 escolas de resultado conhecido | `tests/gold/test_gestao_dbt.py` |
+| Painel lendo só a Gold de consumo, frases geradas e proteção contra script no JSON | `tests/consumo/test_painel.py` |
 | Comandos da CLI, dependência entre pacotes e caminhos citados nos documentos | `tests/test_cli.py`, `tests/test_estrutura_do_codigo.py`, `tests/test_verificar_caminhos.py` |
 
 ## Verificações opcionais

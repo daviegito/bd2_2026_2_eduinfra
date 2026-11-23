@@ -342,11 +342,11 @@ interativo estão em [Transformação declarativa](docs/transformacao.md).
 A [comparação com SQL direto e as evidências](docs/evidencias/issue-48/comparacao.md)
 registram os tempos, os testes e a validação do fluxo completo.
 
-## Painel analítico (E3, issue #53)
+## Painel analítico
 
 O [painel no GitHub Pages](https://daviegito.github.io/bd2_2026_2_eduinfra/painel.html)
-é atualizado pelo workflow de documentação. Ele usa HTML estático e Plotly para
-permitir interação no Pages, sem servidor de aplicação ou serviço pago.
+é atualizado pelo workflow de documentação. Ele usa HTML estático e Plotly, sem
+servidor de aplicação ou serviço pago.
 
 Para gerar localmente com Censo, ENEM e eventos canônicos reais:
 
@@ -357,24 +357,20 @@ uv run mkdocs serve
 ```
 
 Abra `http://127.0.0.1:8000/painel.html`. O arquivo gerado é `docs/painel.html`;
-ele não é versionado. `construir-gold` sozinho só entrega a infraestrutura e
-não substitui a transformação completa com ENEM exigida pelo painel.
+ele não é versionado.
 
-A visualização seleciona `ANO_ENEM` (2024 por padrão) e usa o vínculo
-`fato_desempenho_escola_ano.escola_infra_sk` com a dimensão SCD para comparar a
-infraestrutura na referência analítica da prova. Os itens vêm do JSON `itens`
-e seus nomes, do catálogo Gold. Estados desconhecidos, em obra e inutilizáveis
-permanecem separados da ausência confirmada. O painel mostra média simples das
-médias escolares válidas por rede/item, n e um desvio padrão; não estima efeito
-causal nem controla INSE, que não está disponível neste contrato. Grupos com
-menos de dez escolas com média válida são suprimidos e a regra é informada.
+O painel lê só as tabelas de consumo da Gold, em `transformacao/models/marts/gestao`.
+O dbt já entrega cada número pronto, por UF, rede e item: a média das escolas com e
+sem cada item, o percentual de escolas com o item entre as de maior e as de menor
+desempenho da rede, a situação da infraestrutura de todas as escolas do Censo e a
+cobertura da junção ENEM x Censo. O navegador só escolhe as linhas do recorte e
+escreve as frases do topo da página. Ele não calcula média, desvio nem grupo.
 
-Os gráficos leem exclusivamente fatos e dimensões Gold. A cobertura completa
-ENEM × Censo usa também o retrato `entrada_transformacao.enem_escola_ano`, pois
-o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
-com perfil temporal conhecido ficam explícitos, sem converter dados ausentes em
-zero. O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica
-o mesmo artefato validado; ausência do painel ou de dados obrigatórios falha.
+Grupos com menos de dez escolas com nota não têm média publicada, e essa regra está
+no `dbt_project.yml`, valendo para todo consumidor. As comparações são associações:
+o painel não controla o nível socioeconômico, que não está disponível neste contrato.
+O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica o mesmo
+artefato validado.
 
 ## O que a carga produz
 
@@ -659,7 +655,7 @@ src/eduinfra/
   gold/               preparo das fontes do dbt e SLA de frescor (os modelos ficam em transformacao/)
   consumo/            painel HTML gerado a partir da Gold
   experimentos/       medições, comparações e demonstrações dos ADRs; fora do pipeline agendado
-transformacao/        projeto dbt da Gold: staging, intermediate e marts
+transformacao/        projeto dbt da Gold: staging, intermediate, marts (estrela) e marts/gestao (consumo)
   scripts/            executar.py (fluxo completo) e comparar.py (dbt x SQL)
 tests/                mesmos pacotes de src/, com testes unitários e de integração (ver docs/testes.md)
 scripts/              verificar_caminhos.py: falha se um documento citar caminho inexistente
