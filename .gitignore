@@ -29,3 +29,6 @@ transformacao/.user.yml
 
 dbt-docs/
 docs/painel.html
+
+# Arquivos públicos restaurados pelo cache do CI
+.cache/fontes-inep/

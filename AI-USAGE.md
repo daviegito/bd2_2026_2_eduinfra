@@ -705,3 +705,64 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **O que foi aproveitado:** a estrutura existente de migrações do Alembic, o pipeline de transformação dbt e a orquestração via Docker Compose e Dagster. O superusuário foi isolado exclusivamente no serviço dedicado `migracao` (`profiles: [admin]`), enquanto `carga`, `transformacao`, `cdc`, `orquestrador` e `painel` passaram a autenticar com papéis dedicados (`rolsuper = false`). Na integração com a `main`, foram preservadas as definições de métricas da #82 (`metricas/`, `test_metricas.py`) e a remoção da etapa `migrar` do Dagster.
 - **Como foi verificado:** execução de `demonstrar-acesso` aprovada nos 4 cenários (leitura permitida do painel na Gold, escrita negada em `municipio`, linha de outra UF invisível entre `DF` e `SP` via RLS e colunas pessoais `nome`/`matricula` negadas para `eduinfra_analise`), registrada em `docs/evidencias/controle-de-acesso/saida.txt`; suíte `tests/test_controle_de_acesso.py` (18 testes de declaração e integração) aprovada; build do dbt (39/39 testes) e geração do painel (`docs/painel.html`) validados sob os papéis restritos; `uv run pytest -m "not integracao"` e `mkdocs build --strict` aprovados sem erros.
 - **Quem revisou:** daviegito.
+
+## 2026-11-24 — Experimento de cache de fontes no CI
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** testar redução no tempo de espera do CI, mantendo a validação da Gold.
+- **O que foi aproveitado:** testes rápidos antes da carga nacional, preparo separado
+  das fontes, cache apenas dos ZIPs públicos e relatório de tempos/hashes. O override
+  do Compose liga o cache ao caminho usado pelos leitores, sem cache de banco ou Gold.
+- **Como foi verificado:** testes com servidor HTTP real local, cache vazio/restaurado
+  e entrada inválida; configuração efetiva do Compose; extração dos ZIPs nacionais
+  com rede desativada e volume original somente de leitura. Evidências em
+  `docs/evidencias/ci-cache-fontes/`. Testes direcionados: 15 aprovados e quatro skips
+  por ausência de Node. A suíte completa não coletou por ausência do extra Hypothesis.
+- **Limites:** ganho total remoto ainda depende de execuções fria/quente no GitHub.
+  A reorganização da suíte geral atribuída ao Davi na #99 não foi implementada aqui.
+- **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Corrigir propriedade da pasta de cache (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** continuar a comparação real do tempo do CI.
+- **Diagnóstico:** a primeira execução passou sem cache; a tentativa de restauração
+  encontrou a chave, mas falhou com `Permission denied`, pois o primeiro contêiner
+  havia criado o bind como root. A tentativa 2 foi cancelada e excluída da medição.
+- **O que foi aproveitado:** criação antecipada dos diretórios como usuário do runner,
+  sem chmod amplo ou alteração dos modelos/leitores. Teste de regressão com dois
+  usuários reproduziu o erro antes da correção e passou depois. A conferência dos
+  hashes dos ZIPs de teste foi reforçada com valores calculados das entradas HTTP.
+- **Limites:** a medição com restauração corrigida ainda está pendente; o commit de
+  cada execução será registrado para não atribuir equivalência a revisões distintas.
+- **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Disponibilizar o workflow ao teste de permissões (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Diagnóstico:** o teste de regressão leu o checkout completo na bancada local,
+  mas a imagem da aplicação não copia `.github`; a execução real falhou antes da
+  carga com `FileNotFoundError`. Essa tentativa não entra na comparação de tempos.
+- **O que foi aproveitado:** bind somente de leitura dos workflows na etapa de
+  testes, mantendo a imagem e os serviços de produção sem esse arquivo adicional.
+- **Como foi verificado:** reproduzido o erro com os mesmos diretórios da imagem;
+  com o bind explícito, os 16 testes direcionados passaram (quatro skips por Node).
+- **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Consolidar a medição real de cache do CI (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Resultado:** execução fria aprovada em 974 s; execução com restauração funcional
+  aprovada em 329 s, economia observada de 66,2%. Preparo de fontes: 559 s para 13 s,
+  mais 3 s de restauração. Os ZIPs e tamanhos dos CSVs coincidiram.
+- **Verificação:** logs e metadados do GitHub preservados em JSON; `git diff`
+  confirmou leitores, modelos, Compose e dependências iguais. Gold, auditoria,
+  painel e site passaram. As duas tentativas de diagnóstico foram excluídas.
+- **Limites:** uma amostra válida por cenário, em revisões diferentes pelas correções
+  de diretórios/montagem do teste; sem promessa de duração fixa. Reuso entre PRs
+  depende de integrar o workflow e semear o cache na main.
+- **Quem revisou:** revisão humana pendente.
