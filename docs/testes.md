@@ -70,6 +70,7 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Camada analítica | `tests/test_camada_analitica.py` |
 | Compressão | `tests/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/test_insert_only.py` |
+| Definições de métricas  | `tests/test_metricas.py` |
 | Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |
 
 ## Verificações opcionais

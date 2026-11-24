@@ -1,0 +1,59 @@
+nome: prioridade_vistoria
+titulo: Prioridade de vistoria presencial
+versao: 0.1.0
+status: rascunho
+historico:
+  - versao: 0.1.0
+    data: 2026-11-22
+    mudanca: rascunho para o ETL reverso; cortes a confirmar com o grupo
+dono: lucasarruda9
+
+descricao: Escolas públicas a vistoriar primeiro, em ordem, por UF.
+grao: uma linha por escola
+
+formula: |
+  -- cortes a confirmar: 20% de menor nota, laboratório de ciências, 365 dias
+  with base as (
+    select f.co_entidade, e.rede, m.sg_uf, f.media_geral,
+           percent_rank() over (partition by e.rede, m.sg_uf order by f.media_geral) as percentil,
+           count(*)       over (partition by e.rede, m.sg_uf)                        as n_grupo
+    from gold.fato_desempenho_escola_ano f
+    join gold.dim_escola e using (co_entidade)
+    join gold.dim_municipio m using (co_municipio)
+    where f.ano = 2024
+      and e.ano_censo_referencia = 2024
+      and e.rede in ('federal', 'estadual', 'municipal')
+      and f.media_geral is not null
+  )
+  select b.*,
+         row_number() over (partition by b.sg_uf order by b.media_geral, b.co_entidade) as posicao_na_uf
+  from base b
+  join gold.dim_escola_infraestrutura d
+    on d.co_entidade = b.co_entidade and d.is_current
+  where b.n_grupo >= 10
+    and b.percentil < 0.2
+    and coalesce(d.itens ->> 'lab_ciencias', 'nao_informado') <> 'existente'
+    and not exists (
+      select 1
+      from gold.fato_vistoria_item v
+      where v.co_entidade = b.co_entidade
+        and v.origem = 'vistoria_presencial'
+        and v.ocorrido_em >= now() - interval '365 days'
+    )
+
+fonte:
+  - gold.fato_desempenho_escola_ano
+  - gold.dim_escola
+  - gold.dim_municipio
+  - gold.dim_escola_infraestrutura
+  - gold.fato_vistoria_item
+
+filtros:
+  - UF
+
+supressao:
+  minimo: 10
+  regra: rede e UF com menos de 10 escolas com nota não entram na lista
+
+consumidores:
+  - ETL reverso
