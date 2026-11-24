@@ -1,0 +1,8 @@
+name: bancada_semantica
+version: '1.0'
+config-version: 2
+profile: bancada_semantica
+model-paths: [models]
+models:
+  bancada_semantica:
+    +materialized: view

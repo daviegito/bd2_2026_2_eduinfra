@@ -1,0 +1,12 @@
+bancada_semantica:
+  target: local
+  outputs:
+    local:
+      type: postgres
+      host: "{{ env_var('PGHOST', '127.0.0.1') }}"
+      port: "{{ env_var('PGPORT', '55483') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'eduinfra83') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'eduinfra83') }}"
+      schema: bancada_mf
+      threads: 1
