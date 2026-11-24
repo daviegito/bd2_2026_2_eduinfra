@@ -742,3 +742,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** reproduzido o erro com os mesmos diretórios da imagem;
   com o bind explícito, os 16 testes direcionados passaram (quatro skips por Node).
 - **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Consolidar a medição real de cache do CI (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Resultado:** execução fria aprovada em 974 s; execução com restauração funcional
+  aprovada em 329 s, economia observada de 66,2%. Preparo de fontes: 559 s para 13 s,
+  mais 3 s de restauração. Os ZIPs e tamanhos dos CSVs coincidiram.
+- **Verificação:** logs e metadados do GitHub preservados em JSON; `git diff`
+  confirmou leitores, modelos, Compose e dependências iguais. Gold, auditoria,
+  painel e site passaram. As duas tentativas de diagnóstico foram excluídas.
+- **Limites:** uma amostra válida por cenário, em revisões diferentes pelas correções
+  de diretórios/montagem do teste; sem promessa de duração fixa. Reuso entre PRs
+  depende de integrar o workflow e semear o cache na main.
+- **Quem revisou:** revisão humana pendente.
