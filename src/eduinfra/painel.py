@@ -442,6 +442,8 @@ def renderizar_html(dados):
     serializado = json.dumps(dados, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
     serializado = serializado.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     cobertura = dados["cobertura"]
+    versoes = dados.get("versoes_metricas") or {}
+    rotulo_versoes = "Métricas: " + ", ".join(f"{k} v{v}" for k, v in sorted(versoes.items())) if versoes else "Métricas: catálogo local"
     taxa = 100 * cobertura["identificadas"] / cobertura["entrada"]
     html = r'''<!DOCTYPE html>
 <html lang="pt-BR">
@@ -492,7 +494,7 @@ def renderizar_html(dados):
 <div class="grid"><article class="quadro"><h3>Do ENEM até a análise conjunta</h3><div class="tabela-container"><table><thead><tr><th scope="col">Base nacional</th><th scope="col">Escolas / códigos</th></tr></thead><tbody><tr><td>Códigos de escola na entrada do ENEM</td><td>__ENTRADA__</td></tr><tr><td>Escolas identificadas no Censo</td><td>__IDENTIFICADAS__</td></tr><tr><td>Códigos sem junção</td><td>__SEM_JUNCAO__</td></tr><tr><td>Sem junção e com menos de 10 participantes</td><td>__MASCARADAS__</td></tr></tbody></table></div><p class="legenda">Abaixo de dez participantes, o INEP mascara o código da escola. A entrada usada aqui não oferece os atributos para redistribuir códigos sem junção pelos filtros territoriais.</p></article>
 <article class="quadro"><h3>O que há no recorte atual?</h3><div class="tabela-container" id="tabela-qualidade"></div><p class="legenda">Escolas sem nota permanecem nas contagens de cobertura. Informação de infraestrutura desconhecida não é contada como ausência.</p></article></div>
 <details class="metodo"><summary>Como interpretar estes números</summary><p>Fontes: Censo Escolar e resultados do ENEM __ANO__, processados pela Silver e pela Gold do projeto. A infraestrutura usa os perfis históricos das vistorias e do Censo em __REFERENCIA__. O painel não usa o perfil atual para representar uma data passada.</p><p>A média geral escolar é formada pelos participantes com as cinco notas válidas. Cada área tem seu próprio conjunto de notas válidas. Os resultados do painel são médias simples das médias escolares, sem ponderação por participantes. As populações de cada área podem diferir.</p><p>Grupos com menos de dez escolas com nota válida têm suas médias suprimidas, inclusive após filtrar. Um desvio padrão mostra dispersão entre escolas e não representa intervalo de confiança. Comparações dentro da mesma rede ainda podem misturar contextos socioeconômicos diferentes.</p><p>A infraestrutura considera todas as escolas do Censo no recorte, inclusive as que não oferecem ensino médio. A análise de notas considera apenas o subconjunto identificado no ENEM. Este retrato de __ANO__ não permite medir evolução anual nem efeito causal de investimentos.</p><p>O HTML contém o retrato exportado. Para incorporar novas cargas, gere novamente com <code>eduinfra gerar-painel</code>. Os filtros e gráficos funcionam localmente, inclusive sem conexão à internet.</p></details></section>
-<footer class="rodape">EduInfra AI · Censo e ENEM __ANO__ · Retrato exportado em <span id="data-exportacao"></span></footer>
+<footer class="rodape">EduInfra AI · Censo e ENEM __ANO__ · Retrato exportado em <span id="data-exportacao"></span> · __VERSOES_METRICAS__</footer>
 </main>
 <script type="application/json" id="dados-painel">__DADOS__</script>
 <script id="painel-calculos">__CALCULOS__</script>
@@ -506,6 +508,7 @@ def renderizar_html(dados):
         "__SEM_JUNCAO__": f"{cobertura['sem_juncao']:,}".replace(",", "."),
         "__MASCARADAS__": f"{cobertura['mascaradas']:,}".replace(",", "."),
         "__DADOS__": serializado, "__CALCULOS__": CALCULOS, "__INTERFACE__": INTERFACE,
+        "__VERSOES_METRICAS__": rotulo_versoes,
     }
     # Substituição em uma passada: texto das fontes não vira um novo marcador.
     return re.sub("|".join(map(re.escape, substituicoes)), lambda m: substituicoes[m.group()], html)
