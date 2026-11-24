@@ -696,3 +696,20 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** `uv run pytest -m "not integracao"` aprovado; `mkdocs build
   --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
 - **Quem revisou:** lucasarruda9.
+
+## 2026-11-24 — Experimento de cache de fontes no CI
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** testar redução no tempo de espera do CI, mantendo a validação da Gold.
+- **O que foi aproveitado:** testes rápidos antes da carga nacional, preparo separado
+  das fontes, cache apenas dos ZIPs públicos e relatório de tempos/hashes. O override
+  do Compose liga o cache ao caminho usado pelos leitores, sem cache de banco ou Gold.
+- **Como foi verificado:** testes com servidor HTTP real local, cache vazio/restaurado
+  e entrada inválida; configuração efetiva do Compose; extração dos ZIPs nacionais
+  com rede desativada e volume original somente de leitura. Evidências em
+  `docs/evidencias/ci-cache-fontes/`. Testes direcionados: 15 aprovados e quatro skips
+  por ausência de Node. A suíte completa não coletou por ausência do extra Hypothesis.
+- **Limites:** ganho total remoto ainda depende de execuções fria/quente no GitHub.
+  A reorganização da suíte geral atribuída ao Davi na #99 não foi implementada aqui.
+- **Quem revisou:** revisão humana pendente.
