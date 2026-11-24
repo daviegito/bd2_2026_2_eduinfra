@@ -6,8 +6,11 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
+      - "metricas/**"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/semantica.py"
       - "tests/test_painel.py"
+      - "tests/test_consumo_duplo.py"
       - "tests/test_e3_gold.py"
       - "pyproject.toml"
       - "uv.lock"
@@ -19,8 +22,11 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
+      - "metricas/**"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/semantica.py"
       - "tests/test_painel.py"
+      - "tests/test_consumo_duplo.py"
       - "tests/test_e3_gold.py"
       - "pyproject.toml"
       - "uv.lock"
@@ -60,9 +66,10 @@ jobs:
       - name: Conferir a auditoria e os testes do painel
         run: |
           docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
-          docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py -q
-      - name: Gerar o painel real
+          docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py tests/test_consumo_duplo.py -q
+      - name: Publicar métricas e gerar o painel real
         run: |
+          docker compose run --no-deps --rm carga publicar-metricas
           docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
           test -s docs/painel.html
           grep -q 'Desempenho x ' docs/painel.html
