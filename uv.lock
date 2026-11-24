@@ -963,6 +963,7 @@ dependencies = [
     { name = "plotly" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pyarrow" },
+    { name = "pyyaml" },
 ]
 
 [package.optional-dependencies]
@@ -999,6 +1000,7 @@ requires-dist = [
     { name = "plotly", specifier = ">=5.0.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.2" },
     { name = "pyarrow", specifier = ">=26.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
 ]
 provides-extras = ["dev-extra"]
 

@@ -49,12 +49,13 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
         "publicar-analitico",
         "processar-janelas",
         "dbt",
+        "publicar-metricas",
         "tests.test_e3_gold tests.test_metricas",
         "medir-frescor",
     }
     ordem = chamadas.index
     assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("dbt") < ordem("medir-frescor")
-    assert ordem("dbt") < ordem("tests.test_e3_gold tests.test_metricas")
+    assert ordem("dbt") < ordem("publicar-metricas") < ordem("tests.test_e3_gold tests.test_metricas")
 
 
 def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
