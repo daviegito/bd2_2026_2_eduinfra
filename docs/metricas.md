@@ -135,3 +135,20 @@ A migração dos cálculos duplicados do painel e dos outros consumidores deve o
 nas respectivas issues. Esta interface não altera a branch de outro integrante.
 A [comparação reproduzível](evidencias/issue-83/README.md) e o
 [ADR 0006](adr/0006-consumo-etl-reverso.md) fundamentam a escolha.
+
+## Consumo duplo e garantia de consistência (#84)
+
+O painel (`src/eduinfra/painel.py`) lê a cobertura, o limiar de supressão e as versões
+publicadas da camada semântica e exibe as versões ativas no rodapé do HTML exportado.
+
+Como segundo consumidor documentado, analistas podem consultar as mesmas métricas
+diretamente no PostgreSQL usando o roteiro em
+[`metricas/sql/consumidor_analista.sql`](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/metricas/sql/consumidor_analista.sql):
+
+```bash
+psql "$DATABASE_URL" -f metricas/sql/consumidor_analista.sql
+```
+
+A consistência entre o painel e a camada semântica é verificada automaticamente em
+`tests/test_consumo_duplo.py`, que também falha se a regra de supressão ou cálculo
+for alterada em apenas um consumidor.
