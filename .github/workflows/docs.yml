@@ -75,7 +75,7 @@ jobs:
         run: docker compose build carga cdc transformacao
       - name: Conferir o painel e o preparo das fontes antes da carga nacional
         run: |
-          docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py tests/test_preparar_fontes_ci.py -q
+          docker compose run --no-deps --rm -v "$PWD/.github/workflows:/app/.github/workflows:ro" --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py tests/test_preparar_fontes_ci.py -q
       - name: Restaurar os ZIPs públicos do INEP
         id: fontes-cache
         uses: actions/cache/restore@v4

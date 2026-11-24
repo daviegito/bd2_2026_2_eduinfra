@@ -729,3 +729,16 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Limites:** a medição com restauração corrigida ainda está pendente; o commit de
   cada execução será registrado para não atribuir equivalência a revisões distintas.
 - **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Disponibilizar o workflow ao teste de permissões (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Diagnóstico:** o teste de regressão leu o checkout completo na bancada local,
+  mas a imagem da aplicação não copia `.github`; a execução real falhou antes da
+  carga com `FileNotFoundError`. Essa tentativa não entra na comparação de tempos.
+- **O que foi aproveitado:** bind somente de leitura dos workflows na etapa de
+  testes, mantendo a imagem e os serviços de produção sem esse arquivo adicional.
+- **Como foi verificado:** reproduzido o erro com os mesmos diretórios da imagem;
+  com o bind explícito, os 16 testes direcionados passaram (quatro skips por Node).
+- **Quem revisou:** revisão humana pendente.

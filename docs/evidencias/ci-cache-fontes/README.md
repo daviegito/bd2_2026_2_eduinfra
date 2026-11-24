@@ -105,3 +105,9 @@ os leitores, os modelos, os ZIPs nem a política de testes da Gold. A comparaç�
 a registrar explicitamente o commit de cada execução, em vez de alegar uma comparação
 fria/quente da mesma revisão quando houve esse ajuste de preparação dos diretórios.
 A execução com restauração corrigida ainda precisa ser medida.
+
+A execução `45478583454` parou antes da carga: o novo teste precisava ler o workflow,
+que não faz parte da imagem da aplicação. A etapa de testes passa a montar
+`.github/workflows` como somente leitura. O problema foi reproduzido localmente
+com o layout real da imagem e deixou de ocorrer ao acrescentar esse bind. Essa
+execução também está excluída das medições; os diagnósticos estão em `diagnosticos.json`.
