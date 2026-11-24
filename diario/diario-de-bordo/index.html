@@ -642,6 +642,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../metricas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../projeto/" class="md-nav__link">
         
   
@@ -1640,6 +1668,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#semana-11-modelagem-dimensional-da-gold-e-scd-tipo-2-222810" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 11 — Modelagem dimensional da Gold e SCD Tipo 2 (22–28/10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semana-12-telemetria-cdc-frescorsla-da-gold-e-selecao-da-ferramenta-de-transformacao-29100411" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 12 — Telemetria CDC, Frescor/SLA da Gold e Seleção da Ferramenta de Transformação (29/10–04/11)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semana-13-fonte-unica-de-eventos-validacao-de-datas-recuperacao-do-cdc-e-painel-e4-051111" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 13 — Fonte Única de Eventos, Validação de Datas, Recuperação do CDC e Painel E4 (05–11/11)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1990,6 +2051,39 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#semana-11-modelagem-dimensional-da-gold-e-scd-tipo-2-222810" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 11 — Modelagem dimensional da Gold e SCD Tipo 2 (22–28/10)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semana-12-telemetria-cdc-frescorsla-da-gold-e-selecao-da-ferramenta-de-transformacao-29100411" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 12 — Telemetria CDC, Frescor/SLA da Gold e Seleção da Ferramenta de Transformação (29/10–04/11)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#semana-13-fonte-unica-de-eventos-validacao-de-datas-recuperacao-do-cdc-e-painel-e4-051111" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Semana 13 — Fonte Única de Eventos, Validação de Datas, Recuperação do CDC e Painel E4 (05–11/11)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2277,6 +2371,79 @@ tolerância de 7 dias.</p>
       Delta) antes de construir a transformação sobre eles</li>
 <li>[ ] Escrever o ADR 0003 (armazenamento analítico em formato aberto), ainda
       "a escrever"</li>
+</ul>
+<h2 id="semana-11-modelagem-dimensional-da-gold-e-scd-tipo-2-222810">Semana 11 — Modelagem dimensional da Gold e SCD Tipo 2 (22–28/10)<a class="headerlink" href="#semana-11-modelagem-dimensional-da-gold-e-scd-tipo-2-222810" title="Permanent link">&para;</a></h2>
+<p><strong>O que foi medido</strong></p>
+<ul>
+<li>Testes automatizados executados contra PostgreSQL 16 com base sintética no volume do Censo Escolar (181.065 escolas e 3.078.105 itens de vistoria).</li>
+<li>11 novos testes de unidade e integração validados (totalizando 32 testes cobrindo ingestão, transformação, insert-only e modelo analítico).</li>
+</ul>
+<p><strong>O que surpreendeu</strong></p>
+<ul>
+<li>Tratar <code>nao_informado</code> como estado alterava indevidamente a versão temporal da escola.</li>
+<li>A chave substituta (<em>surrogate key</em>) necessitou ser um hash estável de <code>(co_entidade, data_inicio)</code> para evitar mutabilidade entre reprocessamentos.</li>
+</ul>
+<p><strong>O que foi decidido</strong></p>
+<ul>
+<li>Implementação da dimensão de variação lenta (SCD Tipo 2) em <code>dim_escola</code> alimentada pelos eventos insert-only.</li>
+<li>Criação de duas tabelas fato de granularidades distintas: <code>fato_vistoria_item</code> (no grão atômico por item) e <code>fato_infra_escola_ano</code> (no grão anual para consumo analítico).</li>
+</ul>
+<p><strong>Pendências para a Semana seguinte</strong></p>
+<ul>
+<li>[ ] Implementar telemetria transacional e fila de erros (DLQ) para o CDC (ADR 0007)</li>
+<li>[ ] Desenvolver a medição de frescor da Gold e definir o SLA da camada analítica</li>
+</ul>
+<hr />
+<h2 id="semana-12-telemetria-cdc-frescorsla-da-gold-e-selecao-da-ferramenta-de-transformacao-29100411">Semana 12 — Telemetria CDC, Frescor/SLA da Gold e Seleção da Ferramenta de Transformação (29/10–04/11)<a class="headerlink" href="#semana-12-telemetria-cdc-frescorsla-da-gold-e-selecao-da-ferramenta-de-transformacao-29100411" title="Permanent link">&para;</a></h2>
+<p><strong>O que foi medido</strong></p>
+<ul>
+<li>Telemetria do CDC: latência ponta a ponta mediana de 1,62 s a 1,90 s para eventos recentes e ~4,10 s para eventos atrasados.</li>
+<li>Checksum de integridade validou 3.174.801 linhas idênticas entre origem e Delta Lake sem divergências.</li>
+<li>Medição de frescor da Gold: tempo de reconstrução medido entre 60,3 s e 85,8 s.</li>
+<li>Benchmark ADR 0005: dbt, SQLMesh e opção nula geraram 6 tabelas analíticas idênticas em contagem e hashes.</li>
+</ul>
+<p><strong>O que surpreendeu</strong></p>
+<ul>
+<li>A decisão de medir a tabela inteira por checksum custou apenas 17,4 s sobre 3,16 milhões de linhas, mostrando-se viável sem amostragem.</li>
+<li>O SLA de frescor da Gold foi definido em 25 horas para cobrir o ciclo diário com folga para uma nova tentativa (<em>retry</em>) sem onerar o banco com reconstruções contínuas custosas.</li>
+</ul>
+<p><strong>O que foi decidido</strong></p>
+<ul>
+<li>Adoção da Opção B no ADR 0007: telemetria por transação e desvio de dados com erro para a <code>fila_de_erros_cdc</code> (DLQ) sem parar o consumidor.</li>
+<li>Fixação do SLA de frescor da Gold em 25h, medido a partir da vistoria pendente mais antiga na origem.</li>
+<li>Escolha do <strong>dbt</strong> como ferramenta oficial de transformação analítica (ADR 0005).</li>
+<li>Integração automática da auditoria E3 ao comando <code>construir-gold</code>.</li>
+</ul>
+<p><strong>Pendências para a Semana seguinte</strong></p>
+<ul>
+<li>[ ] Ingerir dados do ENEM 2024 e realizar o cruzamento por código INEP com o Censo Escolar</li>
+<li>[ ] Definir a fonte única de eventos analíticos (ADR 0008)</li>
+<li>[ ] Implementar mecanismo de recuperação e tratamento da fila de erros do CDC</li>
+</ul>
+<hr />
+<h2 id="semana-13-fonte-unica-de-eventos-validacao-de-datas-recuperacao-do-cdc-e-painel-e4-051111">Semana 13 — Fonte Única de Eventos, Validação de Datas, Recuperação do CDC e Painel E4 (05–11/11)<a class="headerlink" href="#semana-13-fonte-unica-de-eventos-validacao-de-datas-recuperacao-do-cdc-e-painel-e4-051111" title="Permanent link">&para;</a></h2>
+<p><strong>O que foi medido</strong></p>
+<ul>
+<li>Ingestão do ENEM 2024: 29.400 escolas no arquivo do ENEM, alcançando 25.179 escolas no fato analítico conjunto (cobertura de 85,6%) e 4.221 escolas auditadas sem junção.</li>
+<li>Medição de recuperação do CDC (Issue #58): recuperação seletiva por chave leu apenas 17 itens (mediana de 1,319 s) contra 3.080.009 eventos na releitura completa (mediana de 2,847 s).</li>
+<li>Auditoria e testes de integração: 360 testes passando na suíte completa sem skips, 39 verificações dbt (<code>PASS=39</code>) e 6 verificações nativas da auditoria Gold E3.</li>
+</ul>
+<p><strong>O que surpreendeu</strong></p>
+<ul>
+<li>A recuperação por chave no CDC utilizou busca por índice primário (<code>Index Scan</code>), eliminando a necessidade de varredura completa da tabela e reduzindo o tempo de processamento pela metade em relação ao merge completo.</li>
+<li>A ordenação da suíte de testes exigiu executar a auditoria Gold antes dos cenários de teste de integração que inserem vistorias sintéticas, evitando falsos positivos de violação de SLA de frescor.</li>
+</ul>
+<p><strong>O que foi decidido</strong></p>
+<ul>
+<li>ADR 0008: Definida a tabela Delta <code>eventos_vistoria</code> como fonte única e canônica de eventos analíticos, unificando carga inicial, CDC e janelas de dado atrasado.</li>
+<li>Migração 0009 / Issue #57: Restrição de datas finitas em UTC (anos 1 a 9999) na origem, rejeitando dados inconsistentes antes da escrita na camada analítica.</li>
+<li>Issue #58: Criados os comandos <code>reprocessar-fila-cdc</code> e <code>tratar-desvio-cdc</code> com registro de recibos em <code>tratamentos_cdc</code> sem dados pessoais.</li>
+<li>Entrega 4: Finalizado o Painel Analítico E4 estático gerado via Python/Plotly (<code>docs/painel.html</code>), integrado ao MkDocs e workflow do GitHub Actions.</li>
+</ul>
+<p><strong>Pendências para a Semana seguinte</strong></p>
+<ul>
+<li>[ ] Revisão humana final e autorização do merge dos PRs integrados na branch main</li>
+<li>[ ] Preparação dos materiais e slides da defesa da Entrega 3 e 4</li>
 </ul>
 
 

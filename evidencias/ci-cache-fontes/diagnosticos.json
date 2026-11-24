@@ -1,0 +1,16 @@
+{
+  "tentativas_excluidas": [
+    {
+      "run_id": 45473371890,
+      "tentativa": 2,
+      "conclusao": "cancelled",
+      "motivo": "Cache encontrado, mas tar recebeu Permission denied porque o Docker criou o bind como root; caiu em novo download. Interrompida para diagnóstico."
+    },
+    {
+      "run_id": 45478583454,
+      "tentativa": 1,
+      "conclusao": "failure",
+      "motivo": "O novo teste de permissões precisava do workflow, ausente na imagem. Falhou antes da carga. Corrigido com bind somente de leitura na etapa de testes."
+    }
+  ]
+}

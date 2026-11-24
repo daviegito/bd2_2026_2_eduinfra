@@ -1,0 +1,19 @@
+{
+  "metodo": "Antes/depois; uma execução válida por cenário. As revisões diferem pela preparação de diretórios e montagem do workflow para o teste; leitores, modelos, Compose e dependências são idênticos.",
+  "baseline_103_segundos": 1166.0,
+  "frio_segundos": 974.0,
+  "quente_segundos": 329.0,
+  "economia_vs_frio_segundos": 645.0,
+  "reducao_vs_frio_pct": 66.2,
+  "reducao_vs_baseline_pct": 71.8,
+  "preparo_frio_segundos": 559.0,
+  "preparo_quente_segundos": 13.0,
+  "restauracao_quente_segundos": 3.0,
+  "zip_hashes_e_tamanhos_csv_iguais": true,
+  "leitores_modelos_compose_dependencias_iguais": true,
+  "integracao_completa_aprovada_nos_dois_cenarios": true,
+  "frio_commit": "ff0e2d7b14bcf577e2974b71b5a9e516d24d2052",
+  "quente_commit": "fc68efdc6a7a0e57af8d5a98581a2de6f9fe44df",
+  "frio_url": "https://github.com/daviegito/bd2_2026_2_eduinfra/actions/runs/45473371890/attempts/1",
+  "quente_url": "https://github.com/daviegito/bd2_2026_2_eduinfra/actions/runs/45479758756/attempts/1"
+}

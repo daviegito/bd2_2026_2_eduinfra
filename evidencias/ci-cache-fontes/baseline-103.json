@@ -1,0 +1,63 @@
+{
+  "run_id": 45468098049,
+  "tentativa": 1,
+  "commit": "fad64ad882cea0dd03f2fe9d5da1ed10e03beb54",
+  "url": "https://github.com/daviegito/bd2_2026_2_eduinfra/actions/runs/45468098049/attempts/1",
+  "conclusao": "success",
+  "segundos_job": 1166.0,
+  "segundos_desde_criacao": 1168.0,
+  "etapas": {
+    "Set up job": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Run actions/checkout@v4": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Run actions/setup-python@v5": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Instalar ferramentas de documentação": {
+      "segundos": 7.0,
+      "conclusao": "success"
+    },
+    "Construir e testar a Gold com as fontes reais": {
+      "segundos": 1121.0,
+      "conclusao": "success"
+    },
+    "Conferir a auditoria e os testes do painel": {
+      "segundos": 19.0,
+      "conclusao": "success"
+    },
+    "Gerar o painel real": {
+      "segundos": 7.0,
+      "conclusao": "success"
+    },
+    "Mostrar logs do pipeline se houver falha": {
+      "segundos": 0.0,
+      "conclusao": "skipped"
+    },
+    "Gerar o site e verificar a inclusão do painel": {
+      "segundos": 2.0,
+      "conclusao": "success"
+    },
+    "Run actions/upload-artifact@v4": {
+      "segundos": 3.0,
+      "conclusao": "success"
+    },
+    "Post Run actions/setup-python@v5": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    },
+    "Post Run actions/checkout@v4": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Complete job": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    }
+  }
+}

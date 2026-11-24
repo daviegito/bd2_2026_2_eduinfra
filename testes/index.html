@@ -642,6 +642,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../metricas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Métricas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../projeto/" class="md-nav__link">
         
   
@@ -920,6 +948,17 @@
     <span class="md-ellipsis">
       
         Validar a documentação
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#experimento-de-desempenho-do-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experimento de desempenho do workflow
       
     </span>
   </a>
@@ -1924,6 +1963,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#experimento-de-desempenho-do-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experimento de desempenho do workflow
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2041,6 +2091,10 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 <td><code>tests/test_insert_only.py</code></td>
 </tr>
 <tr>
+<td>Definições de métricas</td>
+<td><code>tests/test_metricas.py</code></td>
+</tr>
+<tr>
 <td>Frescor e SLA da Gold</td>
 <td><code>tests/test_frescor.py</code>, <code>tests/test_frescor_integracao.py</code> (exige <code>construir-gold</code> antes)</td>
 </tr>
@@ -2066,6 +2120,15 @@ arquivos de dados gerados.</p>
 </span></code></pre></div>
 <p>A validação gera o site e acusa links internos quebrados. A renderização dos
 diagramas também deve ser conferida no navegador.</p>
+<h2 id="experimento-de-desempenho-do-workflow">Experimento de desempenho do workflow<a class="headerlink" href="#experimento-de-desempenho-do-workflow" title="Permanent link">&para;</a></h2>
+<p>O experimento de <a href="../evidencias/ci-cache-fontes/">cache dos arquivos públicos</a>
+antecipa os testes do painel e do preparo das fontes, restaura somente ZIPs e mede
+o preparo antes de iniciar a integração. Carga, CDC, dbt, auditoria e painel continuam
+sendo executados sobre banco novo. A comparação remota registrou
+16 min 14 s sem reaproveitamento e 5 min 29 s com cache; o relatório documenta
+as revisões, os hashes, os testes mantidos e os limites dessa amostra.</p>
+<p>Isso não substitui o workflow de suíte geral solicitado na #99. O cache e seu
+bind em <code>/dados/bruto</code> são habilitados apenas pelo override <code>docker-compose.ci.yml</code>.</p>
 
 
 
