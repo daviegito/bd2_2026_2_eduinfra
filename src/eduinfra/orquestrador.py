@@ -65,10 +65,15 @@ def construir_gold() -> None:
     _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
 
 
+@asset(deps=[construir_gold], retry_policy=RETRY)
+def publicar_metricas() -> None:
+    rodar("publicar-metricas")
+
+
 # Os testes de dados do #63 só rodavam dentro do construir-gold, que o pipeline não chama mais.
 # Sem retry: um teste que falha aponta defeito na Gold, e repetir não corrige.
 # A completude das definições de métricas (#82) roda no mesmo comando.
-@asset(deps=[construir_gold])
+@asset(deps=[publicar_metricas])
 def testar_gold() -> None:
     _executar([sys.executable, "-m", "unittest", "tests.test_e3_gold", "tests.test_metricas"], "testes de dados da Gold")
 
@@ -90,6 +95,7 @@ ETAPAS_DO_PIPELINE = [
     publicar_linha_de_base,
     processar_janelas,
     construir_gold,
+    publicar_metricas,
     testar_gold,
     medir_frescor,
 ]
