@@ -1,29 +1,3 @@
-"""Papéis com privilégio mínimo, recorte de linha e de coluna (issue #86).
-
-Cada serviço de rotina deixa de usar o superusuário do Compose e passa a
-autenticar com o papel da sua função:
-
-- ``eduinfra_carga``     escrita da origem transacional (ingestão) e da camada de
-  monitoramento; não replica e não escreve na Gold;
-- ``eduinfra_dbt``       transformação: lê a entrada e escreve só na Gold;
-- ``eduinfra_cdc``       replicação lógica e leitura das tabelas publicadas;
-- ``eduinfra_cdc_bancada`` replicação lógica para as ferramentas de bancada do CDC,
-  com escrita em ``tecnico``/``vistoria``/``vistoria_item`` e execução dos
-  artefatos gerados; a ingestão de rotina não a usa;
-- ``eduinfra_painel``    leitura exclusiva da Gold (e da camada de métricas);
-- ``eduinfra_analise``   leitura analítica, sem as colunas pessoais de ``tecnico``;
-- ``eduinfra_tecnico_df``/``eduinfra_tecnico_sp`` leem só a fila da sua UF pela
-  visão ``public.fila_vistoria``, sem acesso direto a escola/município;
-- ``eduinfra_orquestrador`` pertence a ``eduinfra_carga`` e ``eduinfra_dbt``; é o
-  dono de ``fonte`` e ``entrada_transformacao`` e não tem ``DATABASE_URL_ADMIN``.
-
-O superusuário continua sendo usado apenas por ``migrar``/``reverter`` (o CLI
-troca a conexão por ``DATABASE_URL_ADMIN`` só nesse caminho).
-
-Revision ID: 0010
-Revises: 0009
-"""
-
 import os
 
 from alembic import op
@@ -34,21 +8,20 @@ down_revision = "0009"
 branch_labels = None
 depends_on = None
 
-# Mesma senha local para todos os papéis: o que separa os serviços é o privilégio,
-# não a senha. Em produção, sobrescreva EDUINFRA_SENHA_PAPEIS por ambiente.
-SENHA_PADRAO = "senha_local_dos_papeis"
+# Em produção, sobrescreva EDUINFRA_SENHA_PAPEIS por ambiente.
+SENHAS_PADRAO = {
+    "eduinfra_carga": ("EDUINFRA_SENHA_CARGA", "senha_local_carga"),
+    "eduinfra_dbt": ("EDUINFRA_SENHA_DBT", "senha_local_dbt"),
+    "eduinfra_cdc": ("EDUINFRA_SENHA_CDC", "senha_local_cdc"),
+    "eduinfra_cdc_bancada": ("EDUINFRA_SENHA_CDC_BANCADA", "senha_local_cdc_bancada"),
+    "eduinfra_painel": ("EDUINFRA_SENHA_PAINEL", "senha_local_painel"),
+    "eduinfra_analise": ("EDUINFRA_SENHA_ANALISE", "senha_local_analise"),
+    "eduinfra_tecnico_df": ("EDUINFRA_SENHA_TECNICO_DF", "senha_local_tecnico_df"),
+    "eduinfra_tecnico_sp": ("EDUINFRA_SENHA_TECNICO_SP", "senha_local_tecnico_sp"),
+    "eduinfra_orquestrador": ("EDUINFRA_SENHA_ORQUESTRADOR", "senha_local_orquestrador"),
+}
 
-PAPEIS = (
-    "eduinfra_carga",
-    "eduinfra_dbt",
-    "eduinfra_cdc",
-    "eduinfra_cdc_bancada",
-    "eduinfra_painel",
-    "eduinfra_analise",
-    "eduinfra_tecnico_df",
-    "eduinfra_tecnico_sp",
-    "eduinfra_orquestrador",
-)
+PAPEIS = tuple(SENHAS_PADRAO.keys())
 
 # UF da fila lida por cada papel de técnico. Em produção, este mapa é alimentado
 # a partir de tecnico.lotacao_uf para o papel correspondente ao operador logado.
@@ -75,8 +48,8 @@ GRANTS = [
     "grant select on public.item_infraestrutura to eduinfra_dbt",
     "grant select on public.municipio, public.escola to eduinfra_dbt",
     # cdc: leitura das tabelas publicadas (a replicação exige SELECT)
-    "grant select on public.vistoria to eduinfra_cdc",
-    "grant select on public.vistoria_item to eduinfra_cdc",
+    "grant select on public.vistoria, public.vistoria_item to eduinfra_cdc",
+    "grant select on public.escola, public.municipio to eduinfra_cdc",
     # cdc_bancada: as ferramentas de bancada criam técnico/vistorias e leem o
     # cadastro para montar a linha de base; a ingestão de rotina usa eduinfra_cdc.
     "grant select, insert on public.tecnico to eduinfra_cdc_bancada",
@@ -101,6 +74,7 @@ COLUNAS_TECNICO = ("id", "lotacao_uf", "ativo", "registrado_em")
 # dona do monitoramento e da comparação.
 ESQUEMAS = {
     "gold": "eduinfra_dbt",
+    "metricas": "eduinfra_dbt",
     "fonte": "eduinfra_orquestrador",
     "entrada_transformacao": "eduinfra_orquestrador",
     "monitoramento": "eduinfra_carga",
@@ -252,16 +226,23 @@ REMOVER_RLS = [
 def _conexao_psycopg():
     return op.get_bind().connection.dbapi_connection
 
-
-def _senha() -> str:
-    return os.environ.get("EDUINFRA_SENHA_PAPEIS", SENHA_PADRAO)
+def _senhas_por_papel() -> dict[str, str]:
+    senhas = {
+        papel: os.environ.get(variavel, padrao)
+        for papel, (variavel, padrao) in SENHAS_PADRAO.items()
+    }
+    if len(set(senhas.values())) != len(PAPEIS):
+        raise RuntimeError(
+            "Cada papel deve receber uma senha distinta; "
+            "verifique as variáveis EDUINFRA_SENHA_*."
+        )
+    return senhas
 
 
 def _criar_papeis() -> None:
     conexao = _conexao_psycopg()
-    senha = sql.Literal(_senha())
+    senhas = _senhas_por_papel()
     for papel in PAPEIS:
-        # Idempotente: a migração pode ser reaplicada num ambiente já preparado.
         conexao.execute(
             sql.SQL(
                 "do $$ begin "
@@ -270,22 +251,15 @@ def _criar_papeis() -> None:
                 "end if; end $$"
             ).format(sql.Literal(papel), sql.Identifier(papel))
         )
-        # O corpo do DO acima é texto: o identificador já sai renderizado.
         conexao.execute(
-            sql.SQL("alter role {} with login password {}").format(sql.Identifier(papel), senha)
+            sql.SQL("alter role {} with login password {}").format(
+                sql.Identifier(papel), sql.Literal(senhas[papel])
+            )
         )
-    # O consumidor do slot lógico precisa do atributo de replicação.
     conexao.execute("alter role eduinfra_cdc with replication")
-    # As ferramentas de bancada do CDC (demonstrar-cdc, comparar-ingestao,
-    # medir-recarga, auditar-cdc) rodam na imagem de carga e criam/leem slots.
-    # A ingestão de rotina não usa replicação; o atributo fica só para elas.
     conexao.execute("alter role eduinfra_cdc_bancada with replication")
-    # Garante que uma base criada por uma versão anterior da 0010 perca o
-    # atributo: a carga de rotina não deve replicar.
     conexao.execute("alter role eduinfra_carga with noreplication")
-    # O orquestrador executa as duas metades do pipeline com os mesmos privilégios.
     conexao.execute("grant eduinfra_carga, eduinfra_dbt to eduinfra_orquestrador")
-
 
 def _preparar_esquemas() -> None:
     for esquema, dono in ESQUEMAS.items():
@@ -369,19 +343,18 @@ def _conceder_esquemas() -> None:
     # Comparação é uma ferramenta de bancada, do papel de carga.
     op.execute("grant usage, create on schema comparacao to eduinfra_carga")
 
-    # Camada de métricas é opcional (entrega da #98). Se existir, o painel só lê.
+    # Métricas (entrega #103): dbt/orquestrador constroem; painel e análise só leem.
+    op.execute("grant usage on schema metricas to eduinfra_carga, eduinfra_painel, eduinfra_analise, eduinfra_orquestrador")
+    op.execute("grant usage, create on schema metricas to eduinfra_dbt, eduinfra_orquestrador")
+    op.execute("grant select on all tables in schema metricas to eduinfra_painel, eduinfra_analise")
     op.execute(
-        """
-        do $$
-        begin
-            if exists (select 1 from pg_namespace where nspname = 'metricas') then
-                execute 'grant usage on schema metricas to eduinfra_painel, eduinfra_analise';
-                execute 'grant select on all tables in schema metricas to eduinfra_painel, eduinfra_analise';
-            end if;
-        end
-        $$
-        """
-    )
+        "alter default privileges for role eduinfra_dbt in schema metricas "
+        "grant select on tables to eduinfra_painel, eduinfra_analise"
+        )
+    op.execute(
+        "alter default privileges for role eduinfra_orquestrador in schema metricas "
+        "grant select on tables to eduinfra_painel, eduinfra_analise"
+        )
 
     # Privilégios padrão: objetos criados depois da migração (pelo dbt) já nascem
     # legíveis para o painel/análise, sem um GRANT manual a cada construção.
