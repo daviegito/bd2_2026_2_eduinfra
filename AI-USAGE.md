@@ -696,3 +696,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** `uv run pytest -m "not integracao"` aprovado; `mkdocs build
   --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
 - **Quem revisou:** lucasarruda9.
+
+## 2026-11-24 — Camada semântica e ADR de consumo (#83 / #7)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** comparar uma ferramenta de métricas com views PostgreSQL, expor a
+  interface nome/filtros e registrar a decisão de consumo e ETL reverso.
+- **O que foi aproveitado:** protótipos MetricFlow/PostgreSQL e catálogo executável,
+  publicador transacional, contrato SQL/Python/CLI, etapa após dbt no Dagster,
+  testes de filtros/supressão e ADR 0006 proposto com perdas e gatilhos de revisão.
+- **Autorização:** bancada isolada, dependências experimentais e PostgreSQL
+  descartável aprovados pelo usuário; regras gerais permitem os arquivos da tarefa.
+- **Como foi verificado:** comparação A/B em seis cenários e cinco repetições,
+  incluindo mudança isolada do mínimo; testes de integração sobre fixture sintética,
+  oráculo Python independente e testes do grafo Dagster. Evidências e comandos em
+  `docs/evidencias/issue-83/`. O painel de outro integrante não foi migrado nesta branch.
+- **Limites:** sem validação de carga nacional/concorrência, usabilidade humana,
+  escrita de ETL reverso ou tamanho final de imagem com MetricFlow; o custo instalado
+  foi comparado em venvs. A prioridade de vistoria continua como rascunho.
+- **Quem revisou:** revisão humana pendente; ADR proposto para a Squad.
