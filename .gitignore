@@ -28,3 +28,6 @@ transformacao/dbt_packages/
 transformacao/.user.yml
 
 dbt-docs/
+
+# Arquivos públicos restaurados pelo cache do CI
+.cache/fontes-inep/
