@@ -65,7 +65,10 @@ jobs:
         run: |
           docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
           test -s docs/painel.html
-          grep -q 'Desempenho x ' docs/painel.html
+          # Confere componentes funcionais sem depender do texto dos títulos.
+          grep -Fq 'id="dados-painel"' docs/painel.html
+          grep -Fq 'id="painel-calculos"' docs/painel.html
+          grep -Fq 'id="grafico-relacao"' docs/painel.html
       - name: Mostrar logs do pipeline se houver falha
         if: failure()
         run: docker compose logs banco carga cdc

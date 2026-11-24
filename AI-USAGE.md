@@ -716,3 +716,20 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   escrita de ETL reverso ou tamanho final de imagem com MetricFlow; o custo instalado
   foi comparado em venvs. A prioridade de vistoria continua como rascunho.
 - **Quem revisou:** revisão humana pendente; ADR proposto para a Squad.
+
+## 2026-11-24 — Corrigir a checagem do painel no CI (#103)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** investigar e corrigir a falha do CI, conferindo também o estado dos demais PRs.
+- **O que foi aproveitado:** troca da busca pelo título antigo por três marcadores
+  funcionais do HTML: dados, cálculos e gráfico de relação. Mantém a geração real
+  do painel, a checagem de arquivo não vazio e as demais validações do workflow.
+- **Como foi verificado:** a checagem antiga falhou sobre o HTML atual; a nova
+  passou. Remover cada componente, ou fornecer apenas o título antigo sem o painel,
+  continuou retornando falha. Testes do painel: 13 aprovados e quatro ignorados
+  pela ausência de Node no contêiner. `git diff --check` sem erros.
+- **Limites:** o resultado integral no GitHub depende da nova execução após o push.
+  O #104 apresentou a mesma falha do título antigo; o #101 falhou antes, na
+  inicialização dos papéis, conforme registrado no review.
+- **Quem revisou:** revisão humana pendente.
