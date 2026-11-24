@@ -70,6 +70,7 @@ def test_testes_de_dados_rodam_depois_do_dbt_e_sem_retry(chamadas):
 
     assert chamadas == ["tests.test_e3_gold tests.test_metricas"]
 
+
 def test_gold_e_frescor_entram_na_execucao_agendada():
     assert {construir_gold.key, testar_gold.key, medir_frescor.key} <= set(agenda.job.selection.resolve(ETAPAS_DO_PIPELINE))
 
