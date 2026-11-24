@@ -1,0 +1,20 @@
+{
+  "fontes": [
+    {
+      "fonte": "censo",
+      "zip_reutilizado": true,
+      "segundos_preparo": 0.602,
+      "bytes_zip": 33829396,
+      "bytes_csv": 217925280,
+      "sha256_zip": "ae29d81d45ddecef59e11eda39788cbfd30dfa1cc71be9d29f23051fc2d640db"
+    },
+    {
+      "fonte": "enem",
+      "zip_reutilizado": true,
+      "segundos_preparo": 8.052,
+      "bytes_zip": 526073856,
+      "bytes_csv": 1683449589,
+      "sha256_zip": "69ee52dbcdae61410a7b2c31b776f396f2da30febfc1d2856e9e0ad064c76fb1"
+    }
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "run_id": 45479758756,
+  "tentativa": 1,
+  "commit": "fc68efdc6a7a0e57af8d5a98581a2de6f9fe44df",
+  "url": "https://github.com/daviegito/bd2_2026_2_eduinfra/actions/runs/45479758756/attempts/1",
+  "conclusao": "success",
+  "segundos_job": 329.0,
+  "segundos_desde_criacao": 332.0,
+  "etapas": {
+    "Set up job": {
+      "segundos": 3.0,
+      "conclusao": "success"
+    },
+    "Run actions/checkout@v4": {
+      "segundos": 4.0,
+      "conclusao": "success"
+    },
+    "Run actions/setup-python@v5": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Instalar ferramentas de documentação": {
+      "segundos": 9.0,
+      "conclusao": "success"
+    },
+    "Preparar diretórios do cache no runner": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    },
+    "Construir as imagens": {
+      "segundos": 106.0,
+      "conclusao": "success"
+    },
+    "Conferir o painel e o preparo das fontes antes da carga nacional": {
+      "segundos": 11.0,
+      "conclusao": "success"
+    },
+    "Restaurar os ZIPs públicos do INEP": {
+      "segundos": 3.0,
+      "conclusao": "success"
+    },
+    "Preparar e medir as fontes sem iniciar o banco": {
+      "segundos": 13.0,
+      "conclusao": "success"
+    },
+    "Salvar os ZIPs antes das etapas de integração": {
+      "segundos": 0.0,
+      "conclusao": "skipped"
+    },
+    "Construir e testar a Gold com as fontes reais": {
+      "segundos": 165.0,
+      "conclusao": "success"
+    },
+    "Conferir a auditoria da Gold": {
+      "segundos": 4.0,
+      "conclusao": "success"
+    },
+    "Gerar o painel real": {
+      "segundos": 5.0,
+      "conclusao": "success"
+    },
+    "Guardar os tempos de preparo das fontes": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Mostrar logs do pipeline se houver falha": {
+      "segundos": 0.0,
+      "conclusao": "skipped"
+    },
+    "Gerar o site e verificar a inclusão do painel": {
+      "segundos": 1.0,
+      "conclusao": "success"
+    },
+    "Run actions/upload-artifact@v4": {
+      "segundos": 2.0,
+      "conclusao": "success"
+    },
+    "Post Run actions/setup-python@v5": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    },
+    "Post Run actions/checkout@v4": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    },
+    "Complete job": {
+      "segundos": 0.0,
+      "conclusao": "success"
+    }
+  }
+}

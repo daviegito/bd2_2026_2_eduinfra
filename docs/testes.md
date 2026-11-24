@@ -106,3 +106,15 @@ uv run mkdocs build --strict --site-dir /tmp/eduinfra-site
 
 A validação gera o site e acusa links internos quebrados. A renderização dos
 diagramas também deve ser conferida no navegador.
+
+## Experimento de desempenho do workflow
+
+O experimento de [cache dos arquivos públicos](evidencias/ci-cache-fontes/README.md)
+antecipa os testes do painel e do preparo das fontes, restaura somente ZIPs e mede
+o preparo antes de iniciar a integração. Carga, CDC, dbt, auditoria e painel continuam
+sendo executados sobre banco novo. A comparação remota registrou
+16 min 14 s sem reaproveitamento e 5 min 29 s com cache; o relatório documenta
+as revisões, os hashes, os testes mantidos e os limites dessa amostra.
+
+Isso não substitui o workflow de suíte geral solicitado na #99. O cache e seu
+bind em `/dados/bruto` são habilitados apenas pelo override `docker-compose.ci.yml`.
