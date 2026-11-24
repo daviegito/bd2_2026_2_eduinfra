@@ -675,3 +675,24 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 * **O que foi aproveitado:** a orquestração do Docker Compose e do MkDocs. A montagem local de volumes foi substituída pelo empacotamento (`COPY tests ./tests`) para espelhar o ambiente de produção, preservando os mesmos critérios originais da auditoria E3.
 * **Como foi verificado:** a auditoria E3 executou os 6 testes lendo diretamente o banco relacional (comparando volume com a origem OLTP). O script de demonstração injetou a situação `ERRO_DE_DOMINIO`, falhou o teste apropriado e limpou o banco em seguida. O GitHub Actions executou `validar` e `publicar` com sucesso após injeção das variáveis de ambiente simuladas, gerando o artefato `painel.html` aprovado no modo estrito do MkDocs.
 * **Quem revisou:** apontamentos técnicos e cenários de regressão levantados por `Pedrovargas10` e colaboradores; correções testadas, CI verde e merjado.
+
+### 2026-11-22 — Definição única e versionada das métricas 
+
+- **Ferramenta:** Claude.
+- **O que foi pedido:** levantamento das métricas que já existiam no projeto, calculadas
+  no painel da E3, e um rascunho inicial das definições da #82.
+- **Onde:** `metricas/*.yml`, `docs/metricas.md`, `tests/test_metricas.py`; a etapa
+  `testar_gold` de `src/eduinfra/orquestrador.py` passou a rodar o teste de completude
+  (com o ajuste em `tests/test_orquestrador.py`); `Dockerfile`, `mkdocs.yml` e
+  `docs/testes.md`.
+- **O que foi aproveitado:** o levantamento das regras do painel (média por escola,
+  supressão com menos de 10 escolas, comparação dentro da rede) e o rascunho das
+  fórmulas em SQL, traduzidas do cálculo em JavaScript do painel. Lucas decidiu o
+  formato final (arquivos yml com a fórmula em SQL, versão e histórico no próprio
+  arquivo em vez de um `CHANGELOG.md` separado), cortou os textos explicativos e os
+  campos sem uso, definiu os tópicos e o conteúdo de `docs/metricas.md` e executou as
+  fórmulas no banco do projeto. A `prioridade_vistoria` segue como rascunho para o ETL
+  reverso, com cortes a confirmar pelo grupo.
+- **Como foi verificado:** `uv run pytest -m "not integracao"` aprovado; `mkdocs build
+  --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
+- **Quem revisou:** lucasarruda9.

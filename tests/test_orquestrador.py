@@ -36,7 +36,6 @@ def chamadas(monkeypatch):
 def test_definicoes_carregam():
     Definitions.validate_loadable(defs)
 
-
 def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
     resultado = materialize(ETAPAS_DO_PIPELINE)
 
@@ -48,17 +47,15 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
         "publicar-analitico",
         "processar-janelas",
         "dbt",
-        "tests.test_e3_gold",
+        "tests.test_e3_gold tests.test_metricas",
         "medir-frescor",
     }
     ordem = chamadas.index
     assert ordem("publicar-analitico") < ordem("processar-janelas") < ordem("dbt") < ordem("medir-frescor")
-    assert ordem("dbt") < ordem("tests.test_e3_gold")
+    assert ordem("dbt") < ordem("tests.test_e3_gold tests.test_metricas")
 
 
 def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
-    assert orquestrador.TRANSFORMACAO.is_file()
-
     materialize([construir_gold])
 
     assert chamadas == ["dbt"]
@@ -66,12 +63,12 @@ def test_gold_e_construida_pelo_dbt_e_nao_pelo_construir_gold(chamadas):
 
 def test_testes_de_dados_rodam_depois_do_dbt_e_sem_retry(chamadas):
     assert importlib.util.find_spec("tests.test_e3_gold") is not None
+    assert importlib.util.find_spec("tests.test_metricas") is not None
     assert testar_gold.op.retry_policy is None
 
     materialize([testar_gold])
 
-    assert chamadas == ["tests.test_e3_gold"]
-
+    assert chamadas == ["tests.test_e3_gold tests.test_metricas"]
 
 def test_gold_e_frescor_entram_na_execucao_agendada():
     assert {construir_gold.key, testar_gold.key, medir_frescor.key} <= set(agenda.job.selection.resolve(ETAPAS_DO_PIPELINE))

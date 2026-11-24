@@ -14,6 +14,7 @@ COPY tests ./tests
 COPY alembic ./alembic
 COPY alembic.ini ./
 COPY transformacao ./transformacao
+COPY metricas ./metricas
 RUN uv sync --locked --no-dev --group transformacao
 
 ENTRYPOINT ["uv", "run", "--no-sync", "eduinfra"]
