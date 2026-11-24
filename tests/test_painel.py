@@ -82,6 +82,9 @@ def test_cli_exporta_dados_e_calculos_reais_sem_duplicar_perfis_ou_anos(ambiente
     assert all(escola[3] == "12" for escola in dados["escolas"])
     assert "painel-calculos" in html and "Perguntas que os dados respondem" in html
     assert 'src="https://' not in html
+    assert dados["minimo"] == 10
+    assert "media_enem_escolas" in dados["versoes_metricas"]
+    assert "media_enem_escolas v" in html
 
 
 @pytest.mark.parametrize("estado,esperado", [
