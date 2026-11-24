@@ -1,169 +1,108 @@
-services:
-  banco:
-    image: pgvector/pgvector:pg16
-    # Decodificação lógica do WAL: pré-requisito do CDC da E2 (issue #22).
-    command:
-      - postgres
-      - -c
-      - wal_level=logical
-      - -c
-      - max_replication_slots=10
-      - -c
-      - max_wal_senders=10
-      - -c
-      # A Gold nacional reteve cerca de 940 MiB num único build (issue #60).
-      - max_slot_wal_keep_size=${MAX_SLOT_WAL_KEEP_SIZE:-2GB}
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "${PORTA_POSTGRES:-5432}:5432"
-    volumes:
-      - dados_postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-
-  carga:
-    build: .
-    environment:
-      # Rotina de ingestão usa apenas papéis de privilégio mínimo (sem DATABASE_URL_ADMIN).
-      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      # construir-gold: o orquestrador prepara fonte/entrada e entra como dbt só na Gold.
-      DATABASE_URL_ORQUESTRADOR: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      # Ferramentas de bancada do CDC criam slot e gravam vistorias, sem replicar na rotina.
-      DATABASE_URL_CDC_BANCADA: postgresql://eduinfra_cdc_bancada:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
-      DIRETORIO_DADOS: /dados
-      ANO_CENSO: ${ANO_CENSO:-2024}
-      ANO_ENEM: ${ANO_ENEM:-2024}
-    volumes:
-      - dados_censo:/dados
-      - ./src:/app/src
-      - ./tests:/app/tests
-    depends_on:
-      banco:
-        condition: service_healthy
-    restart: "no"
-    command: ["tudo"]
-
-  migracao:
+migracao:
     build: .
     profiles: [admin]
     environment:
-      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_CARGA:-senha_local_carga}@banco:5432/${POSTGRES_DB}
       DATABASE_URL_ADMIN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
-      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+      EDUINFRA_SENHA_CARGA: ${EDUINFRA_SENHA_CARGA:-senha_local_carga}
+      EDUINFRA_SENHA_DBT: ${EDUINFRA_SENHA_DBT:-senha_local_dbt}
+      EDUINFRA_SENHA_CDC: ${EDUINFRA_SENHA_CDC:-senha_local_cdc}
+      EDUINFRA_SENHA_CDC_BANCADA: ${EDUINFRA_SENHA_CDC_BANCADA:-senha_local_cdc_bancada}
+      EDUINFRA_SENHA_PAINEL: ${EDUINFRA_SENHA_PAINEL:-senha_local_painel}
+      EDUINFRA_SENHA_ANALISE: ${EDUINFRA_SENHA_ANALISE:-senha_local_analise}
+      EDUINFRA_SENHA_TECNICO_DF: ${EDUINFRA_SENHA_TECNICO_DF:-senha_local_tecnico_df}
+      EDUINFRA_SENHA_TECNICO_SP: ${EDUINFRA_SENHA_TECNICO_SP:-senha_local_tecnico_sp}
+      EDUINFRA_SENHA_ORQUESTRADOR: ${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}
     depends_on:
       banco:
         condition: service_healthy
     restart: "no"
     command: ["migrar"]
 
-  transformacao:
-    build: .
-    profiles: [analitico]
-    environment:
-      # Ingestão do ENEM usa o orquestrador (membro de carga); o dbt constrói a
-      # Gold com o papel de transformação, passado em DATABASE_URL_TRANSFORMACAO.
-      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DIRETORIO_DADOS: /dados
-      FONTE_EVENTOS: ${FONTE_EVENTOS:-/dados/warehouse/eventos_vistoria}
-      FONTE_ENEM: ${FONTE_ENEM:-}
-      ANO_ENEM: ${ANO_ENEM:-2024}
-      URL_ENEM: ${URL_ENEM:-https://download.inep.gov.br/microdados/microdados_enem_2024.zip}
-      DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
-      POSTGRES_USER: eduinfra_dbt
-      POSTGRES_PASSWORD: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
-      POSTGRES_DB: ${POSTGRES_DB}
-      PGHOST: banco
-      DBT_SCHEMA: gold
-      DBT_TARGET_PATH: /dados/dbt
-      DBT_LOG_PATH: /dados/dbt_logs
-    volumes:
-      - dados_censo:/dados
-      - ./src:/app/src
-      - ./transformacao:/app/transformacao
-    depends_on:
-      carga:
-        condition: service_completed_successfully
-      cdc:
-        condition: service_healthy
-    entrypoint: ["uv", "run", "--no-sync", "python", "transformacao/scripts/executar.py"]
-    restart: "no"
-
-  cdc:
+    carga:
     build: .
     environment:
-      # O papel do CDC tem REPLICATION e SELECT apenas nas tabelas publicadas.
-      DATABASE_URL: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DIRETORIO_DADOS: /dados
-    volumes:
-      - dados_censo:/dados
-    depends_on:
-      carga:
-        condition: service_completed_successfully
-    restart: unless-stopped
-    command: ["cdc", "--continuo", "--intervalo", "2"]
-    healthcheck:
-      test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/cdc_vivo) )) -lt 60"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      # A primeira passada depois de subir levou de cerca de 50 a 86 s no Docker
-      # Desktop (medido); só então o consumidor cria /tmp/cdc_vivo.
-      start_period: 120s
-
-  orquestrador:
-    build: .
-    entrypoint: ["uv", "run", "--no-sync", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "eduinfra.orquestrador"]
-    environment:
-      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_CARGA:-senha_local_carga}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_DBT:-senha_local_dbt}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_ORQUESTRADOR: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_CDC: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_CDC:-senha_local_cdc}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_CDC_BANCADA: postgresql://eduinfra_cdc_bancada:${EDUINFRA_SENHA_CDC_BANCADA:-senha_local_cdc_bancada}@banco:5432/${POSTGRES_DB}
       DIRETORIO_DADOS: /dados
       ANO_CENSO: ${ANO_CENSO:-2024}
       ANO_ENEM: ${ANO_ENEM:-2024}
-      URL_ENEM: ${URL_ENEM:-https://download.inep.gov.br/microdados/microdados_enem_2024.zip}
       DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
-      DBT_TARGET_PATH: /dados/dbt
-      DBT_LOG_PATH: /dados/dbt_logs
-      DAGSTER_HOME: /dagster
-      AGENDA_ORQUESTRADOR: ${AGENDA_ORQUESTRADOR:-0 3 * * *}
-    ports:
-      - "${PORTA_DAGSTER:-3000}:3000"
     volumes:
       - dados_censo:/dados
-      - dados_dagster:/dagster
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: "no"
+    command: ["tudo"]
+
+    transformacao:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_DBT:-senha_local_dbt}@banco:5432/${POSTGRES_DB}
+      POSTGRES_HOST: banco
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: eduinfra_dbt
+      POSTGRES_PASSWORD: ${EDUINFRA_SENHA_DBT:-senha_local_dbt}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+      ANO_CENSO: ${ANO_CENSO:-2024}
+      ANO_ENEM: ${ANO_ENEM:-2024}
+      DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
+    volumes:
+      - dados_censo:/dados
     depends_on:
       carga:
         condition: service_completed_successfully
-      cdc:
-        condition: service_healthy
-    restart: unless-stopped
+    restart: "no"
 
-  painel:
+    cdc:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_CDC:-senha_local_cdc}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_CDC: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_CDC:-senha_local_cdc}@banco:5432/${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+    volumes:
+      - dados_censo:/dados
+    depends_on:
+      banco:
+        condition: service_healthy
+    command: ["cdc", "--continuo"]
+
+    orquestrador:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_DBT:-senha_local_dbt}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_CDC: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_CDC:-senha_local_cdc}@banco:5432/${POSTGRES_DB}
+      POSTGRES_HOST: banco
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: eduinfra_dbt
+      POSTGRES_PASSWORD: ${EDUINFRA_SENHA_DBT:-senha_local_dbt}
+      POSTGRES_DB: ${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
+      ANO_CENSO: ${ANO_CENSO:-2024}
+      ANO_ENEM: ${ANO_ENEM:-2024}
+      DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
+      AGENDA_ORQUESTRADOR: ${AGENDA_ORQUESTRADOR:-0 3 * * *}
+    volumes:
+      - dados_censo:/dados
+    depends_on:
+      banco:
+        condition: service_healthy
+
+    painel:
     build: .
     profiles: [analitico]
     environment:
-      # O painel só lê a Gold; nenhuma tabela da origem é alcançável.
-      DATABASE_URL: postgresql://eduinfra_painel:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      ANO_ENEM: ${ANO_ENEM:-2024}
+      DATABASE_URL: postgresql://eduinfra_painel:${EDUINFRA_SENHA_PAINEL:-senha_local_painel}@banco:5432/${POSTGRES_DB}
+      DIRETORIO_DADOS: /dados
     volumes:
-      - ./docs:/app/docs
-      - ./src:/app/src
+      - dados_censo:/dados
     depends_on:
-      transformacao:
-        condition: service_completed_successfully
-    restart: "no"
-    command: ["gerar-painel"]
-
-volumes:
-  dados_postgres:
-  dados_censo:
-  dados_dagster:
+      banco:
+        condition: service_healthy

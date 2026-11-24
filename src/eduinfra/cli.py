@@ -38,12 +38,44 @@ log = logging.getLogger("eduinfra")
 def main(argumentos: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
 
-    parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
-                                           "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
-                                           "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
-                                           "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
-                                           "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "demonstrar-acesso"))
+    parser.add_argument(
+        "comando",
+        choices=(
+            "migrar",
+            "reverter",
+            "carregar",
+            "ingerir",
+            "caracterizar",
+            "comparar-modelagem",
+            "comparar-compressao",
+            "processar-janelas",
+            "reprocessar-janela",
+            "demonstrar-atraso",
+            "tudo",
+            "gerar_amostra",
+            "preparar-slot-cdc",
+            "publicar-analitico",
+            "cdc",
+            "demonstrar-cdc",
+            "comparar-ingestao",
+            "publicar-analitica",
+            "comparar-particionamento",
+            "medir-cdc",
+            "medir-recarga",
+            "auditar-cdc",
+            "reprocessar-fila-cdc",
+            "tratar-desvio-cdc",
+            "comparar-consulta",
+            "construir-gold",
+            "comparar-granularidades",
+            "medir-frescor",
+            "demonstrar-frescor",
+            "ingerir-enem",
+            "medir-cobertura-enem",
+            "gerar-painel",
+            "demonstrar-acesso",
+        ),
+    )
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
@@ -85,6 +117,10 @@ def main(argumentos: list[str] | None = None) -> int:
         except ValueError as erro:
             log.error("%s", erro)
             return 1
+
+    if opcoes.comando == "migrar":
+        command.upgrade(_alembic(configuracao), opcoes.revisao)
+        return 0
 
     if opcoes.comando == "reverter":
         command.downgrade(_alembic(configuracao), opcoes.revisao)
@@ -178,9 +214,7 @@ def main(argumentos: list[str] | None = None) -> int:
         print(otimizacao_consulta.formatar_markdown(comparacao))
         return 0 if comparacao.mesmo_resultado else 1
 
-    if opcoes.comando in ("migrar", "tudo"):
-        command.upgrade(_alembic(configuracao), opcoes.revisao)
-
+    # Nota: "migrar" foi isolado acima; "tudo" executa apenas a rotina do papel de carga.
     if opcoes.comando in ("carregar", "ingerir", "tudo"):
         resultado = ingerir(configuracao, forcar=opcoes.forcar)
         if resultado.ignorada:
@@ -251,7 +285,16 @@ def _auditar_gold() -> bool:
     return True
 
 
-COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
+COMANDOS_ANALITICOS = (
+    "preparar-slot-cdc",
+    "publicar-analitico",
+    "cdc",
+    "demonstrar-cdc",
+    "comparar-ingestao",
+    "medir-cdc",
+    "medir-recarga",
+    "auditar-cdc",
+)
 
 # Ferramentas de bancada que criam slot/privilégios de replicação; a ingestão de
 # rotina (publicar-analitico) não usa o papel de replicação.
@@ -263,7 +306,10 @@ ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
 def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
     if opcoes.comando in COMANDOS_DE_BANCADA_CDC:
         configuracao = replace(configuracao, dsn=configuracao.dsn_cdc_bancada or configuracao.dsn)
-    if opcoes.comando == "publicar-analitico":
+    if opcoes.comando == "preparar-slot-cdc":
+        fluxo_cdc.preparar_slot(configuracao)
+        log.info("cdc: slot lógico pronto")
+    elif opcoes.comando == "publicar-analitico":
         _publicar_linha_de_base(configuracao, opcoes.forcar)
     elif opcoes.comando == "cdc" and opcoes.continuo:
         fluxo_cdc.acompanhar(configuracao, opcoes.intervalo, ARQUIVO_DE_VIDA)
@@ -307,8 +353,12 @@ def _imprimir(texto: str, saida: Path | None) -> None:
 
 def _alembic(configuracao: Configuracao) -> Config:
     # Só migrar/reverter usam o superusuário; o resto da CLI fica no papel de rotina.
-    if configuracao.dsn_admin:
-        os.environ["EDUINFRA_ALEMBIC_URL"] = configuracao.dsn_admin
+    if not configuracao.dsn_admin:
+        raise RuntimeError(
+            "DATABASE_URL_ADMIN não definida; execute as migrações via "
+            "'docker compose --profile admin run --rm migracao'."
+        )
+    os.environ["EDUINFRA_ALEMBIC_URL"] = configuracao.dsn_admin
     return Config(str(configuracao.arquivo_alembic))
 
 

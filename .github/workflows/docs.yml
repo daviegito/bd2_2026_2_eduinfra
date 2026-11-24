@@ -7,17 +7,23 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/fluxo_cdc.py"
+      - "src/eduinfra/controle_de_acesso.py"
+      - "src/eduinfra/microdados.py"
+      - "src/eduinfra/configuracao.py"
       - "tests/test_painel.py"
+      - "tests/consumo/test_painel.py"
       - "tests/test_e3_gold.py"
+      - "tests/test_controle_de_acesso.py"
+      - "tests/test_preparar_fontes_ci.py"
+      - "alembic/**"
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
       - "docker-compose.yml"
       - "docker-compose.ci.yml"
       - "transformacao/scripts/preparar_fontes_ci.py"
-      - "tests/test_preparar_fontes_ci.py"
-      - "src/eduinfra/microdados.py"
-      - "src/eduinfra/configuracao.py"
   push:
     branches: [main]
     paths:
@@ -25,17 +31,23 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/fluxo_cdc.py"
+      - "src/eduinfra/controle_de_acesso.py"
+      - "src/eduinfra/microdados.py"
+      - "src/eduinfra/configuracao.py"
       - "tests/test_painel.py"
+      - "tests/consumo/test_painel.py"
       - "tests/test_e3_gold.py"
+      - "tests/test_controle_de_acesso.py"
+      - "tests/test_preparar_fontes_ci.py"
+      - "alembic/**"
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
       - "docker-compose.yml"
       - "docker-compose.ci.yml"
       - "transformacao/scripts/preparar_fontes_ci.py"
-      - "tests/test_preparar_fontes_ci.py"
-      - "src/eduinfra/microdados.py"
-      - "src/eduinfra/configuracao.py"
   workflow_dispatch:
 
 permissions:
@@ -53,6 +65,15 @@ jobs:
       POSTGRES_USER: eduinfra
       POSTGRES_PASSWORD: eduinfra
       POSTGRES_DB: eduinfra
+      EDUINFRA_SENHA_CARGA: senha_local_carga
+      EDUINFRA_SENHA_DBT: senha_local_dbt
+      EDUINFRA_SENHA_CDC: senha_local_cdc
+      EDUINFRA_SENHA_CDC_BANCADA: senha_local_cdc_bancada
+      EDUINFRA_SENHA_PAINEL: senha_local_painel
+      EDUINFRA_SENHA_ANALISE: senha_local_analise
+      EDUINFRA_SENHA_TECNICO_DF: senha_local_tecnico_df
+      EDUINFRA_SENHA_TECNICO_SP: senha_local_tecnico_sp
+      EDUINFRA_SENHA_ORQUESTRADOR: senha_local_orquestrador
       PORTA_POSTGRES: 5432
       ANO_CENSO: 2024
       ANO_ENEM: 2024
@@ -72,7 +93,7 @@ jobs:
         id: diretorios-cache
         run: mkdir -p .cache/fontes-inep/enem
       - name: Construir as imagens
-        run: docker compose build carga cdc transformacao
+        run: docker compose build carga migracao cdc transformacao
       - name: Conferir o painel e o preparo das fontes antes da carga nacional
         run: |
           docker compose run --no-deps --rm -v "$PWD/.github/workflows:/app/.github/workflows:ro" --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py tests/test_preparar_fontes_ci.py -q
@@ -97,6 +118,10 @@ jobs:
             .cache/fontes-inep/censo_escolar_${{ env.ANO_CENSO }}.zip
             .cache/fontes-inep/enem/microdados_enem_${{ env.ANO_ENEM }}.zip
           key: ${{ steps.fontes-cache.outputs.cache-primary-key }}
+      - name: Preparar banco, aplicar migrações e criar slot lógico do CDC
+        run: |
+          docker compose --profile admin run --rm migracao
+          docker compose run --no-deps --rm cdc preparar-slot-cdc
       - name: Construir e testar a Gold com as fontes reais
         run: docker compose run --rm transformacao
       - name: Conferir a auditoria da Gold
@@ -108,7 +133,6 @@ jobs:
           docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev pytest tests/test_controle_de_acesso.py -q -m "not integracao"
       - name: Validar controle de acesso no PostgreSQL (integração)
         run: |
-          docker compose --profile admin run --rm migracao
           docker compose run --no-deps --rm carga ingerir
           docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev pytest tests/test_controle_de_acesso.py -q -m integracao
       - name: Gerar o painel real
@@ -128,7 +152,7 @@ jobs:
           if-no-files-found: ignore
       - name: Mostrar logs do pipeline se houver falha
         if: failure()
-        run: docker compose logs banco carga cdc
+        run: docker compose logs banco migracao carga cdc
       - name: Gerar o site e verificar a inclusão do painel
         run: |
           mkdocs build --strict

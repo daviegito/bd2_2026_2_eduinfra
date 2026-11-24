@@ -27,6 +27,8 @@ class Configuracao:
     dsn_transformacao: str | None = None
     # Orquestrador (carga + dbt) da opção nula construir-gold e do pipeline.
     dsn_orquestrador: str | None = None
+    # Consumidor de rotina do CDC (possui REPLICATION e leitura das tabelas publicadas).
+    dsn_cdc: str | None = None
     # Papel de bancada do CDC (replicação sem ser o consumidor de rotina).
     dsn_cdc_bancada: str | None = None
 
@@ -52,5 +54,6 @@ def carregar_configuracao() -> Configuracao:
         dsn_admin=os.environ.get("DATABASE_URL_ADMIN"),
         dsn_transformacao=os.environ.get("DATABASE_URL_TRANSFORMACAO"),
         dsn_orquestrador=os.environ.get("DATABASE_URL_ORQUESTRADOR"),
+        dsn_cdc=os.environ.get("DATABASE_URL_CDC"),
         dsn_cdc_bancada=os.environ.get("DATABASE_URL_CDC_BANCADA"),
     )
