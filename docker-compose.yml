@@ -76,6 +76,8 @@ services:
       DBT_LOG_PATH: /dados/dbt_logs
     volumes:
       - dados_censo:/dados
+      - ./src:/app/src
+      - ./transformacao:/app/transformacao
     depends_on:
       carga:
         condition: service_completed_successfully
@@ -143,6 +145,7 @@ services:
       ANO_ENEM: ${ANO_ENEM:-2024}
     volumes:
       - ./docs:/app/docs
+      - ./src:/app/src
     depends_on:
       transformacao:
         condition: service_completed_successfully

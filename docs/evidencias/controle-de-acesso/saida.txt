@@ -3,17 +3,38 @@
 Demonstração de controle de acesso (issue #86)
 [OK] leitura permitida (painel -> gold): esperado SELECT aceito; obtido 181065 linhas
 [OK] escrita negada (painel -> municipio): esperado permission denied; obtido permission denied
-[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (148996 de outras UFs ocultas)
+[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (149006 de outras UFs ocultas)
 [OK] coluna negada (análise -> tecnico): esperado nome e matricula negados; obtido id/lotacao_uf liberados; nome e matricula negados
 4/4 casos como esperado
 
-# Atributos dos papéis (nenhum superusuário; cdc e carga replicam)
+# Atributos dos papéis (nenhum superusuário; só cdc e cdc_bancada replicam)
 
-eduinfra_analise         super=False repl=False bypassrls=False
-eduinfra_carga           super=False repl=True  bypassrls=False
-eduinfra_cdc             super=False repl=True  bypassrls=False
-eduinfra_dbt             super=False repl=False bypassrls=False
-eduinfra_orquestrador    super=False repl=False bypassrls=False
-eduinfra_painel          super=False repl=False bypassrls=False
-eduinfra_tecnico_df      super=False repl=False bypassrls=False
-eduinfra_tecnico_sp      super=False repl=False bypassrls=False
+ rolname               | rolsuper | rolbypassrls | rolreplication | rolcanlogin
+------------------------+----------+--------------+----------------+-------------
+ eduinfra_analise       | f        | f            | f              | t
+ eduinfra_carga         | f        | f            | f              | t
+ eduinfra_cdc           | f        | f            | t              | t
+ eduinfra_cdc_bancada   | f        | f            | t              | t
+ eduinfra_dbt           | f        | f            | f              | t
+ eduinfra_orquestrador  | f        | f            | f              | t
+ eduinfra_painel        | f        | f            | f              | t
+ eduinfra_tecnico_df    | f        | f            | f              | t
+ eduinfra_tecnico_sp    | f        | f            | f              | t
+
+# Conferências de catálogo (has_table_privilege)
+
+- painel lê gold.dim_escola; não lê public.vistoria, entrada_transformacao.enem_escola_ano nem monitoramento.frescor_gold.
+- dbt escreve em gold; não cria tabela em entrada_transformacao, não insere em monitoramento nem em public.vistoria.
+- analise lê colunas id/lotacao_uf/ativo/registrado_em de tecnico; nome e matricula negados.
+- tecnico não lê public.escola/municipio direto; lê public.fila_vistoria filtrada pela UF do papel.
+- carga lê gold; não escreve em gold e não tem REPLICATION.
+
+# Observação sobre o ambiente de desenvolvimento
+
+`auditar-cdc` e `test_e3_gold` continuam apontando 34 itens da origem fora do Delta
+porque o slot do CDC tinha sido invalidado (`lost`) antes da recriação, antes
+desta mudança. É estado herdado do banco de desenvolvimento, não permissão
+negada: `demonstrar-cdc` (5/5), o `dbt build` (39/39) e `construir-gold`
+terminaram sem erro de privilégio. `construir-gold` apaga o schema `gold` e
+reconstrói só os marts de infraestrutura; para o painel completo, rode
+`transformacao` depois.

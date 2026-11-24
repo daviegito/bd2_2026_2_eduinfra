@@ -287,7 +287,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
 | `docker compose run --build --rm transformacao` | prepara Censo, ENEM e eventos canônicos, constrói e testa a Gold com dbt e gera sua documentação; fluxo completo da E3 |
 | `docker compose run --rm carga construir-gold` | construtor SQL de infraestrutura, mantido para comparação com dbt; não entrega o fato ENEM exigido pelo painel |
-| `docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel` | exporta `docs/painel.html` a partir da Gold completa |
+| `docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel` | exporta `docs/painel.html` a partir da Gold completa, como `eduinfra_painel` |
 | `docker compose run --rm carga auditar-cdc` | confere consistência, fila, contrato e saúde do slot |
 | `docker compose run --rm carga reprocessar-fila-cdc --responsavel operador-01 --motivo esquema_corrigido` | recupera os INSERTs rejeitados pela chave, mantendo itens inválidos pendentes e registrando recibos ([procedimento](docs/metricas-cdc.md)) |
 | `docker compose run --rm carga tratar-desvio-cdc --lsn <decimal> --chave <chave> --responsavel operador-01 --motivo desvio_revisado` | registra o aceite explícito de uma alteração fora do insert-only (`UPDATE`, `DELETE`, `TRUNCATE`) que está na fila, pela ocorrência exata |
@@ -352,7 +352,7 @@ Para gerar localmente com Censo, ENEM e eventos canônicos reais:
 
 ```bash
 docker compose run --build --rm transformacao
-docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
 uv run mkdocs serve
 ```
 
@@ -370,8 +370,8 @@ causal nem controla INSE, que não está disponível neste contrato. Grupos com
 menos de dez escolas com média válida são suprimidos e a regra é informada.
 
 Os gráficos leem exclusivamente fatos e dimensões Gold. A cobertura completa
-ENEM × Censo usa também o retrato `entrada_transformacao.enem_escola_ano`, pois
-o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
+ENEM × Censo usa `gold.stg_enem_escola_ano` (retrato derivado da Silver do ENEM),
+pois o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
 com perfil temporal conhecido ficam explícitos, sem converter dados ausentes em
 zero. O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica
 o mesmo artefato validado; ausência do painel ou de dados obrigatórios falha.

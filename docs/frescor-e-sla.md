@@ -72,7 +72,10 @@ este SLA inclui esse trecho e a construção da Gold.
   num horário fixo, a vistoria registrada logo depois espera quase 24 h. A margem
   cobre a construção e uma nova tentativa se a primeira falhar.
 
-O valor é ajustável com `medir-frescor --sla-horas`.
+O valor é ajustável com `medir-frescor --sla-horas`. O `construir-gold` roda
+como `eduinfra_orquestrador` e entra como `eduinfra_dbt` só na escrita da Gold;
+`medir-frescor` registra a leitura como `eduinfra_carga`, que tem `SELECT` na
+Gold e na origem, sem ser superusuário.
 
 ## Registro e falha
 

@@ -137,7 +137,12 @@ uv run eduinfra tudo
 | Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
 | Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
 
-Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
+Use o prefixo `docker compose run --rm carga` antes do comando da CLI. A CLI
+troca de papel conforme o comando: `construir-gold` usa
+`DATABASE_URL_ORQUESTRADOR` (e entra como `eduinfra_dbt` na Gold); as ferramentas
+de bancada do CDC (`demonstrar-cdc`, `comparar-ingestao`, `medir-cdc`,
+`medir-recarga`, `auditar-cdc`) usam `DATABASE_URL_CDC_BANCADA`; os demais usam
+`DATABASE_URL` (`eduinfra_carga`).
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos
 podem variar em outra máquina. A comparação de ingestão mede captura, sem a
 escrita no Delta. Para a suíte automatizada, consulte [Testes](testes.md).

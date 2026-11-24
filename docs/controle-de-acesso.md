@@ -121,8 +121,8 @@ docker compose run --rm --no-deps carga demonstrar-cdc           # 5 etapas do C
 docker compose run --rm --no-deps carga auditar-cdc
 ```
 
-- `transformacao`: download/ingestão do ENEM como `eduinfra_orquestrador`,
-  `preparar`/dbt como `eduinfra_dbt`. O `dbt build` terminou com **39/39** testes
+- `transformacao`: download/ingestão do ENEM, `preparar` da fonte/entrada e
+  dbt como `eduinfra_dbt` na Gold. O `dbt build` terminou com **39/39** testes
   e a Gold com 181.065 escolas e 3.078.105 itens de vistoria.
 - `painel` exportou `docs/painel.html` lendo só `gold` e a cobertura do ENEM.
 - `demonstrar-cdc` confirmou a criação/leitura/avanço do slot como

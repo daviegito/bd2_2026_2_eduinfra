@@ -41,9 +41,8 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
     resultado = materialize(ETAPAS_DO_PIPELINE)
 
     assert resultado.success
-    assert chamadas[:2] == ["migrar", "ingerir"]
+    assert chamadas[0] == "ingerir"
     assert set(chamadas) == {
-        "migrar",
         "ingerir",
         "publicar-analitica",
         "publicar-analitico",
