@@ -30,7 +30,16 @@ services:
   carga:
     build: .
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      # Rotina de ingestão usa o papel de privilégio mínimo; o superusuário
+      # aparece só em DATABASE_URL_ADMIN, consumido por migrar/reverter.
+      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_ADMIN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      # construir-gold: o orquestrador prepara fonte/entrada e entra como dbt só na Gold.
+      DATABASE_URL_ORQUESTRADOR: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      # Ferramentas de bancada do CDC criam slot e gravam vistorias, sem replicar na rotina.
+      DATABASE_URL_CDC_BANCADA: postgresql://eduinfra_cdc_bancada:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
       DIRETORIO_DADOS: /dados
       ANO_CENSO: ${ANO_CENSO:-2024}
       ANO_ENEM: ${ANO_ENEM:-2024}
@@ -48,15 +57,18 @@ services:
     build: .
     profiles: [analitico]
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      # Ingestão do ENEM usa o orquestrador (membro de carga); o dbt constrói a
+      # Gold com o papel de transformação, passado em DATABASE_URL_TRANSFORMACAO.
+      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
       DIRETORIO_DADOS: /dados
       FONTE_EVENTOS: ${FONTE_EVENTOS:-/dados/warehouse/eventos_vistoria}
       FONTE_ENEM: ${FONTE_ENEM:-}
       ANO_ENEM: ${ANO_ENEM:-2024}
       URL_ENEM: ${URL_ENEM:-https://download.inep.gov.br/microdados/microdados_enem_2024.zip}
       DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: eduinfra_dbt
+      POSTGRES_PASSWORD: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
       POSTGRES_DB: ${POSTGRES_DB}
       PGHOST: banco
       DBT_SCHEMA: gold
@@ -75,7 +87,8 @@ services:
   cdc:
     build: .
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      # O papel do CDC tem REPLICATION e SELECT apenas nas tabelas publicadas.
+      DATABASE_URL: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
       DIRETORIO_DADOS: /dados
     volumes:
       - dados_censo:/dados
@@ -97,7 +110,9 @@ services:
     build: .
     entrypoint: ["uv", "run", "--no-sync", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "eduinfra.orquestrador"]
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
       DIRETORIO_DADOS: /dados
       ANO_CENSO: ${ANO_CENSO:-2024}
       ANO_ENEM: ${ANO_ENEM:-2024}
@@ -118,6 +133,21 @@ services:
       cdc:
         condition: service_healthy
     restart: unless-stopped
+
+  painel:
+    build: .
+    profiles: [analitico]
+    environment:
+      # O painel só lê a Gold; nenhuma tabela da origem é alcançável.
+      DATABASE_URL: postgresql://eduinfra_painel:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      ANO_ENEM: ${ANO_ENEM:-2024}
+    volumes:
+      - ./docs:/app/docs
+    depends_on:
+      transformacao:
+        condition: service_completed_successfully
+    restart: "no"
+    command: ["gerar-painel"]
 
 volumes:
   dados_postgres:

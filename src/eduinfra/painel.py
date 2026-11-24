@@ -39,8 +39,7 @@ def conectar(configuracao):
 def preparar_base(conexao, ano):
     exigidas = {
         ("gold", "dim_escola"), ("gold", "dim_municipio"), ("gold", "dim_item"),
-        ("gold", "dim_escola_infraestrutura"), ("gold", "fato_desempenho_escola_ano"),
-        ("entrada_transformacao", "enem_escola_ano"),
+        ("gold", "dim_escola_infraestrutura"), ("gold", "fato_desempenho_escola_ano"), ("gold", "stg_enem_escola_ano"),
     }
     presentes = set(conexao.execute("""select table_schema, table_name
         from information_schema.tables where table_catalog = 'pg'""").fetchall())
@@ -80,15 +79,15 @@ def ler_cobertura(conexao, ano):
     total, distintas, encontradas, mascaradas = conexao.execute("""select count(*),
         count(distinct e.co_entidade), count(c.co_entidade),
         count(*) filter (where c.co_entidade is null and e.poucos_participantes)
-        from pg.entrada_transformacao.enem_escola_ano e
+        from pg.gold.stg_enem_escola_ano e
         left join base_censo c using (co_entidade) where e.ano = ?""", [ano]).fetchone()
     diferentes = conexao.execute("""select count(*) from (
-        (select e.co_entidade from pg.entrada_transformacao.enem_escola_ano e
+        (select e.co_entidade from pg.gold.stg_enem_escola_ano e
          join base_censo c using (co_entidade) where e.ano = ?
          except select co_entidade from base_enem)
         union all
         (select co_entidade from base_enem except
-         select e.co_entidade from pg.entrada_transformacao.enem_escola_ano e
+         select e.co_entidade from pg.gold.stg_enem_escola_ano e
          join base_censo c using (co_entidade) where e.ano = ?))""", [ano, ano]).fetchone()[0]
     if not total or total != distintas or diferentes:
         raise RuntimeError("Gold ENEM difere da cobertura de entrada; reexecute transformacao antes do painel")

@@ -1,0 +1,19 @@
+# Saída de `demonstrar-acesso` (base de desenvolvimento, Censo 2024)
+
+Demonstração de controle de acesso (issue #86)
+[OK] leitura permitida (painel -> gold): esperado SELECT aceito; obtido 181065 linhas
+[OK] escrita negada (painel -> municipio): esperado permission denied; obtido permission denied
+[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (148996 de outras UFs ocultas)
+[OK] coluna negada (análise -> tecnico): esperado nome e matricula negados; obtido id/lotacao_uf liberados; nome e matricula negados
+4/4 casos como esperado
+
+# Atributos dos papéis (nenhum superusuário; cdc e carga replicam)
+
+eduinfra_analise         super=False repl=False bypassrls=False
+eduinfra_carga           super=False repl=True  bypassrls=False
+eduinfra_cdc             super=False repl=True  bypassrls=False
+eduinfra_dbt             super=False repl=False bypassrls=False
+eduinfra_orquestrador    super=False repl=False bypassrls=False
+eduinfra_painel          super=False repl=False bypassrls=False
+eduinfra_tecnico_df      super=False repl=False bypassrls=False
+eduinfra_tecnico_sp      super=False repl=False bypassrls=False

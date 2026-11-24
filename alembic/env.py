@@ -11,7 +11,8 @@ if config.config_file_name is not None:
 
 
 def url_do_ambiente() -> str:
-    dsn = os.environ.get("DATABASE_URL")
+    # Só o caminho de migração usa o superusuário; o CLI o injeta aqui.
+    dsn = os.environ.get("EDUINFRA_ALEMBIC_URL") or os.environ.get("DATABASE_URL")
     if not dsn:
         raise RuntimeError(
             "DATABASE_URL não definida. Copie .env.example para .env ou exporte a variável."

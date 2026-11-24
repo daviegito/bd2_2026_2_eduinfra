@@ -36,12 +36,8 @@ def rodar(*argumentos: str) -> None:
 
 
 @asset(retry_policy=RETRY)
-def migrar() -> None:
-    rodar("migrar")
-
-
-@asset(deps=[migrar], retry_policy=RETRY)
 def ingerir() -> None:
+    # O esquema é migrado pelo serviço de carga (que mantém DATABASE_URL_ADMIN).
     rodar("ingerir")
 
 
@@ -62,6 +58,8 @@ def processar_janelas() -> None:
 
 @asset(deps=[processar_janelas], retry_policy=RETRY)
 def construir_gold() -> None:
+    # O script usa DATABASE_URL (orquestrador, para ingerir o ENEM) e
+    # DATABASE_URL_TRANSFORMACAO (dbt, dono da Gold e das entradas).
     _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
 
 
@@ -83,7 +81,6 @@ def reprocessar_janela(context: AssetExecutionContext) -> None:
 
 
 ETAPAS_DO_PIPELINE = [
-    migrar,
     ingerir,
     publicar_analitica,
     publicar_linha_de_base,

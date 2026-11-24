@@ -15,7 +15,7 @@ from eduinfra import cli, painel
 @pytest.fixture
 def ambiente(monkeypatch, tmp_path):
     conexao = duckdb.connect()
-    conexao.execute("attach ':memory:' as pg; create schema pg.gold; create schema pg.entrada_transformacao")
+    conexao.execute("attach ':memory:' as pg; create schema pg.gold")
     conexao.execute("""create table pg.gold.dim_item as
         select 'biblioteca' as item_codigo, 'Biblioteca' as descricao
         union all select 'internet', 'Internet'""")
@@ -41,7 +41,7 @@ def ambiente(monkeypatch, tmp_path):
                490.0+i as media_lc, 510.0+i as media_mt, 600.0+i as media_redacao,
                10 as n_participantes, date '2024-11-03' as data_referencia_infraestrutura
         from range(1,21) r(i)""")
-    conexao.execute("""create table pg.entrada_transformacao.enem_escola_ano as
+    conexao.execute("""create table pg.gold.stg_enem_escola_ano as
         select co_entidade, ano, false as poucos_participantes from pg.gold.fato_desempenho_escola_ano
         union all select 60000001, 2024, true""")
     configuracao = SimpleNamespace(dsn="fixture", ano_enem=2024)
@@ -174,7 +174,7 @@ def test_fonte_inconsistente_falha_antes_de_exportar(ambiente, defeito):
     elif defeito == "referencias_distintas":
         conexao.execute("update pg.gold.fato_desempenho_escola_ano set data_referencia_infraestrutura = date '2024-10-01' where co_entidade = 1")
     else:
-        conexao.execute("update pg.entrada_transformacao.enem_escola_ano set co_entidade = 999 where co_entidade = 1")
+        conexao.execute("update pg.gold.stg_enem_escola_ano set co_entidade = 999 where co_entidade = 1")
     with pytest.raises(RuntimeError):
         cli.main(["gerar-painel"])
     assert not destino.exists()

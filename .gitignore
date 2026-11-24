@@ -28,3 +28,4 @@ transformacao/dbt_packages/
 transformacao/.user.yml
 
 dbt-docs/
+docs/painel.html

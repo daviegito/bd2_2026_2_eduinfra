@@ -38,7 +38,8 @@ com [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/daviegito/bd2_2026_2_eduinfra.git
 cd bd2_2026_2_eduinfra
 cp .env.example .env
-# Edite .env: ajuste POSTGRES_PASSWORD e a senha correspondente em DATABASE_URL.
+# Edite .env: troque POSTGRES_PASSWORD e EDUINFRA_SENHA_PAPEIS (a mesma senha
+# dos papéis de privilégio mínimo criados pela migração 0010).
 docker compose up --build
 ```
 
@@ -91,6 +92,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
 | `docker compose run --rm carga demonstrar-cdc` | Demonstra captura, interrupção e reentrega sem duplicação |
 | `docker compose run --rm carga demonstrar-atraso` | Demonstra o tratamento de eventos atrasados |
+| `docker compose run --rm carga demonstrar-acesso` | Demonstra leitura, escrita negada, recorte de linha e de coluna ([Controle de acesso](controle-de-acesso.md)) |
 | `docker compose run --rm carga comparar-ingestao` | Compara captura incremental com captura pelo slot, sem medir a escrita Delta |
 | `docker compose run --rm carga medir-cdc --repeticoes 30` | Insere vistorias de teste, mede latência e ordem com o consumidor ligado e termina com a auditoria |
 | `docker compose run --rm carga auditar-cdc` | Só lê: confere checksum, contagem por operação, fila de erros, esquema e frescor. Sai com código 1 se houver violação |
@@ -128,6 +130,7 @@ uv run eduinfra tudo
 | --- | --- | --- |
 | Retomada e deduplicação | `demonstrar-cdc` | [CDC e semântica de entrega](cdc-e-semantica-de-entrega.md#demonstracao) |
 | Vistoria digitada com atraso | `demonstrar-atraso` | [Dados atrasados](dado-atrasado.md#demonstracao) |
+| Papéis, recorte de linha e de coluna | `demonstrar-acesso` | [Controle de acesso](controle-de-acesso.md#demonstracao) |
 | Formato e compressão | `comparar-compressao --repeticoes 15` | [Compressão](serializacao-compressao.md#resultados) |
 | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
 | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |

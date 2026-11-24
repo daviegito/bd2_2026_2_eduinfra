@@ -1,6 +1,8 @@
 import argparse
 import logging
+import os
 import sys
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -17,6 +19,7 @@ from eduinfra import (
     comparacao_latencia,
     comparacao_modelagem,
     comparacao_particionamento,
+    controle_de_acesso,
     demonstracao_cdc,
     fluxo_cdc,
     frescor,
@@ -40,7 +43,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "demonstrar-acesso"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
@@ -67,6 +70,9 @@ def main(argumentos: list[str] | None = None) -> int:
 
     configuracao = carregar_configuracao()
 
+    if opcoes.comando == "demonstrar-acesso":
+        return controle_de_acesso.executar()
+
     if opcoes.comando in ("reprocessar-fila-cdc", "tratar-desvio-cdc"):
         try:
             if opcoes.comando == "reprocessar-fila-cdc":
@@ -88,7 +94,10 @@ def main(argumentos: list[str] | None = None) -> int:
         return _executar_analitico(opcoes, configuracao)
 
     if opcoes.comando == "construir-gold":
-        resumo = modelo_analitico.construir(configuracao)
+        # A opção nula é executada pelo orquestrador: ele prepara a fonte e entra
+        # como dbt só na etapa que escreve a Gold.
+        alvo = replace(configuracao, dsn=configuracao.dsn_orquestrador or configuracao.dsn)
+        resumo = modelo_analitico.construir(alvo)
         fonte = resumo.fonte
         log.info(
             "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",
@@ -97,6 +106,7 @@ def main(argumentos: list[str] | None = None) -> int:
         for tabela, linhas in resumo.linhas.items():
             log.info("gold.%s: %d linhas", tabela, linhas)
         # Cada construção registra o frescor; a violação só reprova em medir-frescor.
+        # O frescor lê a origem (vistoria), então fica com o papel de carga.
         frescor.medir(configuracao.dsn, comando="construir-gold")
         return 0 if _auditar_gold() else 1
 
@@ -243,10 +253,16 @@ def _auditar_gold() -> bool:
 
 COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
 
+# Ferramentas de bancada que criam slot/privilégios de replicação; a ingestão de
+# rotina (publicar-analitico) não usa o papel de replicação.
+COMANDOS_DE_BANCADA_CDC = ("demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
+
 ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
 
 
 def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
+    if opcoes.comando in COMANDOS_DE_BANCADA_CDC:
+        configuracao = replace(configuracao, dsn=configuracao.dsn_cdc_bancada or configuracao.dsn)
     if opcoes.comando == "publicar-analitico":
         _publicar_linha_de_base(configuracao, opcoes.forcar)
     elif opcoes.comando == "cdc" and opcoes.continuo:
@@ -290,6 +306,9 @@ def _imprimir(texto: str, saida: Path | None) -> None:
 
 
 def _alembic(configuracao: Configuracao) -> Config:
+    # Só migrar/reverter usam o superusuário; o resto da CLI fica no papel de rotina.
+    if configuracao.dsn_admin:
+        os.environ["EDUINFRA_ALEMBIC_URL"] = configuracao.dsn_admin
     return Config(str(configuracao.arquivo_alembic))
 
 

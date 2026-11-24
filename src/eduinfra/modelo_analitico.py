@@ -32,11 +32,34 @@ log = logging.getLogger(__name__)
 
 PADRAO_DE_CODIGO_DE_ITEM = re.compile(r"^[a-z_]+$")
 
+# A Gold é reconstruída a cada execução. O dono do esquema (papel do dbt) não pode
+# recriar o esquema (exigiria CREATE no banco), então apagamos os objetos e mantemos
+# o esquema criado pela migração 0010.
+LIMPAR_GOLD = """
+do $$
+declare r record;
+begin
+    for r in
+        select c.relname, c.relkind
+        from pg_class c
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'gold' and c.relkind in ('r', 'p', 'v', 'm')
+    loop
+        if r.relkind in ('r', 'p') then
+            execute format('drop table if exists gold.%I cascade', r.relname);
+        elsif r.relkind = 'v' then
+            execute format('drop view if exists gold.%I cascade', r.relname);
+        elsif r.relkind = 'm' then
+            execute format('drop materialized view if exists gold.%I cascade', r.relname);
+        end if;
+    end loop;
+end
+$$
+"""
+
 # Itens que aparecem como coluna booleana na tabela larga. Todos os itens do catálogo
 # viram coluna; a lista é lida do banco para não divergir da migração 0002.
 CONSULTAS_DA_DIMENSAO = [
-    "drop schema if exists gold cascade",
-    "create schema gold",
     # --- dimensões de atributo estável (tipo 1) ---
     """
     create table gold.dim_item as
@@ -79,7 +102,6 @@ CONSULTAS_DA_DIMENSAO = [
 TABELA_DA_FONTE = "fonte.eventos_vistoria"
 
 CONSULTAS_DA_FONTE = [
-    "create schema if not exists fonte",
     f"drop table if exists {TABELA_DA_FONTE}",
     f"""
     create unlogged table {TABELA_DA_FONTE} (
@@ -348,18 +370,42 @@ def construir(configuracao: Configuracao) -> ResumoGold:
                 linha[0]
                 for linha in conexao.execute("select codigo from public.item_infraestrutura order by codigo")
             ]
+            # A fonte e a entrada são do orquestrador; só a Gold é escrita como dbt.
+            conexao.execute("set local role eduinfra_dbt")
+            conexao.execute(LIMPAR_GOLD)
             for etapa in _etapas(itens):
                 etapa(conexao)
+            _conceder_leitura_gold(conexao)
+            conexao.execute("reset role")
 
+        conexao.execute("set role eduinfra_dbt")
         linhas = {
             tabela: conexao.execute(f"select count(*) from gold.{tabela}").fetchone()[0]
             for tabela in TABELAS_DA_GOLD
         }
+        conexao.execute("reset role")
 
     resumo = ResumoGold(linhas=linhas, segundos=time.perf_counter() - inicio, fonte=conferencia)
     log.info("gold construída em %.1f s: %s", resumo.segundos, linhas)
 
     return resumo
+
+
+def _conceder_leitura_gold(conexao: psycopg.Connection) -> None:
+    """Reaplica a leitura da Gold depois do drop/create do esquema (issue #86).
+
+    ``construir-gold`` recria ``gold``; o dono (papel de transformação) devolve
+    USAGE e SELECT à carga, ao painel e à análise para não depender de rodar a
+    migração de novo. Em bases anteriores à 0010 os papéis não existem e o bloco
+    é ignorado.
+    """
+    for papel in ("eduinfra_carga", "eduinfra_painel", "eduinfra_analise"):
+        if conexao.execute("select 1 from pg_roles where rolname = %s", (papel,)).fetchone():
+            conexao.execute(f'grant usage on schema gold to "{papel}"')
+            conexao.execute(f'grant select on all tables in schema gold to "{papel}"')
+            # O drop/create do esquema apaga os privilégios padrão; reaplica para
+            # as próximas tabelas que o dbt criar.
+            conexao.execute(f'alter default privileges in schema gold grant select on tables to "{papel}"')
 
 
 def _carregar_fonte(conexao: psycopg.Connection, configuracao: Configuracao) -> ConferenciaDaFonte:

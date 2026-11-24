@@ -236,7 +236,9 @@ def preparar(conexao: psycopg.Connection, entradas: Entradas) -> dict:
     with conexao.transaction():
         conexao.execute("set transaction isolation level repeatable read")
         conexao.execute("set local TimeZone = 'UTC'")
-        conexao.execute(f"create schema if not exists {SCHEMA}")
+        # A migração 0010 cria o esquema; o papel do dbt não tem CREATE no banco.
+        if conexao.execute("select to_regnamespace(%s) is null", (SCHEMA,)).fetchone()[0]:
+            conexao.execute(f"create schema {SCHEMA}")
         for tabela in tabelas:
             definicao = ", ".join(f"{nome} {tipo}" for nome, tipo in COLUNAS[tabela].items())
             # As views de staging são recriadas pelo build; a Gold materializada não depende delas.

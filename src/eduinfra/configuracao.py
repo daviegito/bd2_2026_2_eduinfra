@@ -21,6 +21,14 @@ class Configuracao:
     arquivo_alembic: Path
     url_enem: str = URL_PADRAO_ENEM
     ano_enem: int = 2024
+    # Superusuário usado apenas por migrar/reverter (issue #86).
+    dsn_admin: str | None = None
+    # Papel da transformação, lido pelo dbt.
+    dsn_transformacao: str | None = None
+    # Orquestrador (carga + dbt) da opção nula construir-gold e do pipeline.
+    dsn_orquestrador: str | None = None
+    # Papel de bancada do CDC (replicação sem ser o consumidor de rotina).
+    dsn_cdc_bancada: str | None = None
 
 
 def carregar_configuracao() -> Configuracao:
@@ -41,4 +49,8 @@ def carregar_configuracao() -> Configuracao:
         arquivo_alembic=raiz / "alembic.ini",
         url_enem=os.environ.get("URL_ENEM", URL_PADRAO_ENEM),
         ano_enem=int(os.environ.get("ANO_ENEM", "2024")),
+        dsn_admin=os.environ.get("DATABASE_URL_ADMIN"),
+        dsn_transformacao=os.environ.get("DATABASE_URL_TRANSFORMACAO"),
+        dsn_orquestrador=os.environ.get("DATABASE_URL_ORQUESTRADOR"),
+        dsn_cdc_bancada=os.environ.get("DATABASE_URL_CDC_BANCADA"),
     )

@@ -63,7 +63,7 @@ jobs:
           docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py -q
       - name: Gerar o painel real
         run: |
-          docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+          docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
           test -s docs/painel.html
           grep -q 'Desempenho x ' docs/painel.html
       - name: Mostrar logs do pipeline se houver falha
