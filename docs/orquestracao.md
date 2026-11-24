@@ -20,7 +20,8 @@ flowchart LR
     INGERIR --> BASE["publicar_linha_de_base"]
     BASE --> JANELAS["processar_janelas"]
     JANELAS --> GOLD["construir_gold"]
-    GOLD --> TESTES["testar_gold"]
+    GOLD --> METRICAS["publicar_metricas"]
+    METRICAS --> TESTES["testar_gold"]
     GOLD --> FRESCOR["medir_frescor"]
     REPROC["reprocessar_janela<br/>(partição mensal)"]
 ```
@@ -29,7 +30,10 @@ flowchart LR
   bem. Se uma falha, as seguintes não rodam.
 - **Gold.** A Gold é construída pelo dbt, com o mesmo script do serviço
   `transformacao`, que também ingere o ENEM.
-- **Testes de dados.** Depois da Gold, o `testar_gold` roda os testes de
+- **Métricas.** Depois do dbt, `publicar_metricas` publica as views e funções do catálogo
+  em uma transação. A etapa tem retry e precisa de permissão de criação no schema
+  `metricas`. Consulte o [contrato de leitura](metricas.md).
+- **Testes de dados.** Depois da publicação das métricas, o `testar_gold` roda os testes de
   `tests/test_e3_gold.py`: esquema, volume, unicidade, integridade referencial,
   distribuição e domínio da situação. Ele não tem retry, porque um teste que falha
   aponta defeito na Gold, e repetir não corrige.

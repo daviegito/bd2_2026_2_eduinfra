@@ -1,0 +1,4 @@
+# Somente para a bancada; não instalar na imagem da aplicação.
+dbt-metricflow[dbt-postgres]==0.16.0
+dbt-core==1.12.6
+dbt-postgres==1.11.0

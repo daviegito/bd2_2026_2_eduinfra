@@ -9,6 +9,7 @@ from pathlib import Path
 import duckdb
 from plotly.offline import get_plotlyjs
 
+from eduinfra import semantica
 from eduinfra.configuracao import carregar_configuracao
 
 MINIMO_ESCOLAS = 10
@@ -108,9 +109,36 @@ def nota_valida(valor):
     return numero if math.isfinite(numero) else None
 
 
-def ler_dados(conexao, ano):
+def ler_metadados_semanticos(dsn, ano):
+    definicoes = semantica.carregar_definicoes()
+    minimo = int(definicoes["media_enem_escolas"]["supressao"]["minimo"])
+    versoes = {nome: str(defn["versao"]) for nome, defn in sorted(definicoes.items())}
+    cobertura_semantica = None
+    if dsn and dsn != "fixture":
+        resposta = semantica.consultar(dsn, "cobertura_enem_censo", {"ano": ano})
+        if resposta["dados"]:
+            linha = resposta["dados"][0]
+            cobertura_semantica = {
+                "entrada": int(linha["escolas_enem"]),
+                "identificadas": int(linha["encontradas"]),
+                "sem_juncao": int(linha["nao_encontradas"]),
+                "mascaradas": int(linha["mascaradas"]),
+            }
+    return {"minimo": minimo, "versoes": versoes, "cobertura": cobertura_semantica}
+
+
+def consultar_metricas_semanticas(dsn, ano, filtros=None):
+    base = {"ano": ano, **(filtros or {})}
+    return {
+        "media_enem_escolas": semantica.consultar(dsn, "media_enem_escolas", base),
+        "cobertura_enem_censo": semantica.consultar(dsn, "cobertura_enem_censo", {"ano": ano}),
+    }
+
+
+def ler_dados(conexao, ano, dsn=None):
     referencia = preparar_base(conexao, ano)
-    cobertura = ler_cobertura(conexao, ano)
+    metadados = ler_metadados_semanticos(dsn, ano)
+    cobertura = metadados["cobertura"] or ler_cobertura(conexao, ano)
     catalogo = conexao.execute("select item_codigo, descricao from pg.gold.dim_item order by item_codigo").fetchall()
     if not catalogo or len({codigo for codigo, _ in catalogo}) != len(catalogo):
         raise RuntimeError("Catálogo Gold vazio ou duplicado; reexecute transformacao")
@@ -134,7 +162,8 @@ def ler_dados(conexao, ano):
         from base_enem order by co_entidade""").fetchall():
         enem.append([indice_escolas[codigo], codificar_itens(itens, catalogo),
                      [nota_valida(nota) for nota in notas], participantes, perfil is not None])
-    return {"ano": ano, "referencia": str(referencia), "minimo": MINIMO_ESCOLAS,
+    return {"ano": ano, "referencia": str(referencia), "minimo": metadados["minimo"],
+            "versoes_metricas": metadados["versoes"],
             "gerado_em": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "itens": catalogo, "metricas": METRICAS, "municipios": municipios,
             "escolas": escolas, "enem": enem, "cobertura": cobertura}
@@ -413,6 +442,8 @@ def renderizar_html(dados):
     serializado = json.dumps(dados, ensure_ascii=False, allow_nan=False, separators=(",", ":"))
     serializado = serializado.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     cobertura = dados["cobertura"]
+    versoes = dados.get("versoes_metricas") or {}
+    rotulo_versoes = "Métricas: " + ", ".join(f"{k} v{v}" for k, v in sorted(versoes.items())) if versoes else "Métricas: catálogo local"
     taxa = 100 * cobertura["identificadas"] / cobertura["entrada"]
     html = r'''<!DOCTYPE html>
 <html lang="pt-BR">
@@ -463,7 +494,7 @@ def renderizar_html(dados):
 <div class="grid"><article class="quadro"><h3>Do ENEM até a análise conjunta</h3><div class="tabela-container"><table><thead><tr><th scope="col">Base nacional</th><th scope="col">Escolas / códigos</th></tr></thead><tbody><tr><td>Códigos de escola na entrada do ENEM</td><td>__ENTRADA__</td></tr><tr><td>Escolas identificadas no Censo</td><td>__IDENTIFICADAS__</td></tr><tr><td>Códigos sem junção</td><td>__SEM_JUNCAO__</td></tr><tr><td>Sem junção e com menos de 10 participantes</td><td>__MASCARADAS__</td></tr></tbody></table></div><p class="legenda">Abaixo de dez participantes, o INEP mascara o código da escola. A entrada usada aqui não oferece os atributos para redistribuir códigos sem junção pelos filtros territoriais.</p></article>
 <article class="quadro"><h3>O que há no recorte atual?</h3><div class="tabela-container" id="tabela-qualidade"></div><p class="legenda">Escolas sem nota permanecem nas contagens de cobertura. Informação de infraestrutura desconhecida não é contada como ausência.</p></article></div>
 <details class="metodo"><summary>Como interpretar estes números</summary><p>Fontes: Censo Escolar e resultados do ENEM __ANO__, processados pela Silver e pela Gold do projeto. A infraestrutura usa os perfis históricos das vistorias e do Censo em __REFERENCIA__. O painel não usa o perfil atual para representar uma data passada.</p><p>A média geral escolar é formada pelos participantes com as cinco notas válidas. Cada área tem seu próprio conjunto de notas válidas. Os resultados do painel são médias simples das médias escolares, sem ponderação por participantes. As populações de cada área podem diferir.</p><p>Grupos com menos de dez escolas com nota válida têm suas médias suprimidas, inclusive após filtrar. Um desvio padrão mostra dispersão entre escolas e não representa intervalo de confiança. Comparações dentro da mesma rede ainda podem misturar contextos socioeconômicos diferentes.</p><p>A infraestrutura considera todas as escolas do Censo no recorte, inclusive as que não oferecem ensino médio. A análise de notas considera apenas o subconjunto identificado no ENEM. Este retrato de __ANO__ não permite medir evolução anual nem efeito causal de investimentos.</p><p>O HTML contém o retrato exportado. Para incorporar novas cargas, gere novamente com <code>eduinfra gerar-painel</code>. Os filtros e gráficos funcionam localmente, inclusive sem conexão à internet.</p></details></section>
-<footer class="rodape">EduInfra AI · Censo e ENEM __ANO__ · Retrato exportado em <span id="data-exportacao"></span></footer>
+<footer class="rodape">EduInfra AI · Censo e ENEM __ANO__ · Retrato exportado em <span id="data-exportacao"></span> · __VERSOES_METRICAS__</footer>
 </main>
 <script type="application/json" id="dados-painel">__DADOS__</script>
 <script id="painel-calculos">__CALCULOS__</script>
@@ -477,6 +508,7 @@ def renderizar_html(dados):
         "__SEM_JUNCAO__": f"{cobertura['sem_juncao']:,}".replace(",", "."),
         "__MASCARADAS__": f"{cobertura['mascaradas']:,}".replace(",", "."),
         "__DADOS__": serializado, "__CALCULOS__": CALCULOS, "__INTERFACE__": INTERFACE,
+        "__VERSOES_METRICAS__": rotulo_versoes,
     }
     # Substituição em uma passada: texto das fontes não vira um novo marcador.
     return re.sub("|".join(map(re.escape, substituicoes)), lambda m: substituicoes[m.group()], html)
@@ -485,7 +517,7 @@ def renderizar_html(dados):
 def gerar_painel():
     configuracao = carregar_configuracao()
     with conectar(configuracao) as conexao:
-        dados = ler_dados(conexao, configuracao.ano_enem)
+        dados = ler_dados(conexao, configuracao.ano_enem, dsn=configuracao.dsn)
     destino = Path("docs/painel.html")
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(renderizar_html(dados), encoding="utf-8")
