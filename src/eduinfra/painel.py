@@ -9,6 +9,7 @@ from pathlib import Path
 import duckdb
 from plotly.offline import get_plotlyjs
 
+from eduinfra import semantica
 from eduinfra.configuracao import carregar_configuracao
 
 MINIMO_ESCOLAS = 10
@@ -108,9 +109,36 @@ def nota_valida(valor):
     return numero if math.isfinite(numero) else None
 
 
-def ler_dados(conexao, ano):
+def ler_metadados_semanticos(dsn, ano):
+    definicoes = semantica.carregar_definicoes()
+    minimo = int(definicoes["media_enem_escolas"]["supressao"]["minimo"])
+    versoes = {nome: str(defn["versao"]) for nome, defn in sorted(definicoes.items())}
+    cobertura_semantica = None
+    if dsn and dsn != "fixture":
+        resposta = semantica.consultar(dsn, "cobertura_enem_censo", {"ano": ano})
+        if resposta["dados"]:
+            linha = resposta["dados"][0]
+            cobertura_semantica = {
+                "entrada": int(linha["escolas_enem"]),
+                "identificadas": int(linha["encontradas"]),
+                "sem_juncao": int(linha["nao_encontradas"]),
+                "mascaradas": int(linha["mascaradas"]),
+            }
+    return {"minimo": minimo, "versoes": versoes, "cobertura": cobertura_semantica}
+
+
+def consultar_metricas_semanticas(dsn, ano, filtros=None):
+    base = {"ano": ano, **(filtros or {})}
+    return {
+        "media_enem_escolas": semantica.consultar(dsn, "media_enem_escolas", base),
+        "cobertura_enem_censo": semantica.consultar(dsn, "cobertura_enem_censo", {"ano": ano}),
+    }
+
+
+def ler_dados(conexao, ano, dsn=None):
     referencia = preparar_base(conexao, ano)
-    cobertura = ler_cobertura(conexao, ano)
+    metadados = ler_metadados_semanticos(dsn, ano)
+    cobertura = metadados["cobertura"] or ler_cobertura(conexao, ano)
     catalogo = conexao.execute("select item_codigo, descricao from pg.gold.dim_item order by item_codigo").fetchall()
     if not catalogo or len({codigo for codigo, _ in catalogo}) != len(catalogo):
         raise RuntimeError("Catálogo Gold vazio ou duplicado; reexecute transformacao")
@@ -134,7 +162,8 @@ def ler_dados(conexao, ano):
         from base_enem order by co_entidade""").fetchall():
         enem.append([indice_escolas[codigo], codificar_itens(itens, catalogo),
                      [nota_valida(nota) for nota in notas], participantes, perfil is not None])
-    return {"ano": ano, "referencia": str(referencia), "minimo": MINIMO_ESCOLAS,
+    return {"ano": ano, "referencia": str(referencia), "minimo": metadados["minimo"],
+            "versoes_metricas": metadados["versoes"],
             "gerado_em": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "itens": catalogo, "metricas": METRICAS, "municipios": municipios,
             "escolas": escolas, "enem": enem, "cobertura": cobertura}
@@ -485,7 +514,7 @@ def renderizar_html(dados):
 def gerar_painel():
     configuracao = carregar_configuracao()
     with conectar(configuracao) as conexao:
-        dados = ler_dados(conexao, configuracao.ano_enem)
+        dados = ler_dados(conexao, configuracao.ano_enem, dsn=configuracao.dsn)
     destino = Path("docs/painel.html")
     destino.parent.mkdir(parents=True, exist_ok=True)
     destino.write_text(renderizar_html(dados), encoding="utf-8")
