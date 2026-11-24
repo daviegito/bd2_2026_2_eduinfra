@@ -13,11 +13,12 @@ ENEM e publicar sua Silver, enquanto o dbt levou cerca de 35 s.
 
 ## Mudança testada
 
-1. Construir imagens e executar os testes existentes do painel e do preparo do cache.
-2. Restaurar **somente os dois ZIPs públicos**, sem banco, Silver, Delta ou Gold.
-3. Baixar os ausentes e extrair os CSVs com as funções normais do projeto, sem iniciar PostgreSQL.
-4. Salvar os ZIPs antes da integração: falhas posteriores não obrigam a baixar tudo novamente.
-5. Executar carga e transformação completas sobre banco novo, com os mesmos testes e validação do painel.
+1. Criar os diretórios do cache com o usuário do runner, antes de qualquer contêiner.
+2. Construir imagens e executar os testes existentes do painel e do preparo do cache.
+3. Restaurar **somente os dois ZIPs públicos**, sem banco, Silver, Delta ou Gold.
+4. Baixar os ausentes e extrair os CSVs com as funções normais do projeto, sem iniciar PostgreSQL.
+5. Salvar os ZIPs antes da integração: falhas posteriores não obrigam a baixar tudo novamente.
+6. Executar carga e transformação completas sobre banco novo, com os mesmos testes e validação do painel.
 
 `docker-compose.ci.yml` acrescenta o mesmo bind em `/dados/bruto` à carga e à
 transformação. Os demais caminhos continuam no volume compartilhado `dados_censo`,
@@ -46,10 +47,13 @@ uv run --no-sync pytest tests/test_preparar_fontes_ci.py tests/test_painel.py -q
 
 Um servidor HTTP local entrega ZIPs de teste. A primeira execução faz duas
 requisições; outra pasta, recebendo **apenas os ZIPs**, gera os mesmos CSVs sem
-requisições adicionais. Um ZIP sem `RESULTADOS_2024.csv` continua falhando antes
+requisições adicionais. Um teste de permissões executa a ordem real do workflow
+com dois usuários: um cria o bind como Docker/root, outro restaura os arquivos como
+o runner. Ele falhou antes da preparação antecipada de diretórios e passou depois.
+Um ZIP sem `RESULTADOS_2024.csv` continua falhando antes
 de produzir o relatório de sucesso.
 
-Foram 15 testes aprovados e quatro ignorados por falta de Node na imagem de bancada.
+Foram 16 testes aprovados e quatro ignorados por falta de Node na imagem de bancada.
 Uma tentativa de rodar toda a suíte parou na coleta de
 `tests/test_transformacao_property.py`, porque a imagem não tem o extra opcional
 `hypothesis`. Não foram alteradas dependências ou testes da #99 para contornar isso.
@@ -82,3 +86,22 @@ se o gargalo restante é download, imagem, ingestão ou dbt.
 
 **Medições remotas fria/quente: pendentes.** A redução total ainda não foi comprovada.
 A configuração não pula a integração quando ocorre um cache hit.
+
+## Diagnóstico durante a medição remota
+
+A [primeira execução](https://github.com/daviegito/bd2_2026_2_eduinfra/actions/runs/45473371890/attempts/1)
+terminou verde em **974 s (16 min 14 s)**, com os dois ZIPs baixados. O cache de
+559.910.215 bytes foi salvo antes da integração. Tempos e hashes foram preservados
+em `frio.json` e `frio-fontes.json`; a referência anterior está em `baseline-103.json`.
+
+Na tentativa 2, o GitHub encontrou a chave, mas o `tar` não conseguiu escrever em
+`.cache/fontes-inep`: o primeiro contêiner havia criado o bind como root. O fallback
+voltou a baixar os arquivos. A tentativa foi cancelada para diagnosticar e está
+**excluída da comparação de desempenho**. O log registra `Cannot open: Permission denied`
+e `Failed to restore`; não foi uma execução com cache funcional.
+
+A correção cria `.cache/fontes-inep/enem` como runner antes dos contêineres. Não altera
+os leitores, os modelos, os ZIPs nem a política de testes da Gold. A comparação passa
+a registrar explicitamente o commit de cada execução, em vez de alegar uma comparação
+fria/quente da mesma revisão quando houve esse ajuste de preparação dos diretórios.
+A execução com restauração corrigida ainda precisa ser medida.

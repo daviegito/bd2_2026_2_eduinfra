@@ -713,3 +713,19 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Limites:** ganho total remoto ainda depende de execuções fria/quente no GitHub.
   A reorganização da suíte geral atribuída ao Davi na #99 não foi implementada aqui.
 - **Quem revisou:** revisão humana pendente.
+
+## 2026-11-24 — Corrigir propriedade da pasta de cache (#105)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** continuar a comparação real do tempo do CI.
+- **Diagnóstico:** a primeira execução passou sem cache; a tentativa de restauração
+  encontrou a chave, mas falhou com `Permission denied`, pois o primeiro contêiner
+  havia criado o bind como root. A tentativa 2 foi cancelada e excluída da medição.
+- **O que foi aproveitado:** criação antecipada dos diretórios como usuário do runner,
+  sem chmod amplo ou alteração dos modelos/leitores. Teste de regressão com dois
+  usuários reproduziu o erro antes da correção e passou depois. A conferência dos
+  hashes dos ZIPs de teste foi reforçada com valores calculados das entradas HTTP.
+- **Limites:** a medição com restauração corrigida ainda está pendente; o commit de
+  cada execução será registrado para não atribuir equivalência a revisões distintas.
+- **Quem revisou:** revisão humana pendente.

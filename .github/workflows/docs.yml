@@ -68,6 +68,9 @@ jobs:
           python-version: "3.12"
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
+      - name: Preparar diretórios do cache no runner
+        id: diretorios-cache
+        run: mkdir -p .cache/fontes-inep/enem
       - name: Construir as imagens
         run: docker compose build carga cdc transformacao
       - name: Conferir o painel e o preparo das fontes antes da carga nacional
