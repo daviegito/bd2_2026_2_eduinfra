@@ -141,7 +141,8 @@ def _caso_linha_invisivel(base: str) -> Caso:
         and visto_sp == esperado_sp
         and df_ve_sp == 0
         and sp_ve_sp == 1
-        and ocultas > 0
+        and visto_df < total
+        and visto_sp < total
     )
     obtido = (
         f"DF vê {visto_df}/{esperado_df} e {df_ve_sp} da vistoria {sp_id} de SP; "

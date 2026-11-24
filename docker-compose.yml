@@ -30,10 +30,8 @@ services:
   carga:
     build: .
     environment:
-      # Rotina de ingestão usa o papel de privilégio mínimo; o superusuário
-      # aparece só em DATABASE_URL_ADMIN, consumido por migrar/reverter.
+      # Rotina de ingestão usa apenas papéis de privilégio mínimo (sem DATABASE_URL_ADMIN).
       DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
-      DATABASE_URL_ADMIN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
       DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
       # construir-gold: o orquestrador prepara fonte/entrada e entra como dbt só na Gold.
       DATABASE_URL_ORQUESTRADOR: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
@@ -52,6 +50,19 @@ services:
         condition: service_healthy
     restart: "no"
     command: ["tudo"]
+
+  migracao:
+    build: .
+    profiles: [admin]
+    environment:
+      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+      DATABASE_URL_ADMIN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
+      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+    depends_on:
+      banco:
+        condition: service_healthy
+    restart: "no"
+    command: ["migrar"]
 
   transformacao:
     build: .

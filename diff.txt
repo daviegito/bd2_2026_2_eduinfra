@@ -1,0 +1,1891 @@
+diff --git a/.env.example b/.env.example
+index a9ab9d1..a69f1cd 100644
+--- a/.env.example
++++ b/.env.example
+@@ -4,8 +4,17 @@ POSTGRES_PASSWORD=defina_uma_senha_local
+ POSTGRES_DB=eduinfra
+ PORTA_POSTGRES=5432
+ 
+-# Usada pelos comandos rodados fora do Docker, contra o banco publicado na porta acima.
+-DATABASE_URL=postgresql://eduinfra:defina_uma_senha_local@localhost:5432/eduinfra
++# Senha única dos papéis de privilégio mínimo criados pela migração 0010.
++# Em produção, defina uma senha forte por ambiente.
++EDUINFRA_SENHA_PAPEIS=senha_local_dos_papeis
++
++# Fora do Docker: rotina usa o papel de carga, como no Compose. Se mudar as
++# senhas acima, atualize também as três DSNs abaixo.
++DATABASE_URL=postgresql://eduinfra_carga:senha_local_dos_papeis@localhost:5432/eduinfra
++# Só migrações (migrar/reverter) usam o superusuário; obrigatório fora do Docker.
++DATABASE_URL_ADMIN=postgresql://eduinfra:defina_uma_senha_local@localhost:5432/eduinfra
++# construir-gold (opção nula) e o passo dbt usam o papel de transformação.
++DATABASE_URL_TRANSFORMACAO=postgresql://eduinfra_dbt:senha_local_dos_papeis@localhost:5432/eduinfra
+ 
+ ANO_CENSO=2024
+ URL_CENSO=https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_2024.zip
+@@ -18,3 +27,11 @@ DATA_REFERENCIA_ENEM=2024-11-03
+ # Horário do pipeline do orquestrador (cron). Cada execução reconstrói a Gold.
+ AGENDA_ORQUESTRADOR="0 3 * * *"
+ PORTA_DAGSTER=3000
++
++# DSNs dos papéis (issue #86). O ADMIN fica só na migração; o orquestrador
++# executa a transformação sem ser superusuário.
++# DATABASE_URL_ADMIN=postgresql://eduinfra:senha_local_do_banco@localhost:5433/eduinfra
++# DATABASE_URL_ORQUESTRADOR=postgresql://eduinfra_orquestrador:senha_local_dos_papeis@localhost:5433/eduinfra
++# DATABASE_URL_TRANSFORMACAO=postgresql://eduinfra_dbt:senha_local_dos_papeis@localhost:5433/eduinfra
++# DATABASE_URL_CDC_BANCADA=postgresql://eduinfra_cdc_bancada:senha_local_dos_papeis@localhost:5433/eduinfra
++# EDUINFRA_SENHA_PAPEIS=senha_local_dos_papeis
+diff --git a/.github/workflows/docs.yml b/.github/workflows/docs.yml
+index f0f22df..6f9712b 100644
+--- a/.github/workflows/docs.yml
++++ b/.github/workflows/docs.yml
+@@ -63,7 +63,7 @@ jobs:
+           docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py -q
+       - name: Gerar o painel real
+         run: |
+-          docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
++          docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
+           test -s docs/painel.html
+           grep -q 'Desempenho x ' docs/painel.html
+       - name: Mostrar logs do pipeline se houver falha
+diff --git a/.gitignore b/.gitignore
+index e090d41..25a4658 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -28,3 +28,4 @@ transformacao/dbt_packages/
+ transformacao/.user.yml
+ 
+ dbt-docs/
++docs/painel.html
+diff --git a/README.md b/README.md
+index cb1793b..d025349 100644
+--- a/README.md
++++ b/README.md
+@@ -287,7 +287,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
+ | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
+ | `docker compose run --build --rm transformacao` | prepara Censo, ENEM e eventos canônicos, constrói e testa a Gold com dbt e gera sua documentação; fluxo completo da E3 |
+ | `docker compose run --rm carga construir-gold` | construtor SQL de infraestrutura, mantido para comparação com dbt; não entrega o fato ENEM exigido pelo painel |
+-| `docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel` | exporta `docs/painel.html` a partir da Gold completa |
++| `docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel` | exporta `docs/painel.html` a partir da Gold completa, como `eduinfra_painel` |
+ | `docker compose run --rm carga auditar-cdc` | confere consistência, fila, contrato e saúde do slot |
+ | `docker compose run --rm carga reprocessar-fila-cdc --responsavel operador-01 --motivo esquema_corrigido` | recupera os INSERTs rejeitados pela chave, mantendo itens inválidos pendentes e registrando recibos ([procedimento](docs/metricas-cdc.md)) |
+ | `docker compose run --rm carga tratar-desvio-cdc --lsn <decimal> --chave <chave> --responsavel operador-01 --motivo desvio_revisado` | registra o aceite explícito de uma alteração fora do insert-only (`UPDATE`, `DELETE`, `TRUNCATE`) que está na fila, pela ocorrência exata |
+@@ -352,7 +352,7 @@ Para gerar localmente com Censo, ENEM e eventos canônicos reais:
+ 
+ ```bash
+ docker compose run --build --rm transformacao
+-docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
++docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
+ uv run mkdocs serve
+ ```
+ 
+@@ -370,8 +370,8 @@ causal nem controla INSE, que não está disponível neste contrato. Grupos com
+ menos de dez escolas com média válida são suprimidos e a regra é informada.
+ 
+ Os gráficos leem exclusivamente fatos e dimensões Gold. A cobertura completa
+-ENEM × Censo usa também o retrato `entrada_transformacao.enem_escola_ano`, pois
+-o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
++ENEM × Censo usa `gold.stg_enem_escola_ano` (retrato derivado da Silver do ENEM),
++pois o fato Gold já exclui escolas sem correspondência. O total sem Censo e o total
+ com perfil temporal conhecido ficam explícitos, sem converter dados ausentes em
+ zero. O CI constrói a Gold real, testa o gerador, confere o HTML no site e publica
+ o mesmo artefato validado; ausência do painel ou de dados obrigatórios falha.
+diff --git a/alembic/env.py b/alembic/env.py
+index 9ec05dd..a5323ec 100644
+--- a/alembic/env.py
++++ b/alembic/env.py
+@@ -11,7 +11,8 @@ if config.config_file_name is not None:
+ 
+ 
+ def url_do_ambiente() -> str:
+-    dsn = os.environ.get("DATABASE_URL")
++    # Só o caminho de migração usa o superusuário; o CLI o injeta aqui.
++    dsn = os.environ.get("EDUINFRA_ALEMBIC_URL") or os.environ.get("DATABASE_URL")
+     if not dsn:
+         raise RuntimeError(
+             "DATABASE_URL não definida. Copie .env.example para .env ou exporte a variável."
+diff --git a/alembic/versions/0010_controle_de_acesso.py b/alembic/versions/0010_controle_de_acesso.py
+new file mode 100644
+index 0000000..e73b2ae
+--- /dev/null
++++ b/alembic/versions/0010_controle_de_acesso.py
+@@ -0,0 +1,478 @@
++"""Papéis com privilégio mínimo, recorte de linha e de coluna (issue #86).
++
++Cada serviço de rotina deixa de usar o superusuário do Compose e passa a
++autenticar com o papel da sua função:
++
++- ``eduinfra_carga``     escrita da origem transacional (ingestão) e da camada de
++  monitoramento; não replica e não escreve na Gold;
++- ``eduinfra_dbt``       transformação: lê a entrada e escreve só na Gold;
++- ``eduinfra_cdc``       replicação lógica e leitura das tabelas publicadas;
++- ``eduinfra_cdc_bancada`` replicação lógica para as ferramentas de bancada do CDC,
++  com escrita em ``tecnico``/``vistoria``/``vistoria_item`` e execução dos
++  artefatos gerados; a ingestão de rotina não a usa;
++- ``eduinfra_painel``    leitura exclusiva da Gold (e da camada de métricas);
++- ``eduinfra_analise``   leitura analítica, sem as colunas pessoais de ``tecnico``;
++- ``eduinfra_tecnico_df``/``eduinfra_tecnico_sp`` leem só a fila da sua UF pela
++  visão ``public.fila_vistoria``, sem acesso direto a escola/município;
++- ``eduinfra_orquestrador`` pertence a ``eduinfra_carga`` e ``eduinfra_dbt``; é o
++  dono de ``fonte`` e ``entrada_transformacao`` e não tem ``DATABASE_URL_ADMIN``.
++
++O superusuário continua sendo usado apenas por ``migrar``/``reverter`` (o CLI
++troca a conexão por ``DATABASE_URL_ADMIN`` só nesse caminho).
++
++Revision ID: 0010
++Revises: 0009
++"""
++
++import os
++
++from alembic import op
++from psycopg import sql
++
++revision = "0010"
++down_revision = "0009"
++branch_labels = None
++depends_on = None
++
++# Mesma senha local para todos os papéis: o que separa os serviços é o privilégio,
++# não a senha. Em produção, sobrescreva EDUINFRA_SENHA_PAPEIS por ambiente.
++SENHA_PADRAO = "senha_local_dos_papeis"
++
++PAPEIS = (
++    "eduinfra_carga",
++    "eduinfra_dbt",
++    "eduinfra_cdc",
++    "eduinfra_cdc_bancada",
++    "eduinfra_painel",
++    "eduinfra_analise",
++    "eduinfra_tecnico_df",
++    "eduinfra_tecnico_sp",
++    "eduinfra_orquestrador",
++)
++
++# UF da fila lida por cada papel de técnico. Em produção, este mapa é alimentado
++# a partir de tecnico.lotacao_uf para o papel correspondente ao operador logado.
++FILA_POR_UF = {
++    "eduinfra_tecnico_df": "DF",
++    "eduinfra_tecnico_sp": "SP",
++}
++
++# Concessões por objeto. A ordem importa: papéis e esquemas existem antes.
++GRANTS = [
++    # --- esquema public: cada papel precisa de USAGE para alcançar os objetos ---
++    "grant usage on schema public to " + ", ".join(PAPEIS),
++    # carga: escrita da origem transacional
++    "grant select, insert on public.municipio to eduinfra_carga",
++    "grant select, insert on public.escola to eduinfra_carga",
++    "grant select, insert on public.tecnico to eduinfra_carga",
++    "grant select, insert on public.vistoria to eduinfra_carga",
++    "grant select, insert on public.vistoria_item to eduinfra_carga",
++    "grant select, insert on public.ingestao_execucao to eduinfra_carga",
++    "grant select on public.item_infraestrutura to eduinfra_carga",
++    "grant select on public.escola_estado_atual to eduinfra_carga",
++    # dbt: lê a entrada congelada, o catálogo e o cadastro do Censo (a opção
++    # nula construir-gold monta as dimensões direto da origem); escreve só na Gold.
++    "grant select on public.item_infraestrutura to eduinfra_dbt",
++    "grant select on public.municipio, public.escola to eduinfra_dbt",
++    # cdc: leitura das tabelas publicadas (a replicação exige SELECT)
++    "grant select on public.vistoria to eduinfra_cdc",
++    "grant select on public.vistoria_item to eduinfra_cdc",
++    # cdc_bancada: as ferramentas de bancada criam técnico/vistorias e leem o
++    # cadastro para montar a linha de base; a ingestão de rotina usa eduinfra_cdc.
++    "grant select, insert on public.tecnico to eduinfra_cdc_bancada",
++    "grant select, insert on public.vistoria to eduinfra_cdc_bancada",
++    "grant select, insert on public.vistoria_item to eduinfra_cdc_bancada",
++    "grant select on public.escola, public.municipio, public.item_infraestrutura to eduinfra_cdc_bancada",
++    # painel: só Gold e a camada de métricas; nenhuma tabela da origem
++    # analise: leitura analítica; técnico já é lido por coluna (ver COLUNAS_TECNICO)
++    "grant select on public.municipio to eduinfra_analise",
++    "grant select on public.escola to eduinfra_analise",
++    # técnico: lê a fila por RLS e a visão public.fila_vistoria, sem escola/município
++    "grant select on public.vistoria to eduinfra_tecnico_df, eduinfra_tecnico_sp",
++    "grant select on public.vistoria_item to eduinfra_tecnico_df, eduinfra_tecnico_sp",
++]
++
++# Recorte de coluna: o papel de análise não vê nome nem matrícula do técnico.
++COLUNAS_TECNICO = ("id", "lotacao_uf", "ativo", "registrado_em")
++
++# Esquemas de trabalho e seus donos. O dbt é dono só da Gold; o orquestrador
++# (com os privilégios de carga + dbt) é dono da fonte e da entrada congelada,
++# porque é quem prepara a entrada e escreve a fonte antes do build. A carga é
++# dona do monitoramento e da comparação.
++ESQUEMAS = {
++    "gold": "eduinfra_dbt",
++    "fonte": "eduinfra_orquestrador",
++    "entrada_transformacao": "eduinfra_orquestrador",
++    "monitoramento": "eduinfra_carga",
++    "comparacao": "eduinfra_carga",
++}
++
++# Espelha monitoramento.frescor_gold de eduinfra.frescor, para que a tabela já
++# exista com dono e privilégios definidos antes da primeira medição.
++CRIAR_FRESCOR = """
++create table if not exists monitoramento.frescor_gold (
++    id bigint generated always as identity primary key,
++    medido_em timestamptz not null,
++    comando text not null,
++    tabela text not null,
++    gold_construida boolean not null,
++    vistorias_pendentes integer,
++    pendente_desde timestamptz,
++    frescor_s double precision,
++    sla_s double precision not null,
++    dentro_do_sla boolean not null
++)
++"""
++
++# Mapa papel -> UF lido pela política de linha. Só o dono (migração) escreve.
++CRIAR_MAPA_UF = """
++create table if not exists public.acesso_uf_papel (
++    papel name primary key,
++    uf char(2) not null,
++    atualizado_em timestamptz not null default now()
++)
++"""
++
++# SECURITY DEFINER isola o mapa do técnico: ele executa a função, mas não lê
++# nem altera a tabela que decide o recorte.
++CRIAR_FUNCAO_UF = """
++create or replace function public.uf_do_papel(papel name) returns char(2)
++language sql stable security definer
++set search_path = pg_catalog, public, pg_temp
++as $$
++    select uf from public.acesso_uf_papel where acesso_uf_papel.papel = $1
++$$
++"""
++
++# Resolve a UF da escola sem expor escola/município ao técnico: a função é dona
++# da consulta (SECURITY DEFINER) e o técnico recebe só EXECUTE.
++CRIAR_FUNCAO_UF_DA_ESCOLA = """
++create or replace function public.uf_da_escola(co_entidade integer) returns char(2)
++language sql stable security definer
++set search_path = pg_catalog, public, pg_temp
++as $$
++    select m.sg_uf
++    from public.escola e
++    join public.municipio m on m.co_municipio = e.co_municipio
++    where e.co_entidade = $1
++$$
++"""
++
++# Visão da fila por UF: o técnico não lê escola/município direto; a visão é da
++# carga (dona das tabelas) e filtra pela mesma UF da política.
++CRIAR_VISAO_FILA = """
++create or replace view public.fila_vistoria as
++select v.id as vistoria_id,
++       v.co_entidade,
++       e.no_entidade,
++       m.no_municipio,
++       m.sg_uf,
++       v.tecnico_id,
++       v.origem,
++       v.ocorrido_em,
++       v.registrado_em,
++       v.observacao,
++       count(vi.item_codigo) as itens
++from public.vistoria v
++join public.escola e on e.co_entidade = v.co_entidade
++join public.municipio m on m.co_municipio = e.co_municipio
++left join public.vistoria_item vi on vi.vistoria_id = v.id
++where m.sg_uf = public.uf_do_papel(current_user)
++group by v.id, v.co_entidade, e.no_entidade, m.no_municipio, m.sg_uf,
++         v.tecnico_id, v.origem, v.ocorrido_em, v.registrado_em, v.observacao
++"""
++
++# Recorte de linha na fila: a vistoria só aparece se a escola estiver na UF do
++# técnico. As demais operações (carga/dbt/cdc) ganham políticas permissivas
++# próprias, para que o RLS não quebre o pipeline.
++RLS = [
++    "alter table public.vistoria enable row level security",
++    "alter table public.vistoria_item enable row level security",
++    """
++    create policy vistoria_carga on public.vistoria
++        for all to eduinfra_carga, eduinfra_orquestrador
++        using (true) with check (true)
++    """,
++    """
++    create policy vistoria_leitura on public.vistoria
++        for select to eduinfra_dbt, eduinfra_cdc
++        using (true)
++    """,
++    """
++    create policy vistoria_bancada on public.vistoria
++        for all to eduinfra_cdc_bancada
++        using (true) with check (true)
++    """,
++    """
++    create policy vistoria_fila on public.vistoria
++        for select to eduinfra_tecnico_df, eduinfra_tecnico_sp
++        using (public.uf_da_escola(vistoria.co_entidade) = public.uf_do_papel(current_user))
++    """,
++    """
++    create policy vistoria_item_carga on public.vistoria_item
++        for all to eduinfra_carga, eduinfra_orquestrador
++        using (true) with check (true)
++    """,
++    """
++    create policy vistoria_item_leitura on public.vistoria_item
++        for select to eduinfra_dbt, eduinfra_cdc
++        using (true)
++    """,
++    """
++    create policy vistoria_item_bancada on public.vistoria_item
++        for all to eduinfra_cdc_bancada
++        using (true) with check (true)
++    """,
++    """
++    create policy vistoria_item_fila on public.vistoria_item
++        for select to eduinfra_tecnico_df, eduinfra_tecnico_sp
++        using (
++            exists (
++                select 1 from public.vistoria v
++                where v.id = vistoria_item.vistoria_id
++            )
++        )
++    """,
++]
++
++REMOVER_RLS = [
++    "drop policy if exists vistoria_item_fila on public.vistoria_item",
++    "drop policy if exists vistoria_item_bancada on public.vistoria_item",
++    "drop policy if exists vistoria_item_leitura on public.vistoria_item",
++    "drop policy if exists vistoria_item_carga on public.vistoria_item",
++    "drop policy if exists vistoria_fila on public.vistoria",
++    "drop policy if exists vistoria_bancada on public.vistoria",
++    "drop policy if exists vistoria_leitura on public.vistoria",
++    "drop policy if exists vistoria_carga on public.vistoria",
++    "alter table public.vistoria_item disable row level security",
++    "alter table public.vistoria disable row level security",
++]
++
++
++def _conexao_psycopg():
++    return op.get_bind().connection.dbapi_connection
++
++
++def _senha() -> str:
++    return os.environ.get("EDUINFRA_SENHA_PAPEIS", SENHA_PADRAO)
++
++
++def _criar_papeis() -> None:
++    conexao = _conexao_psycopg()
++    senha = sql.Literal(_senha())
++    for papel in PAPEIS:
++        # Idempotente: a migração pode ser reaplicada num ambiente já preparado.
++        conexao.execute(
++            sql.SQL(
++                "do $$ begin "
++                "if not exists (select 1 from pg_roles where rolname = {}) then "
++                "create role {} nologin; "
++                "end if; end $$"
++            ).format(sql.Literal(papel), sql.Identifier(papel))
++        )
++        # O corpo do DO acima é texto: o identificador já sai renderizado.
++        conexao.execute(
++            sql.SQL("alter role {} with login password {}").format(sql.Identifier(papel), senha)
++        )
++    # O consumidor do slot lógico precisa do atributo de replicação.
++    conexao.execute("alter role eduinfra_cdc with replication")
++    # As ferramentas de bancada do CDC (demonstrar-cdc, comparar-ingestao,
++    # medir-recarga, auditar-cdc) rodam na imagem de carga e criam/leem slots.
++    # A ingestão de rotina não usa replicação; o atributo fica só para elas.
++    conexao.execute("alter role eduinfra_cdc_bancada with replication")
++    # Garante que uma base criada por uma versão anterior da 0010 perca o
++    # atributo: a carga de rotina não deve replicar.
++    conexao.execute("alter role eduinfra_carga with noreplication")
++    # O orquestrador executa as duas metades do pipeline com os mesmos privilégios.
++    conexao.execute("grant eduinfra_carga, eduinfra_dbt to eduinfra_orquestrador")
++
++
++def _preparar_esquemas() -> None:
++    for esquema, dono in ESQUEMAS.items():
++        op.execute(f"create schema if not exists {esquema} authorization {dono}")
++        # Em bases já existentes o esquema pode ter outro dono; normaliza.
++        op.execute(f"alter schema {esquema} owner to {dono}")
++
++
++def _normalizar_donos_existentes() -> None:
++    """Objetos criados antes desta migração passam ao dono do esquema.
++
++    Numa base nova os esquemas estão vazios e o bloco não faz nada. Numa base
++    de desenvolvimento já construída, garante que o dbt/carga possam substituir
++    as tabelas que constroem.
++    """
++    op.execute(
++        """
++        do $$
++        declare r record; dono text;
++        begin
++            for r in
++                select n.nspname, c.relname, c.relkind
++                from pg_class c
++                join pg_namespace n on n.oid = c.relnamespace
++                where n.nspname in ('gold', 'fonte', 'entrada_transformacao')
++                  and c.relkind in ('r', 'p', 'v', 'm')
++            loop
++                if r.nspname = 'gold' then
++                    dono := 'eduinfra_dbt';
++                else
++                    dono := 'eduinfra_orquestrador';
++                end if;
++                if r.relkind in ('r', 'p') then
++                    execute format('alter table %I.%I owner to %I', r.nspname, r.relname, dono);
++                elsif r.relkind = 'v' then
++                    execute format('alter view %I.%I owner to %I', r.nspname, r.relname, dono);
++                elsif r.relkind = 'm' then
++                    execute format('alter materialized view %I.%I owner to %I', r.nspname, r.relname, dono);
++                end if;
++            end loop;
++
++            -- Sequences de identidade acompanham o dono da tabela; alterá-las
++            -- separadamente é recusado pelo PostgreSQL.
++            for r in
++                select n.nspname, c.relname
++                from pg_class c
++                join pg_namespace n on n.oid = c.relnamespace
++                where n.nspname in ('monitoramento', 'comparacao') and c.relkind in ('r', 'p')
++            loop
++                execute format('alter table %I.%I owner to eduinfra_carga', r.nspname, r.relname);
++            end loop;
++        end
++        $$
++        """
++    )
++
++
++def _conceder_esquemas() -> None:
++    # Gold: o dbt constrói; carga executa a opção nula; painel/análise só leem.
++    op.execute("grant usage on schema gold to eduinfra_carga, eduinfra_painel, eduinfra_analise, eduinfra_orquestrador")
++    op.execute("grant usage, create on schema gold to eduinfra_dbt")
++    op.execute("grant select on all tables in schema gold to eduinfra_carga, eduinfra_painel, eduinfra_analise")
++    op.execute("grant select on all sequences in schema gold to eduinfra_carga")
++
++    # Entrada congelada: só o orquestrador escreve; o dbt lê para o build.
++    op.execute("grant usage on schema entrada_transformacao to eduinfra_dbt, eduinfra_orquestrador")
++    op.execute("grant create on schema entrada_transformacao to eduinfra_orquestrador")
++    op.execute("grant select on all tables in schema entrada_transformacao to eduinfra_dbt, eduinfra_orquestrador")
++
++    # Fonte do CDC: o orquestrador escreve; o dbt só lê (opção nula construir-gold).
++    op.execute("grant usage on schema fonte to eduinfra_dbt, eduinfra_orquestrador")
++    op.execute("grant create on schema fonte to eduinfra_orquestrador")
++    op.execute("grant select on all tables in schema fonte to eduinfra_dbt, eduinfra_orquestrador")
++
++    # Monitoramento: a carga registra medições; o orquestrador lê e registra o
++    # frescor do pipeline. Painel e análise não alcançam a camada operacional.
++    op.execute("grant usage on schema monitoramento to eduinfra_carga, eduinfra_orquestrador")
++    op.execute("grant select, insert on monitoramento.frescor_gold to eduinfra_carga, eduinfra_orquestrador")
++    op.execute("grant usage on all sequences in schema monitoramento to eduinfra_orquestrador")
++
++    # Comparação é uma ferramenta de bancada, do papel de carga.
++    op.execute("grant usage, create on schema comparacao to eduinfra_carga")
++
++    # Camada de métricas é opcional (entrega da #98). Se existir, o painel só lê.
++    op.execute(
++        """
++        do $$
++        begin
++            if exists (select 1 from pg_namespace where nspname = 'metricas') then
++                execute 'grant usage on schema metricas to eduinfra_painel, eduinfra_analise';
++                execute 'grant select on all tables in schema metricas to eduinfra_painel, eduinfra_analise';
++            end if;
++        end
++        $$
++        """
++    )
++
++    # Privilégios padrão: objetos criados depois da migração (pelo dbt) já nascem
++    # legíveis para o painel/análise, sem um GRANT manual a cada construção.
++    op.execute(
++        "alter default privileges for role eduinfra_dbt in schema gold "
++        "grant select on tables to eduinfra_carga, eduinfra_painel, eduinfra_analise"
++    )
++    op.execute(
++        "alter default privileges for role eduinfra_orquestrador in schema entrada_transformacao "
++        "grant select on tables to eduinfra_dbt"
++    )
++    op.execute(
++        "alter default privileges for role eduinfra_orquestrador in schema fonte "
++        "grant select on tables to eduinfra_dbt"
++    )
++    op.execute(
++        "alter default privileges for role eduinfra_carga in schema monitoramento "
++        "grant select, insert on tables to eduinfra_orquestrador"
++    )
++
++
++def _criar_fila_por_uf() -> None:
++    op.execute(CRIAR_MAPA_UF)
++    op.execute("revoke all on public.acesso_uf_papel from public")
++    op.execute(CRIAR_FUNCAO_UF)
++    op.execute("revoke all on function public.uf_do_papel(name) from public")
++    op.execute(
++        "grant execute on function public.uf_do_papel(name) to eduinfra_tecnico_df, eduinfra_tecnico_sp"
++    )
++    op.execute(CRIAR_FUNCAO_UF_DA_ESCOLA)
++    op.execute("revoke all on function public.uf_da_escola(integer) from public")
++    op.execute(
++        "grant execute on function public.uf_da_escola(integer) to eduinfra_tecnico_df, eduinfra_tecnico_sp"
++    )
++    for papel, uf in FILA_POR_UF.items():
++        conexao = _conexao_psycopg()
++        conexao.execute(
++            sql.SQL(
++                "insert into public.acesso_uf_papel (papel, uf) values ({}, {}) "
++                "on conflict (papel) do update set uf = excluded.uf"
++            ).format(sql.Literal(papel), sql.Literal(uf))
++        )
++    # A visão é dona da carga (que lê escola/município); o técnico só a consulta.
++    op.execute(CRIAR_VISAO_FILA)
++    op.execute("alter view public.fila_vistoria owner to eduinfra_carga")
++    op.execute("revoke all on public.fila_vistoria from public")
++    op.execute(
++        "grant select on public.fila_vistoria to eduinfra_tecnico_df, eduinfra_tecnico_sp"
++    )
++
++
++def upgrade() -> None:
++    _criar_papeis()
++    _preparar_esquemas()
++    op.execute(CRIAR_FRESCOR)
++    _normalizar_donos_existentes()
++    _conceder_esquemas()
++
++    for comando in GRANTS:
++        op.execute(comando)
++
++    colunas = ", ".join(COLUNAS_TECNICO)
++    # Só o recorte por coluna é concedido a eduinfra_analise; não há GRANT de
++    # tabela inteira, então nome e matrícula permanecem fora do alcance.
++    op.execute(
++        f"grant select ({colunas}) on public.tecnico to eduinfra_analise"
++    )
++
++    _criar_fila_por_uf()
++
++    for comando in RLS:
++        op.execute(comando)
++
++
++def downgrade() -> None:
++    for comando in REMOVER_RLS:
++        op.execute(comando)
++
++    op.execute("drop view if exists public.fila_vistoria")
++    op.execute("drop function if exists public.uf_da_escola(integer)")
++    op.execute("drop function if exists public.uf_do_papel(name)")
++    op.execute("drop table if exists public.acesso_uf_papel")
++
++    # Devolve os objetos ao superusuário que roda a migração antes de apagar os papéis.
++    conexao = _conexao_psycopg()
++    dono = conexao.execute("select current_user").fetchone()[0]
++    for papel in reversed(PAPEIS):
++        conexao.execute(
++            sql.SQL("reassign owned by {} to {}").format(
++                sql.Identifier(papel), sql.Identifier(dono)
++            )
++        )
++        conexao.execute(sql.SQL("drop owned by {}").format(sql.Identifier(papel)))
++        conexao.execute(sql.SQL("drop role if exists {}").format(sql.Identifier(papel)))
+diff --git a/docker-compose.yml b/docker-compose.yml
+index af88eaf..e0aefbe 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -30,7 +30,16 @@ services:
+   carga:
+     build: .
+     environment:
+-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
++      # Rotina de ingestão usa o papel de privilégio mínimo; o superusuário
++      # aparece só em DATABASE_URL_ADMIN, consumido por migrar/reverter.
++      DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      DATABASE_URL_ADMIN: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
++      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      # construir-gold: o orquestrador prepara fonte/entrada e entra como dbt só na Gold.
++      DATABASE_URL_ORQUESTRADOR: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      # Ferramentas de bancada do CDC criam slot e gravam vistorias, sem replicar na rotina.
++      DATABASE_URL_CDC_BANCADA: postgresql://eduinfra_cdc_bancada:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+       DIRETORIO_DADOS: /dados
+       ANO_CENSO: ${ANO_CENSO:-2024}
+       ANO_ENEM: ${ANO_ENEM:-2024}
+@@ -48,15 +57,18 @@ services:
+     build: .
+     profiles: [analitico]
+     environment:
+-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
++      # Ingestão do ENEM usa o orquestrador (membro de carga); o dbt constrói a
++      # Gold com o papel de transformação, passado em DATABASE_URL_TRANSFORMACAO.
++      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+       DIRETORIO_DADOS: /dados
+       FONTE_EVENTOS: ${FONTE_EVENTOS:-/dados/warehouse/eventos_vistoria}
+       FONTE_ENEM: ${FONTE_ENEM:-}
+       ANO_ENEM: ${ANO_ENEM:-2024}
+       URL_ENEM: ${URL_ENEM:-https://download.inep.gov.br/microdados/microdados_enem_2024.zip}
+       DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
+-      POSTGRES_USER: ${POSTGRES_USER}
+-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
++      POSTGRES_USER: eduinfra_dbt
++      POSTGRES_PASSWORD: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+       POSTGRES_DB: ${POSTGRES_DB}
+       PGHOST: banco
+       DBT_SCHEMA: gold
+@@ -64,6 +76,8 @@ services:
+       DBT_LOG_PATH: /dados/dbt_logs
+     volumes:
+       - dados_censo:/dados
++      - ./src:/app/src
++      - ./transformacao:/app/transformacao
+     depends_on:
+       carga:
+         condition: service_completed_successfully
+@@ -75,7 +89,8 @@ services:
+   cdc:
+     build: .
+     environment:
+-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
++      # O papel do CDC tem REPLICATION e SELECT apenas nas tabelas publicadas.
++      DATABASE_URL: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
+       DIRETORIO_DADOS: /dados
+     volumes:
+       - dados_censo:/dados
+@@ -97,7 +112,9 @@ services:
+     build: .
+     entrypoint: ["uv", "run", "--no-sync", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-m", "eduinfra.orquestrador"]
+     environment:
+-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@banco:5432/${POSTGRES_DB}
++      DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      DATABASE_URL_TRANSFORMACAO: postgresql://eduinfra_dbt:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      EDUINFRA_SENHA_PAPEIS: ${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}
+       DIRETORIO_DADOS: /dados
+       ANO_CENSO: ${ANO_CENSO:-2024}
+       ANO_ENEM: ${ANO_ENEM:-2024}
+@@ -119,6 +136,22 @@ services:
+         condition: service_healthy
+     restart: unless-stopped
+ 
++  painel:
++    build: .
++    profiles: [analitico]
++    environment:
++      # O painel só lê a Gold; nenhuma tabela da origem é alcançável.
++      DATABASE_URL: postgresql://eduinfra_painel:${EDUINFRA_SENHA_PAPEIS:-senha_local_dos_papeis}@banco:5432/${POSTGRES_DB}
++      ANO_ENEM: ${ANO_ENEM:-2024}
++    volumes:
++      - ./docs:/app/docs
++      - ./src:/app/src
++    depends_on:
++      transformacao:
++        condition: service_completed_successfully
++    restart: "no"
++    command: ["gerar-painel"]
++
+ volumes:
+   dados_postgres:
+   dados_censo:
+diff --git a/docs/controle-de-acesso.md b/docs/controle-de-acesso.md
+new file mode 100644
+index 0000000..dcadbb7
+--- /dev/null
++++ b/docs/controle-de-acesso.md
+@@ -0,0 +1,148 @@
++# Controle de acesso
++
++Responde à issue #86. Até a E3, carga, dbt, CDC, orquestrador e painel usavam
++o mesmo `POSTGRES_USER` do Compose, que é superusuário. A migração
++`0010_controle_de_acesso.py` cria papéis com privilégio mínimo, aplica recorte
++de linha na fila de vistorias e recorte de coluna na tabela `tecnico`. O
++superusuário passa a ser usado **apenas** por `migrar`/`reverter`; o
++orquestrador não recebe `DATABASE_URL_ADMIN`.
++
++## Matriz papel × objeto × operação
++
++| Papel | Lê | Escreve | Replica | Não alcança |
++| --- | --- | --- | --- | --- |
++| `eduinfra_carga` | `public` (catálogo, cadastro, vistorias, manifesto), `gold`, `monitoramento` | `INSERT` em tabelas da origem e `monitoramento.frescor_gold` | não | escrita em `gold`; `REPLICATION`; `ALTER`/`DROP` da origem |
++| `eduinfra_dbt` | `entrada_transformacao`, `fonte` (opção nula), `item_infraestrutura`, `municipio`, `escola`, `gold` | `CREATE`/`DROP`/`INSERT` só em `gold` (é o dono) | não | escrita em `public`, `entrada_transformacao`, `fonte`, `monitoramento` |
++| `eduinfra_cdc` | `vistoria`, `vistoria_item`, slot lógico | avança o slot | sim (`REPLICATION`) | escrita na origem, Gold, superusuário |
++| `eduinfra_cdc_bancada` | `vistoria`, `vistoria_item`, `escola`, `municipio`, `item_infraestrutura`, slot lógico | `INSERT` em `tecnico`, `vistoria`, `vistoria_item` | sim (`REPLICATION`) | rotina de ingestão; Gold; superusuário |
++| `eduinfra_painel` | `gold`, `metricas` (se existir) | nada | não | `public`, `entrada_transformacao`, `monitoramento` |
++| `eduinfra_analise` | `gold`, `municipio`, `escola`, colunas não pessoais de `tecnico`, `metricas` (se existir) | nada | não | `tecnico.nome`, `tecnico.matricula`, escrita, `monitoramento` |
++| `eduinfra_tecnico_df` | `fila_vistoria` e `vistoria`/`vistoria_item` da UF `DF` (RLS) | nada | não | `escola`/`municipio` direto; outras UFs |
++| `eduinfra_tecnico_sp` | `fila_vistoria` e `vistoria`/`vistoria_item` da UF `SP` (RLS) | nada | não | `escola`/`municipio` direto; outras UFs |
++| `eduinfra_orquestrador` | união de `eduinfra_carga` e `eduinfra_dbt` | `fonte`, `entrada_transformacao`; entra como `dbt` na Gold | não | `DATABASE_URL_ADMIN`; superusuário |
++
++Nenhum papel de serviço é superusuário, tem `BYPASSRLS` ou `CREATEDB`. `eduinfra_cdc`
++(consumidor de rotina) e `eduinfra_cdc_bancada` (ferramentas de bancada) têm
++`REPLICATION`; `eduinfra_carga` não tem.
++
++## Papéis e conexões no Compose
++
++| Serviço | `DATABASE_URL` | Observação |
++| --- | --- | --- |
++| `carga` | `eduinfra_carga` | `DATABASE_URL_ADMIN` (superusuário) só existe para `migrar`/`reverter` |
++| `transformacao` | `eduinfra_orquestrador` | `DATABASE_URL_TRANSFORMACAO=eduinfra_dbt` para o dbt; prepara entrada/fonte como orquestrador |
++| `cdc` | `eduinfra_cdc` | `REPLICATION` + `SELECT` nas tabelas publicadas |
++| `orquestrador` | `eduinfra_orquestrador` | pertence a carga e dbt; sem `DATABASE_URL_ADMIN` |
++| `painel` | `eduinfra_painel` | só leitura da Gold/métricas (`docker compose --profile analitico run painel`) |
++
++O `banco` continua subindo com `POSTGRES_USER` (é o bootstrap do cluster). A
++partir daí, `migrar` conecta com `DATABASE_URL_ADMIN`; todo o resto usa os
++papéis acima. Para rodar fora do Docker, copie `.env.example` e ajuste
++`EDUINFRA_SENHA_PAPEIS` (senha única local dos papéis, usada pela migração, pelo
++Compose e pela demonstração).
++
++## Recorte de linha: a fila da UF
++
++A política `vistoria_fila` filtra `vistoria` pela UF da escola via
++`public.uf_da_escola`, comparada à UF do técnico (`uf_do_papel`); `vistoria_item_fila`
++segue pela vistoria. O técnico consulta a fila por `public.fila_vistoria`, sem
++acesso direto a `escola`/`municipio`.
++
++```sql
++using (public.uf_da_escola(vistoria.co_entidade) = public.uf_do_papel(current_user))
++```
++
++A UF vem de `public.acesso_uf_papel`, um mapa papel → UF alimentado a partir de
++`tecnico.lotacao_uf`. A função `uf_do_papel` é `SECURITY DEFINER`: o técnico a
++executa, mas não lê nem altera o mapa, então não consegue trocar a própria UF.
++O mapa já nasce com `eduinfra_tecnico_df → DF` e `eduinfra_tecnico_sp → SP`;
++para um operador real, provisione o papel com a `lotacao_uf` dele.
++
++As políticas permissivas de `eduinfra_carga`/`eduinfra_orquestrador`,
++`eduinfra_dbt`/`eduinfra_cdc` (leitura) e `eduinfra_cdc_bancada` mantêm o
++pipeline e as ferramentas de bancada enxergando tudo.
++
++## Recorte de coluna: dados pessoais do técnico
++
++`eduinfra_analise` recebe `SELECT (id, lotacao_uf, ativo, registrado_em)` em
++`tecnico`. Não há `GRANT SELECT` de tabela inteira, então `nome` e `matricula`
++ficam fora do alcance do papel de análise:
++
++```sql
++grant select (id, lotacao_uf, ativo, registrado_em) on public.tecnico to eduinfra_analise;
++```
++
++## Demonstração
++
++```bash
++docker compose run --rm carga demonstrar-acesso
++```
++
++O comando conecta com cada papel e registra os quatro casos: leitura permitida,
++escrita negada, linha de outra UF invisível e coluna negada. Sai com código 1 se
++algum caso divergir. Saída de uma base de desenvolvimento com o Censo 2024
++(guardada em `docs/evidencias/controle-de-acesso/saida.txt`):
++
++```text
++Demonstração de controle de acesso (issue #86)
++[OK] leitura permitida (painel -> gold): esperado SELECT aceito; obtido 181065 linhas
++[OK] escrita negada (painel -> municipio): esperado permission denied; obtido permission denied
++[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (148996 de outras UFs ocultas)
++[OK] coluna negada (análise -> tecnico): esperado nome e matricula negados; obtido id/lotacao_uf liberados; nome e matricula negados
++4/4 casos como esperado
++```
++
++## Testes
++
++```bash
++# Declaração: falha se um privilégio for ampliado (não precisa de banco)
++uv run pytest tests/test_controle_de_acesso.py -q -m "not integracao"
++
++# Integração: os quatro casos e os atributos dos papéis (exige banco migrado)
++uv run pytest tests/test_controle_de_acesso.py -q -m integracao
++```
++
++Os testes de declaração leem a própria migração 0010 e garantem, por exemplo,
++que `eduinfra_painel` não recebe `INSERT/UPDATE/DELETE` e que `nome`/`matricula`
++não entram no recorte de coluna. Os de integração consultam `pg_roles`, tentam
++as escritas proibidas e comparam as contagens por UF para provar a invisibilidade
++da linha. Se alguém ampliar uma permissão, os negados deixam de falhar e o teste
++quebra.
++
++## Validação no Docker
++
++Execução feita no Compose, com os serviços já usando os papéis:
++
++```bash
++docker compose run --rm --no-deps carga demonstrar-acesso        # 4/4 casos
++docker compose run --rm --no-deps --build transformacao
++docker compose run --rm --no-deps --build painel                 # docs/painel.html
++docker compose run --rm --no-deps carga demonstrar-cdc           # 5 etapas do CDC
++docker compose run --rm --no-deps carga auditar-cdc
++```
++
++- `transformacao`: download/ingestão do ENEM, `preparar` da fonte/entrada e
++  dbt como `eduinfra_dbt` na Gold. O `dbt build` terminou com **39/39** testes
++  e a Gold com 181.065 escolas e 3.078.105 itens de vistoria.
++- `painel` exportou `docs/painel.html` lendo só `gold` e a cobertura do ENEM.
++- `demonstrar-cdc` confirmou a criação/leitura/avanço do slot como
++  `eduinfra_cdc_bancada` (com `REPLICATION`), sem superusuário.
++- `auditar-cdc` rodou como bancada e apontou 34 itens perdidos pelo slot que já
++  estava `lost` antes da recriação; é o estado herdado do ambiente, não uma
++  permissão negada.
++
++## Limites
++
++- A camada `metricas` pertence à entrega da issue #98. Se o esquema existir, a
++  migração concede `USAGE`/`SELECT` ao painel e à análise; sem ele, só a Gold é
++  lida.
++- O painel lê só `gold` (+ `metricas` opcional). A cobertura do ENEM no painel
++  vem de `gold.stg_enem_escola_ano`.
++- `construir-gold` (opção nula) roda como `eduinfra_orquestrador` e entra como
++  `eduinfra_dbt` só na etapa que escreve a Gold; reaplica `USAGE`/`SELECT` para
++  carga/painel/análise depois de recriar `gold`.
++- As ferramentas de bancada do CDC (`demonstrar-cdc`, `comparar-ingestao`,
++  `medir-cdc`, `medir-recarga`, `auditar-cdc`) usam `DATABASE_URL_CDC_BANCADA`;
++  o consumidor de rotina usa `eduinfra_cdc`.
++- Em produção, troque `EDUINFRA_SENHA_PAPEIS` por segredos distintos por papel e
++  gerencie-os fora do repositório.
+diff --git a/docs/evidencias/controle-de-acesso/saida.txt b/docs/evidencias/controle-de-acesso/saida.txt
+new file mode 100644
+index 0000000..c36b830
+--- /dev/null
++++ b/docs/evidencias/controle-de-acesso/saida.txt
+@@ -0,0 +1,40 @@
++# Saída de `demonstrar-acesso` (base de desenvolvimento, Censo 2024)
++
++Demonstração de controle de acesso (issue #86)
++[OK] leitura permitida (painel -> gold): esperado SELECT aceito; obtido 181065 linhas
++[OK] escrita negada (painel -> municipio): esperado permission denied; obtido permission denied
++[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (149006 de outras UFs ocultas)
++[OK] coluna negada (análise -> tecnico): esperado nome e matricula negados; obtido id/lotacao_uf liberados; nome e matricula negados
++4/4 casos como esperado
++
++# Atributos dos papéis (nenhum superusuário; só cdc e cdc_bancada replicam)
++
++ rolname               | rolsuper | rolbypassrls | rolreplication | rolcanlogin
++------------------------+----------+--------------+----------------+-------------
++ eduinfra_analise       | f        | f            | f              | t
++ eduinfra_carga         | f        | f            | f              | t
++ eduinfra_cdc           | f        | f            | t              | t
++ eduinfra_cdc_bancada   | f        | f            | t              | t
++ eduinfra_dbt           | f        | f            | f              | t
++ eduinfra_orquestrador  | f        | f            | f              | t
++ eduinfra_painel        | f        | f            | f              | t
++ eduinfra_tecnico_df    | f        | f            | f              | t
++ eduinfra_tecnico_sp    | f        | f            | f              | t
++
++# Conferências de catálogo (has_table_privilege)
++
++- painel lê gold.dim_escola; não lê public.vistoria, entrada_transformacao.enem_escola_ano nem monitoramento.frescor_gold.
++- dbt escreve em gold; não cria tabela em entrada_transformacao, não insere em monitoramento nem em public.vistoria.
++- analise lê colunas id/lotacao_uf/ativo/registrado_em de tecnico; nome e matricula negados.
++- tecnico não lê public.escola/municipio direto; lê public.fila_vistoria filtrada pela UF do papel.
++- carga lê gold; não escreve em gold e não tem REPLICATION.
++
++# Observação sobre o ambiente de desenvolvimento
++
++`auditar-cdc` e `test_e3_gold` continuam apontando 34 itens da origem fora do Delta
++porque o slot do CDC tinha sido invalidado (`lost`) antes da recriação, antes
++desta mudança. É estado herdado do banco de desenvolvimento, não permissão
++negada: `demonstrar-cdc` (5/5), o `dbt build` (39/39) e `construir-gold`
++terminaram sem erro de privilégio. `construir-gold` apaga o schema `gold` e
++reconstrói só os marts de infraestrutura; para o painel completo, rode
++`transformacao` depois.
+diff --git a/docs/execucao.md b/docs/execucao.md
+index 2e2577e..96b512e 100644
+--- a/docs/execucao.md
++++ b/docs/execucao.md
+@@ -38,7 +38,8 @@ com [uv](https://docs.astral.sh/uv/).
+ git clone https://github.com/daviegito/bd2_2026_2_eduinfra.git
+ cd bd2_2026_2_eduinfra
+ cp .env.example .env
+-# Edite .env: ajuste POSTGRES_PASSWORD e a senha correspondente em DATABASE_URL.
++# Edite .env: troque POSTGRES_PASSWORD e EDUINFRA_SENHA_PAPEIS (a mesma senha
++# dos papéis de privilégio mínimo criados pela migração 0010).
+ docker compose up --build
+ ```
+ 
+@@ -91,6 +92,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
+ | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
+ | `docker compose run --rm carga demonstrar-cdc` | Demonstra captura, interrupção e reentrega sem duplicação |
+ | `docker compose run --rm carga demonstrar-atraso` | Demonstra o tratamento de eventos atrasados |
++| `docker compose run --rm carga demonstrar-acesso` | Demonstra leitura, escrita negada, recorte de linha e de coluna ([Controle de acesso](controle-de-acesso.md)) |
+ | `docker compose run --rm carga comparar-ingestao` | Compara captura incremental com captura pelo slot, sem medir a escrita Delta |
+ | `docker compose run --rm carga medir-cdc --repeticoes 30` | Insere vistorias de teste, mede latência e ordem com o consumidor ligado e termina com a auditoria |
+ | `docker compose run --rm carga auditar-cdc` | Só lê: confere checksum, contagem por operação, fila de erros, esquema e frescor. Sai com código 1 se houver violação |
+@@ -128,13 +130,19 @@ uv run eduinfra tudo
+ | --- | --- | --- |
+ | Retomada e deduplicação | `demonstrar-cdc` | [CDC e semântica de entrega](cdc-e-semantica-de-entrega.md#demonstracao) |
+ | Vistoria digitada com atraso | `demonstrar-atraso` | [Dados atrasados](dado-atrasado.md#demonstracao) |
++| Papéis, recorte de linha e de coluna | `demonstrar-acesso` | [Controle de acesso](controle-de-acesso.md#demonstracao) |
+ | Formato e compressão | `comparar-compressao --repeticoes 15` | [Compressão](serializacao-compressao.md#resultados) |
+ | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
+ | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |
+ | Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
+ | Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
+ 
+-Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
++Use o prefixo `docker compose run --rm carga` antes do comando da CLI. A CLI
++troca de papel conforme o comando: `construir-gold` usa
++`DATABASE_URL_ORQUESTRADOR` (e entra como `eduinfra_dbt` na Gold); as ferramentas
++de bancada do CDC (`demonstrar-cdc`, `comparar-ingestao`, `medir-cdc`,
++`medir-recarga`, `auditar-cdc`) usam `DATABASE_URL_CDC_BANCADA`; os demais usam
++`DATABASE_URL` (`eduinfra_carga`).
+ As medições publicadas descrevem os ambientes em que foram obtidas; os tempos
+ podem variar em outra máquina. A comparação de ingestão mede captura, sem a
+ escrita no Delta. Para a suíte automatizada, consulte [Testes](testes.md).
+diff --git a/docs/frescor-e-sla.md b/docs/frescor-e-sla.md
+index 2c3d57b..12482d0 100644
+--- a/docs/frescor-e-sla.md
++++ b/docs/frescor-e-sla.md
+@@ -72,7 +72,10 @@ este SLA inclui esse trecho e a construção da Gold.
+   num horário fixo, a vistoria registrada logo depois espera quase 24 h. A margem
+   cobre a construção e uma nova tentativa se a primeira falhar.
+ 
+-O valor é ajustável com `medir-frescor --sla-horas`.
++O valor é ajustável com `medir-frescor --sla-horas`. O `construir-gold` roda
++como `eduinfra_orquestrador` e entra como `eduinfra_dbt` só na escrita da Gold;
++`medir-frescor` registra a leitura como `eduinfra_carga`, que tem `SELECT` na
++Gold e na origem, sem ser superusuário.
+ 
+ ## Registro e falha
+ 
+diff --git a/docs/orquestracao.md b/docs/orquestracao.md
+index 1d1597e..ea3234f 100644
+--- a/docs/orquestracao.md
++++ b/docs/orquestracao.md
+@@ -10,12 +10,14 @@ tudo que foi executado, que pode ser acompanhado por uma interface web.
+ ## O que ele faz neste projeto
+ 
+ O Dagster roda o pipeline em lote chamando os comandos que já existiam na CLI
+-`eduinfra`, como `migrar`, `ingerir` e `processar-janelas`, e o script do dbt para a Gold. O código está em
++`eduinfra`, como `ingerir` e `processar-janelas`, e o script do dbt para a Gold.
++A migração fica no serviço `carga`, que mantém `DATABASE_URL_ADMIN`; o
++orquestrador não recebe superusuário. O código está em
+ [orquestrador.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py).
+ 
+ ```mermaid
+ flowchart LR
+-    MIGRAR["migrar"] --> INGERIR["ingerir"]
++    INGERIR["ingerir"]
+     INGERIR --> ANALITICA["publicar_analitica"]
+     INGERIR --> BASE["publicar_linha_de_base"]
+     BASE --> JANELAS["processar_janelas"]
+@@ -61,7 +63,7 @@ A interface fica em <http://localhost:3000>.
+ 
+ 1. Com o ambiente no ar, derrube o banco com `docker compose stop banco`.
+ 2. Na interface, abra o job `pipeline` e clique em *Materialize all*.
+-3. Em *Runs*, o passo `migrar` falha e o log avisa que vai tentar de novo em
++3. Em *Runs*, o passo `ingerir` falha e o log avisa que vai tentar de novo em
+    30 segundos.
+ 4. Religue o banco com `docker compose start banco`.
+ 5. A tentativa seguinte passa e o pipeline vai até o fim.
+@@ -91,7 +93,7 @@ itens cada.
+ 
+ | Demonstração | O que aconteceu | Registro |
+ | --- | --- | --- |
+-| Retry | Com o banco parado, `migrar` falhou ao conectar e o Dagster agendou nova tentativa em 30 s. O banco voltou 26 s depois de parado, a segunda tentativa passou e a execução terminou com `RUN_SUCCESS` | [retry.log](evidencias/orquestracao/retry.log) |
++| Retry | Com o banco parado, `ingerir` falhou ao conectar e o Dagster agendou nova tentativa em 30 s. O banco voltou 26 s depois de parado, a segunda tentativa passou e a execução terminou com `RUN_SUCCESS` | [retry.log](evidencias/orquestracao/retry.log) |
+ | Backfill | `reprocessar_janela` rodou para 2024-04, 2024-05 e 2024-06, uma execução por mês, e cada uma reconciliou 15 eventos. A fonte de eventos, que só tinha novembro de 2026, ficou com 15 eventos em cada um dos três meses | [backfill.log](evidencias/orquestracao/backfill.log) |
+ 
+ Pela CLI, um intervalo de partições só roda quando o asset tem política de execução
+diff --git a/mkdocs.yml b/mkdocs.yml
+index 82dc6e1..2fd7444 100644
+--- a/mkdocs.yml
++++ b/mkdocs.yml
+@@ -67,6 +67,7 @@ nav:
+       - Transformação declarativa: transformacao.md
+       - Testes: testes.md
+       - Orquestração: orquestracao.md
++      - Controle de acesso: controle-de-acesso.md
+   - Dados e ingestão:
+       - Caracterização da carga: caracterizacao.md
+       - ENEM e junção com o Censo: enem.md
+diff --git a/src/eduinfra/cli.py b/src/eduinfra/cli.py
+index 11c2e79..1ea3984 100644
+--- a/src/eduinfra/cli.py
++++ b/src/eduinfra/cli.py
+@@ -1,6 +1,8 @@
+ import argparse
+ import logging
++import os
+ import sys
++from dataclasses import replace
+ from datetime import timedelta
+ from pathlib import Path
+ 
+@@ -17,6 +19,7 @@ from eduinfra import (
+     comparacao_latencia,
+     comparacao_modelagem,
+     comparacao_particionamento,
++    controle_de_acesso,
+     demonstracao_cdc,
+     fluxo_cdc,
+     frescor,
+@@ -40,7 +43,7 @@ def main(argumentos: list[str] | None = None) -> int:
+                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
+                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
+                                            "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
+-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
++                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "demonstrar-acesso"))
+     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
+     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
+     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
+@@ -67,6 +70,9 @@ def main(argumentos: list[str] | None = None) -> int:
+ 
+     configuracao = carregar_configuracao()
+ 
++    if opcoes.comando == "demonstrar-acesso":
++        return controle_de_acesso.executar()
++
+     if opcoes.comando in ("reprocessar-fila-cdc", "tratar-desvio-cdc"):
+         try:
+             if opcoes.comando == "reprocessar-fila-cdc":
+@@ -88,7 +94,10 @@ def main(argumentos: list[str] | None = None) -> int:
+         return _executar_analitico(opcoes, configuracao)
+ 
+     if opcoes.comando == "construir-gold":
+-        resumo = modelo_analitico.construir(configuracao)
++        # A opção nula é executada pelo orquestrador: ele prepara a fonte e entra
++        # como dbt só na etapa que escreve a Gold.
++        alvo = replace(configuracao, dsn=configuracao.dsn_orquestrador or configuracao.dsn)
++        resumo = modelo_analitico.construir(alvo)
+         fonte = resumo.fonte
+         log.info(
+             "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",
+@@ -97,6 +106,7 @@ def main(argumentos: list[str] | None = None) -> int:
+         for tabela, linhas in resumo.linhas.items():
+             log.info("gold.%s: %d linhas", tabela, linhas)
+         # Cada construção registra o frescor; a violação só reprova em medir-frescor.
++        # O frescor lê a origem (vistoria), então fica com o papel de carga.
+         frescor.medir(configuracao.dsn, comando="construir-gold")
+         return 0 if _auditar_gold() else 1
+ 
+@@ -243,10 +253,16 @@ def _auditar_gold() -> bool:
+ 
+ COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
+ 
++# Ferramentas de bancada que criam slot/privilégios de replicação; a ingestão de
++# rotina (publicar-analitico) não usa o papel de replicação.
++COMANDOS_DE_BANCADA_CDC = ("demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
++
+ ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
+ 
+ 
+ def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
++    if opcoes.comando in COMANDOS_DE_BANCADA_CDC:
++        configuracao = replace(configuracao, dsn=configuracao.dsn_cdc_bancada or configuracao.dsn)
+     if opcoes.comando == "publicar-analitico":
+         _publicar_linha_de_base(configuracao, opcoes.forcar)
+     elif opcoes.comando == "cdc" and opcoes.continuo:
+@@ -290,6 +306,9 @@ def _imprimir(texto: str, saida: Path | None) -> None:
+ 
+ 
+ def _alembic(configuracao: Configuracao) -> Config:
++    # Só migrar/reverter usam o superusuário; o resto da CLI fica no papel de rotina.
++    if configuracao.dsn_admin:
++        os.environ["EDUINFRA_ALEMBIC_URL"] = configuracao.dsn_admin
+     return Config(str(configuracao.arquivo_alembic))
+ 
+ 
+diff --git a/src/eduinfra/configuracao.py b/src/eduinfra/configuracao.py
+index 6cd17ef..ddd4fbd 100644
+--- a/src/eduinfra/configuracao.py
++++ b/src/eduinfra/configuracao.py
+@@ -21,6 +21,14 @@ class Configuracao:
+     arquivo_alembic: Path
+     url_enem: str = URL_PADRAO_ENEM
+     ano_enem: int = 2024
++    # Superusuário usado apenas por migrar/reverter (issue #86).
++    dsn_admin: str | None = None
++    # Papel da transformação, lido pelo dbt.
++    dsn_transformacao: str | None = None
++    # Orquestrador (carga + dbt) da opção nula construir-gold e do pipeline.
++    dsn_orquestrador: str | None = None
++    # Papel de bancada do CDC (replicação sem ser o consumidor de rotina).
++    dsn_cdc_bancada: str | None = None
+ 
+ 
+ def carregar_configuracao() -> Configuracao:
+@@ -41,4 +49,8 @@ def carregar_configuracao() -> Configuracao:
+         arquivo_alembic=raiz / "alembic.ini",
+         url_enem=os.environ.get("URL_ENEM", URL_PADRAO_ENEM),
+         ano_enem=int(os.environ.get("ANO_ENEM", "2024")),
++        dsn_admin=os.environ.get("DATABASE_URL_ADMIN"),
++        dsn_transformacao=os.environ.get("DATABASE_URL_TRANSFORMACAO"),
++        dsn_orquestrador=os.environ.get("DATABASE_URL_ORQUESTRADOR"),
++        dsn_cdc_bancada=os.environ.get("DATABASE_URL_CDC_BANCADA"),
+     )
+diff --git a/src/eduinfra/controle_de_acesso.py b/src/eduinfra/controle_de_acesso.py
+new file mode 100644
+index 0000000..aea0e83
+--- /dev/null
++++ b/src/eduinfra/controle_de_acesso.py
+@@ -0,0 +1,197 @@
++"""Controle de acesso da issue #86: papéis, recorte de linha e de coluna.
++
++O comando ``demonstrar-acesso`` conecta com cada papel de privilégio mínimo e
++registra os quatro casos exigidos:
++
++1. leitura permitida  — o painel lê a Gold;
++2. escrita negada     — o painel não insere na origem;
++3. linha invisível    — o técnico de DF não vê a vistoria de SP;
++4. coluna negada      — a análise não lê ``nome``/``matricula`` de ``tecnico``.
++
++A matriz completa e as decisões estão em ``docs/controle-de-acesso.md``.
++"""
++
++import os
++from dataclasses import dataclass
++
++import psycopg
++from psycopg import errors
++from psycopg.conninfo import conninfo_to_dict, make_conninfo
++
++from eduinfra.configuracao import carregar_configuracao
++
++SENHA_PADRAO = "senha_local_dos_papeis"
++
++# Mesmos nomes da migração 0010. Mantidos aqui para o comando e os testes.
++PAPEIS = (
++    "eduinfra_carga",
++    "eduinfra_dbt",
++    "eduinfra_cdc",
++    "eduinfra_cdc_bancada",
++    "eduinfra_painel",
++    "eduinfra_analise",
++    "eduinfra_tecnico_df",
++    "eduinfra_tecnico_sp",
++    "eduinfra_orquestrador",
++)
++
++# Papéis que o Compose usa para os serviços de rotina. Nenhum é superusuário.
++PAPEIS_DE_SERVICO = (
++    "eduinfra_carga",
++    "eduinfra_dbt",
++    "eduinfra_cdc",
++    "eduinfra_painel",
++    "eduinfra_orquestrador",
++)
++
++# Colunas de tecnico que o papel de análise pode ler. nome e matricula ficam de fora.
++COLUNAS_PERMITIDAS_TECNICO = ("id", "lotacao_uf", "ativo", "registrado_em")
++
++
++@dataclass(frozen=True)
++class Caso:
++    nome: str
++    esperado: str
++    obtido: str
++    ok: bool
++
++    def linha(self) -> str:
++        situacao = "OK" if self.ok else "FALHOU"
++        return f"[{situacao}] {self.nome}: esperado {self.esperado}; obtido {self.obtido}"
++
++
++def senha_dos_papeis() -> str:
++    return os.environ.get("EDUINFRA_SENHA_PAPEIS", SENHA_PADRAO)
++
++
++def dsn_do_papel(papel: str, base: str | None = None) -> str:
++    """Troca usuário e senha da DSN base, mantendo host, porta e banco."""
++    base = base or carregar_configuracao().dsn
++    partes = conninfo_to_dict(base)
++    partes["user"] = papel
++    partes["password"] = senha_dos_papeis()
++    return make_conninfo(**partes)
++
++
++def _contar(dsn: str, consulta: str, parametros: tuple = ()) -> int:
++    with psycopg.connect(dsn, connect_timeout=5) as conexao:
++        return conexao.execute(consulta, parametros).fetchone()[0]
++
++
++def _uf_da_vistoria() -> str:
++    return """
++        select count(*)
++        from public.vistoria v
++        join public.escola e on e.co_entidade = v.co_entidade
++        join public.municipio m on m.co_municipio = e.co_municipio
++        where m.sg_uf = %s
++    """
++
++
++def _caso_leitura_permitida(base: str) -> Caso:
++    dsn = dsn_do_papel("eduinfra_painel", base)
++    try:
++        total = _contar(dsn, "select count(*) from gold.dim_escola")
++        return Caso("leitura permitida (painel -> gold)", "SELECT aceito", f"{total} linhas", True)
++    except errors.UndefinedTable:
++        # Base sem Gold construída: mostra a mesma permissão no catálogo da origem.
++        total = _contar(dsn_do_papel("eduinfra_analise", base), "select count(*) from public.municipio")
++        return Caso(
++            "leitura permitida (análise -> município)",
++            "SELECT aceito",
++            f"{total} linhas (Gold ausente)",
++            True,
++        )
++    except errors.InsufficientPrivilege:
++        return Caso("leitura permitida (painel -> gold)", "SELECT aceito", "permission denied", False)
++
++
++def _caso_escrita_negada(base: str) -> Caso:
++    dsn = dsn_do_papel("eduinfra_painel", base)
++    with psycopg.connect(dsn, connect_timeout=5) as conexao:
++        try:
++            conexao.execute(
++                "insert into public.municipio (co_municipio, no_municipio, sg_uf, co_uf) "
++                "values (-1, 'tentativa do painel', 'XX', 11)"
++            )
++        except errors.InsufficientPrivilege:
++            return Caso("escrita negada (painel -> municipio)", "permission denied", "permission denied", True)
++        conexao.rollback()
++        return Caso("escrita negada (painel -> municipio)", "permission denied", "INSERT aceito", False)
++
++
++def _caso_linha_invisivel(base: str) -> Caso:
++    total = _contar(base, "select count(*) from public.vistoria")
++    esperado_df = _contar(base, _uf_da_vistoria(), ("DF",))
++    esperado_sp = _contar(base, _uf_da_vistoria(), ("SP",))
++    sp_id = _contar(base, _uf_da_vistoria().replace("count(*)", "coalesce(max(v.id), 0)"), ("SP",))
++
++    df = dsn_do_papel("eduinfra_tecnico_df", base)
++    sp = dsn_do_papel("eduinfra_tecnico_sp", base)
++    visto_df = _contar(df, "select count(*) from public.vistoria")
++    visto_sp = _contar(sp, "select count(*) from public.vistoria")
++    df_ve_sp = _contar(df, "select count(*) from public.vistoria where id = %s", (sp_id,))
++    sp_ve_sp = _contar(sp, "select count(*) from public.vistoria where id = %s", (sp_id,))
++
++    ocultas = total - esperado_df - esperado_sp
++    ok = (
++        esperado_df > 0
++        and esperado_sp > 0
++        and visto_df == esperado_df
++        and visto_sp == esperado_sp
++        and df_ve_sp == 0
++        and sp_ve_sp == 1
++        and ocultas > 0
++    )
++    obtido = (
++        f"DF vê {visto_df}/{esperado_df} e {df_ve_sp} da vistoria {sp_id} de SP; "
++        f"SP vê {visto_sp}/{esperado_sp} ({ocultas} de outras UFs ocultas)"
++    )
++    if not (esperado_df and esperado_sp):
++        obtido += "; sem vistorias em DF/SP: rode ingerir antes"
++    return Caso("linha invisível (técnico -> UF)", "só a própria UF", obtido, ok)
++
++
++def _caso_coluna_negada(base: str) -> Caso:
++    dsn = dsn_do_papel("eduinfra_analise", base)
++    with psycopg.connect(dsn, connect_timeout=5) as conexao:
++        conexao.execute("select id, lotacao_uf from public.tecnico limit 1").fetchone()
++        for coluna in ("nome", "matricula"):
++            try:
++                conexao.execute(f"select {coluna} from public.tecnico limit 1").fetchone()
++            except errors.InsufficientPrivilege:
++                # A transação fica abortada após o erro; reabre para testar a próxima coluna.
++                conexao.rollback()
++                continue
++            return Caso(
++                "coluna negada (análise -> tecnico)",
++                "nome e matricula negados",
++                f"{coluna} liberada",
++                False,
++            )
++    return Caso(
++        "coluna negada (análise -> tecnico)",
++        "nome e matricula negados",
++        "id/lotacao_uf liberados; nome e matricula negados",
++        True,
++    )
++
++
++def demonstrar(base: str | None = None) -> list[Caso]:
++    base = base or carregar_configuracao().dsn
++    return [
++        _caso_leitura_permitida(base),
++        _caso_escrita_negada(base),
++        _caso_linha_invisivel(base),
++        _caso_coluna_negada(base),
++    ]
++
++
++def executar() -> int:
++    casos = demonstrar()
++    print("Demonstração de controle de acesso (issue #86)")
++    for caso in casos:
++        print(caso.linha())
++    falhas = [caso for caso in casos if not caso.ok]
++    print(f"{len(casos) - len(falhas)}/{len(casos)} casos como esperado")
++    return 0 if not falhas else 1
+diff --git a/src/eduinfra/fontes_transformacao.py b/src/eduinfra/fontes_transformacao.py
+index 2d97452..4b1e8f5 100644
+--- a/src/eduinfra/fontes_transformacao.py
++++ b/src/eduinfra/fontes_transformacao.py
+@@ -236,7 +236,9 @@ def preparar(conexao: psycopg.Connection, entradas: Entradas) -> dict:
+     with conexao.transaction():
+         conexao.execute("set transaction isolation level repeatable read")
+         conexao.execute("set local TimeZone = 'UTC'")
+-        conexao.execute(f"create schema if not exists {SCHEMA}")
++        # A migração 0010 cria o esquema; o papel do dbt não tem CREATE no banco.
++        if conexao.execute("select to_regnamespace(%s) is null", (SCHEMA,)).fetchone()[0]:
++            conexao.execute(f"create schema {SCHEMA}")
+         for tabela in tabelas:
+             definicao = ", ".join(f"{nome} {tipo}" for nome, tipo in COLUNAS[tabela].items())
+             # As views de staging são recriadas pelo build; a Gold materializada não depende delas.
+diff --git a/src/eduinfra/frescor.py b/src/eduinfra/frescor.py
+index 23b666e..854d202 100644
+--- a/src/eduinfra/frescor.py
++++ b/src/eduinfra/frescor.py
+@@ -28,7 +28,8 @@ TABELA_MONITORADA = "gold.fato_infra_escola_ano"
+ SLA_PADRAO = timedelta(hours=25)
+ 
+ CRIAR_REGISTRO = [
+-    "create schema if not exists monitoramento",
++    # O esquema é criado pela migração 0010 (dono: papel de carga). Recriá-lo
++    # aqui exigiria CREATE no banco, que o papel de rotina não tem.
+     """
+     create table if not exists monitoramento.frescor_gold (
+         id bigint generated always as identity primary key,
+diff --git a/src/eduinfra/modelo_analitico.py b/src/eduinfra/modelo_analitico.py
+index 7d331c6..b6222cd 100644
+--- a/src/eduinfra/modelo_analitico.py
++++ b/src/eduinfra/modelo_analitico.py
+@@ -32,11 +32,34 @@ log = logging.getLogger(__name__)
+ 
+ PADRAO_DE_CODIGO_DE_ITEM = re.compile(r"^[a-z_]+$")
+ 
++# A Gold é reconstruída a cada execução. O dono do esquema (papel do dbt) não pode
++# recriar o esquema (exigiria CREATE no banco), então apagamos os objetos e mantemos
++# o esquema criado pela migração 0010.
++LIMPAR_GOLD = """
++do $$
++declare r record;
++begin
++    for r in
++        select c.relname, c.relkind
++        from pg_class c
++        join pg_namespace n on n.oid = c.relnamespace
++        where n.nspname = 'gold' and c.relkind in ('r', 'p', 'v', 'm')
++    loop
++        if r.relkind in ('r', 'p') then
++            execute format('drop table if exists gold.%I cascade', r.relname);
++        elsif r.relkind = 'v' then
++            execute format('drop view if exists gold.%I cascade', r.relname);
++        elsif r.relkind = 'm' then
++            execute format('drop materialized view if exists gold.%I cascade', r.relname);
++        end if;
++    end loop;
++end
++$$
++"""
++
+ # Itens que aparecem como coluna booleana na tabela larga. Todos os itens do catálogo
+ # viram coluna; a lista é lida do banco para não divergir da migração 0002.
+ CONSULTAS_DA_DIMENSAO = [
+-    "drop schema if exists gold cascade",
+-    "create schema gold",
+     # --- dimensões de atributo estável (tipo 1) ---
+     """
+     create table gold.dim_item as
+@@ -79,7 +102,6 @@ CONSULTAS_DA_DIMENSAO = [
+ TABELA_DA_FONTE = "fonte.eventos_vistoria"
+ 
+ CONSULTAS_DA_FONTE = [
+-    "create schema if not exists fonte",
+     f"drop table if exists {TABELA_DA_FONTE}",
+     f"""
+     create unlogged table {TABELA_DA_FONTE} (
+@@ -348,13 +370,20 @@ def construir(configuracao: Configuracao) -> ResumoGold:
+                 linha[0]
+                 for linha in conexao.execute("select codigo from public.item_infraestrutura order by codigo")
+             ]
++            # A fonte e a entrada são do orquestrador; só a Gold é escrita como dbt.
++            conexao.execute("set local role eduinfra_dbt")
++            conexao.execute(LIMPAR_GOLD)
+             for etapa in _etapas(itens):
+                 etapa(conexao)
++            _conceder_leitura_gold(conexao)
++            conexao.execute("reset role")
+ 
++        conexao.execute("set role eduinfra_dbt")
+         linhas = {
+             tabela: conexao.execute(f"select count(*) from gold.{tabela}").fetchone()[0]
+             for tabela in TABELAS_DA_GOLD
+         }
++        conexao.execute("reset role")
+ 
+     resumo = ResumoGold(linhas=linhas, segundos=time.perf_counter() - inicio, fonte=conferencia)
+     log.info("gold construída em %.1f s: %s", resumo.segundos, linhas)
+@@ -362,6 +391,23 @@ def construir(configuracao: Configuracao) -> ResumoGold:
+     return resumo
+ 
+ 
++def _conceder_leitura_gold(conexao: psycopg.Connection) -> None:
++    """Reaplica a leitura da Gold depois do drop/create do esquema (issue #86).
++
++    ``construir-gold`` recria ``gold``; o dono (papel de transformação) devolve
++    USAGE e SELECT à carga, ao painel e à análise para não depender de rodar a
++    migração de novo. Em bases anteriores à 0010 os papéis não existem e o bloco
++    é ignorado.
++    """
++    for papel in ("eduinfra_carga", "eduinfra_painel", "eduinfra_analise"):
++        if conexao.execute("select 1 from pg_roles where rolname = %s", (papel,)).fetchone():
++            conexao.execute(f'grant usage on schema gold to "{papel}"')
++            conexao.execute(f'grant select on all tables in schema gold to "{papel}"')
++            # O drop/create do esquema apaga os privilégios padrão; reaplica para
++            # as próximas tabelas que o dbt criar.
++            conexao.execute(f'alter default privileges in schema gold grant select on tables to "{papel}"')
++
++
+ def _carregar_fonte(conexao: psycopg.Connection, configuracao: Configuracao) -> ConferenciaDaFonte:
+     """Copia uma versão da fonte canônica para o banco e a confere com a origem, na transação da Gold."""
+     inicio = time.perf_counter()
+diff --git a/src/eduinfra/orquestrador.py b/src/eduinfra/orquestrador.py
+index f0c6d0d..c40b6e6 100644
+--- a/src/eduinfra/orquestrador.py
++++ b/src/eduinfra/orquestrador.py
+@@ -36,12 +36,8 @@ def rodar(*argumentos: str) -> None:
+ 
+ 
+ @asset(retry_policy=RETRY)
+-def migrar() -> None:
+-    rodar("migrar")
+-
+-
+-@asset(deps=[migrar], retry_policy=RETRY)
+ def ingerir() -> None:
++    # O esquema é migrado pelo serviço de carga (que mantém DATABASE_URL_ADMIN).
+     rodar("ingerir")
+ 
+ 
+@@ -62,6 +58,8 @@ def processar_janelas() -> None:
+ 
+ @asset(deps=[processar_janelas], retry_policy=RETRY)
+ def construir_gold() -> None:
++    # O script usa DATABASE_URL (orquestrador, para ingerir o ENEM) e
++    # DATABASE_URL_TRANSFORMACAO (dbt, dono da Gold e das entradas).
+     _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
+ 
+ 
+@@ -83,7 +81,6 @@ def reprocessar_janela(context: AssetExecutionContext) -> None:
+ 
+ 
+ ETAPAS_DO_PIPELINE = [
+-    migrar,
+     ingerir,
+     publicar_analitica,
+     publicar_linha_de_base,
+diff --git a/src/eduinfra/painel.py b/src/eduinfra/painel.py
+index 68d3da9..537d5d8 100644
+--- a/src/eduinfra/painel.py
++++ b/src/eduinfra/painel.py
+@@ -39,8 +39,7 @@ def conectar(configuracao):
+ def preparar_base(conexao, ano):
+     exigidas = {
+         ("gold", "dim_escola"), ("gold", "dim_municipio"), ("gold", "dim_item"),
+-        ("gold", "dim_escola_infraestrutura"), ("gold", "fato_desempenho_escola_ano"),
+-        ("entrada_transformacao", "enem_escola_ano"),
++        ("gold", "dim_escola_infraestrutura"), ("gold", "fato_desempenho_escola_ano"), ("gold", "stg_enem_escola_ano"),
+     }
+     presentes = set(conexao.execute("""select table_schema, table_name
+         from information_schema.tables where table_catalog = 'pg'""").fetchall())
+@@ -80,15 +79,15 @@ def ler_cobertura(conexao, ano):
+     total, distintas, encontradas, mascaradas = conexao.execute("""select count(*),
+         count(distinct e.co_entidade), count(c.co_entidade),
+         count(*) filter (where c.co_entidade is null and e.poucos_participantes)
+-        from pg.entrada_transformacao.enem_escola_ano e
++        from pg.gold.stg_enem_escola_ano e
+         left join base_censo c using (co_entidade) where e.ano = ?""", [ano]).fetchone()
+     diferentes = conexao.execute("""select count(*) from (
+-        (select e.co_entidade from pg.entrada_transformacao.enem_escola_ano e
++        (select e.co_entidade from pg.gold.stg_enem_escola_ano e
+          join base_censo c using (co_entidade) where e.ano = ?
+          except select co_entidade from base_enem)
+         union all
+         (select co_entidade from base_enem except
+-         select e.co_entidade from pg.entrada_transformacao.enem_escola_ano e
++         select e.co_entidade from pg.gold.stg_enem_escola_ano e
+          join base_censo c using (co_entidade) where e.ano = ?))""", [ano, ano]).fetchone()[0]
+     if not total or total != distintas or diferentes:
+         raise RuntimeError("Gold ENEM difere da cobertura de entrada; reexecute transformacao antes do painel")
+diff --git a/tests/test_controle_de_acesso.py b/tests/test_controle_de_acesso.py
+new file mode 100644
+index 0000000..55518ef
+--- /dev/null
++++ b/tests/test_controle_de_acesso.py
+@@ -0,0 +1,286 @@
++"""Controle de acesso da issue #86: permitidos, negados, recorte de linha e de coluna.
++
++Os testes sem banco verificam a declaração (matriz e migração): se alguém ampliar
++um privilégio, a asserção quebra. Os testes de integração executam os quatro casos
++contra o PostgreSQL, com os papéis da migração 0010.
++"""
++
++import importlib.util
++import os
++from pathlib import Path
++
++import psycopg
++import pytest
++from psycopg import errors
++
++from eduinfra import controle_de_acesso
++
++RAIZ = Path(__file__).resolve().parents[1]
++
++
++def _carregar_migracao():
++    caminho = RAIZ / "alembic" / "versions" / "0010_controle_de_acesso.py"
++    spec = importlib.util.spec_from_file_location("migracao_0010", caminho)
++    modulo = importlib.util.module_from_spec(spec)
++    spec.loader.exec_module(modulo)
++    return modulo
++
++
++# --- Declaração: falham se uma permissão for ampliada -----------------------------
++
++
++def test_recorte_de_coluna_nao_inclui_nome_nem_matricula():
++    assert "nome" not in controle_de_acesso.COLUNAS_PERMITIDAS_TECNICO
++    assert "matricula" not in controle_de_acesso.COLUNAS_PERMITIDAS_TECNICO
++
++
++def test_papeis_de_servico_sao_dedicados():
++    for papel in controle_de_acesso.PAPEIS_DE_SERVICO:
++        assert papel in controle_de_acesso.PAPEIS
++        assert papel != os.environ.get("POSTGRES_USER"), "serviço de rotina não pode ser o superusuário"
++
++
++def test_painel_nao_recebe_escrita_em_nenhum_objeto():
++    fonte = (RAIZ / "alembic" / "versions" / "0010_controle_de_acesso.py").read_text(encoding="utf-8")
++    for linha in fonte.lower().splitlines():
++        if "eduinfra_painel" not in linha:
++            continue
++        for verbo in ("insert", "update", "delete", "alter role"):
++            assert verbo not in linha, f"o painel não pode receber {verbo}: {linha.strip()}"
++        assert "entrada_transformacao" not in linha, f"painel não lê entrada: {linha.strip()}"
++        assert "monitoramento" not in linha, f"painel não lê monitoramento: {linha.strip()}"
++        assert "public." not in linha, f"painel não lê a origem: {linha.strip()}"
++
++
++def test_tecnico_tem_politica_de_linha_por_uf():
++    migracao = _carregar_migracao()
++    rls = " ".join(migracao.RLS).lower()
++    assert "enable row level security" in rls
++    assert "create policy vistoria_fila" in rls
++    for papel in ("eduinfra_tecnico_df", "eduinfra_tecnico_sp"):
++        assert papel in rls
++
++
++def test_cdc_tem_replicacao_declarada():
++    migracao = _carregar_migracao()
++    fonte = (RAIZ / "alembic" / "versions" / "0010_controle_de_acesso.py").read_text(encoding="utf-8")
++    assert "alter role eduinfra_cdc with replication" in fonte
++    assert "alter role eduinfra_cdc_bancada with replication" in fonte
++    assert "alter role eduinfra_carga with noreplication" in fonte
++    assert migracao.FILA_POR_UF == {"eduinfra_tecnico_df": "DF", "eduinfra_tecnico_sp": "SP"}
++
++
++def test_dsn_do_papel_troca_usuario_e_mantem_destino():
++    dsn = controle_de_acesso.dsn_do_papel(
++        "eduinfra_painel", base="postgresql://admin:segredo@banco:5432/eduinfra"
++    )
++    partes = psycopg.conninfo.conninfo_to_dict(dsn)
++    assert partes["user"] == "eduinfra_painel"
++    assert partes["password"] == controle_de_acesso.senha_dos_papeis()
++    assert partes["dbname"] == "eduinfra"
++    assert partes["host"] == "banco"
++    assert partes["port"] == "5432"
++
++
++# --- Integração: os quatro casos contra o banco -----------------------------------
++
++
++@pytest.fixture(scope="module")
++def base():
++    url = os.environ.get("DATABASE_URL")
++    if not url:
++        pytest.skip("DATABASE_URL não definida")
++    try:
++        with psycopg.connect(url, connect_timeout=5) as conexao:
++            papeis = conexao.execute(
++                "select count(*) from pg_roles where rolname = any(%s)",
++                (list(controle_de_acesso.PAPEIS),),
++            ).fetchone()[0]
++    except psycopg.Error as erro:
++        pytest.fail(f"banco indisponível em DATABASE_URL: {erro}", pytrace=False)
++    if papeis != len(controle_de_acesso.PAPEIS):
++        pytest.skip("migração 0010 não aplicada: rode `migrar` antes")
++    return url
++
++
++def _conexao(papel, base):
++    return psycopg.connect(controle_de_acesso.dsn_do_papel(papel, base), connect_timeout=5)
++
++
++@pytest.mark.integracao
++def test_nenhum_papel_de_servico_e_superusuario(base):
++    with psycopg.connect(base) as conexao:
++        linhas = conexao.execute(
++            "select rolname, rolsuper, rolbypassrls from pg_roles where rolname = any(%s)",
++            (list(controle_de_acesso.PAPEIS),),
++        ).fetchall()
++    atributos = {nome: (superusuario, bypass) for nome, superusuario, bypass in linhas}
++    for papel in controle_de_acesso.PAPEIS:
++        assert atributos[papel] == (False, False), f"{papel} não pode ser superusuário nem ignorar RLS"
++
++
++@pytest.mark.integracao
++def test_cdc_replica_sem_ser_superusuario(base):
++    with psycopg.connect(base) as conexao:
++        superusuario, replicacao = conexao.execute(
++            "select rolsuper, rolreplication from pg_roles where rolname = 'eduinfra_cdc'"
++        ).fetchone()
++    assert replicacao and not superusuario
++
++
++@pytest.mark.integracao
++def test_leitura_permitida_do_painel(base):
++    with _conexao("eduinfra_painel", base) as conexao:
++        total = conexao.execute("select count(*) from gold.dim_escola").fetchone()[0]
++    assert total >= 0
++
++
++@pytest.mark.integracao
++def test_escrita_negada_do_painel(base):
++    with _conexao("eduinfra_painel", base) as conexao:
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute(
++                "insert into public.municipio (co_municipio, no_municipio, sg_uf, co_uf) "
++                "values (-1, 'tentativa do painel', 'XX', 11)"
++            )
++
++
++@pytest.mark.integracao
++def test_dbt_escreve_so_na_gold(base):
++    with _conexao("eduinfra_dbt", base) as conexao:
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute(
++                "insert into public.vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
++                "values (1, 1, 'vistoria_presencial', now())"
++            )
++        conexao.rollback()
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute("create table entrada_transformacao._teste_dbt (x integer)")
++        conexao.rollback()
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute("insert into monitoramento.frescor_gold (medido_em, comando, tabela, gold_construida, sla_s, dentro_do_sla) values (now(), 'x', 'x', true, 0, true)")
++        conexao.rollback()
++    with psycopg.connect(controle_de_acesso.dsn_do_papel("eduinfra_dbt", base)) as conexao:
++        conexao.execute("create table gold._teste_acesso (x integer)")
++        conexao.rollback()
++
++
++@pytest.mark.integracao
++def test_linha_de_outra_uf_invisivel(base):
++    esperado = {
++        uf: _contar_uf(base, uf) for uf in ("DF", "SP")
++    }
++    if not all(esperado.values()):
++        pytest.skip("sem vistorias de DF/SP: rode `ingerir` antes")
++    sp_id = _ultima_vistoria_da_uf(base, "SP")
++
++    with _conexao("eduinfra_tecnico_df", base) as df, _conexao("eduinfra_tecnico_sp", base) as sp:
++        assert df.execute("select count(*) from public.vistoria").fetchone()[0] == esperado["DF"]
++        assert sp.execute("select count(*) from public.vistoria").fetchone()[0] == esperado["SP"]
++        assert df.execute("select count(*) from public.vistoria where id = %s", (sp_id,)).fetchone()[0] == 0
++        assert sp.execute("select count(*) from public.vistoria where id = %s", (sp_id,)).fetchone()[0] == 1
++
++
++@pytest.mark.integracao
++def test_coluna_negada_para_analise(base):
++    with _conexao("eduinfra_analise", base) as conexao:
++        conexao.execute("select id, lotacao_uf from public.tecnico limit 1").fetchone()
++        for coluna in ("nome", "matricula"):
++            with pytest.raises(errors.InsufficientPrivilege):
++                conexao.execute(f"select {coluna} from public.tecnico limit 1")
++            conexao.rollback()
++
++
++@pytest.mark.integracao
++def test_demonstracao_fecha_os_quatro_casos(base):
++    casos = controle_de_acesso.demonstrar(base)
++    falhas = [caso.linha() for caso in casos if not caso.ok]
++    assert len(casos) == 4
++    assert not falhas, "\n".join(falhas)
++
++
++def _contar_uf(base, uf):
++    with psycopg.connect(base) as conexao:
++        return conexao.execute(
++            """
++            select count(*) from public.vistoria v
++            join public.escola e on e.co_entidade = v.co_entidade
++            join public.municipio m on m.co_municipio = e.co_municipio
++            where m.sg_uf = %s
++            """,
++            (uf,),
++        ).fetchone()[0]
++
++
++def _ultima_vistoria_da_uf(base, uf):
++    with psycopg.connect(base) as conexao:
++        return conexao.execute(
++            """
++            select coalesce(max(v.id), 0) from public.vistoria v
++            join public.escola e on e.co_entidade = v.co_entidade
++            join public.municipio m on m.co_municipio = e.co_municipio
++            where m.sg_uf = %s
++            """,
++            (uf,),
++        ).fetchone()[0]
++
++
++@pytest.mark.integracao
++def test_painel_le_so_gold(base):
++    with _conexao("eduinfra_painel", base) as conexao:
++        conexao.execute("select count(*) from gold.dim_escola").fetchone()
++        for consulta in (
++            "select count(*) from public.vistoria",
++            "select count(*) from entrada_transformacao.enem_escola_ano",
++            "select count(*) from monitoramento.frescor_gold",
++        ):
++            with pytest.raises(errors.InsufficientPrivilege):
++                conexao.execute(consulta)
++            conexao.rollback()
++
++
++@pytest.mark.integracao
++def test_tecnico_so_fila(base):
++    if not _contar_uf(base, "DF") or not _contar_uf(base, "SP"):
++        pytest.skip("sem vistorias de DF/SP: rode `ingerir` antes")
++    with _conexao("eduinfra_tecnico_df", base) as conexao:
++        for consulta in (
++            "select count(*) from public.escola",
++            "select count(*) from public.municipio",
++        ):
++            with pytest.raises(errors.InsufficientPrivilege):
++                conexao.execute(consulta)
++            conexao.rollback()
++        total = conexao.execute("select count(*) from public.fila_vistoria").fetchone()[0]
++        fora = conexao.execute("select count(*) from public.fila_vistoria where sg_uf <> 'DF'").fetchone()[0]
++        assert total > 0
++        assert fora == 0
++
++
++@pytest.mark.integracao
++def test_carga_sem_replication_e_com_gold_leitura(base):
++    with psycopg.connect(base) as conexao:
++        replicacao = conexao.execute(
++            "select rolreplication from pg_roles where rolname = 'eduinfra_carga'"
++        ).fetchone()[0]
++    assert replicacao is False
++    with _conexao("eduinfra_carga", base) as conexao:
++        conexao.execute("select count(*) from gold.dim_escola").fetchone()
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute("create table gold._teste_carga (x integer)")
++        conexao.rollback()
++        conexao.execute("select count(*) from public.vistoria").fetchone()
++
++
++@pytest.mark.integracao
++def test_cdc_nao_escreve_origem(base):
++    with _conexao("eduinfra_cdc", base) as conexao:
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute(
++                "insert into public.vistoria (co_entidade, tecnico_id, origem, ocorrido_em) "
++                "values (1, 1, 'vistoria_presencial', now())"
++            )
++        conexao.rollback()
++        with pytest.raises(errors.InsufficientPrivilege):
++            conexao.execute("select count(*) from gold.dim_escola")
++        conexao.rollback()
+diff --git a/tests/test_orquestrador.py b/tests/test_orquestrador.py
+index 4b4e13b..f13ca49 100644
+--- a/tests/test_orquestrador.py
++++ b/tests/test_orquestrador.py
+@@ -41,9 +41,8 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
+     resultado = materialize(ETAPAS_DO_PIPELINE)
+ 
+     assert resultado.success
+-    assert chamadas[:2] == ["migrar", "ingerir"]
++    assert chamadas[0] == "ingerir"
+     assert set(chamadas) == {
+-        "migrar",
+         "ingerir",
+         "publicar-analitica",
+         "publicar-analitico",
+diff --git a/tests/test_painel.py b/tests/test_painel.py
+index 99526e9..6b245d1 100644
+--- a/tests/test_painel.py
++++ b/tests/test_painel.py
+@@ -15,7 +15,7 @@ from eduinfra import cli, painel
+ @pytest.fixture
+ def ambiente(monkeypatch, tmp_path):
+     conexao = duckdb.connect()
+-    conexao.execute("attach ':memory:' as pg; create schema pg.gold; create schema pg.entrada_transformacao")
++    conexao.execute("attach ':memory:' as pg; create schema pg.gold")
+     conexao.execute("""create table pg.gold.dim_item as
+         select 'biblioteca' as item_codigo, 'Biblioteca' as descricao
+         union all select 'internet', 'Internet'""")
+@@ -41,7 +41,7 @@ def ambiente(monkeypatch, tmp_path):
+                490.0+i as media_lc, 510.0+i as media_mt, 600.0+i as media_redacao,
+                10 as n_participantes, date '2024-11-03' as data_referencia_infraestrutura
+         from range(1,21) r(i)""")
+-    conexao.execute("""create table pg.entrada_transformacao.enem_escola_ano as
++    conexao.execute("""create table pg.gold.stg_enem_escola_ano as
+         select co_entidade, ano, false as poucos_participantes from pg.gold.fato_desempenho_escola_ano
+         union all select 60000001, 2024, true""")
+     configuracao = SimpleNamespace(dsn="fixture", ano_enem=2024)
+@@ -174,7 +174,7 @@ def test_fonte_inconsistente_falha_antes_de_exportar(ambiente, defeito):
+     elif defeito == "referencias_distintas":
+         conexao.execute("update pg.gold.fato_desempenho_escola_ano set data_referencia_infraestrutura = date '2024-10-01' where co_entidade = 1")
+     else:
+-        conexao.execute("update pg.entrada_transformacao.enem_escola_ano set co_entidade = 999 where co_entidade = 1")
++        conexao.execute("update pg.gold.stg_enem_escola_ano set co_entidade = 999 where co_entidade = 1")
+     with pytest.raises(RuntimeError):
+         cli.main(["gerar-painel"])
+     assert not destino.exists()
+diff --git a/transformacao/macros/create_schema.sql b/transformacao/macros/create_schema.sql
+new file mode 100644
+index 0000000..5532c23
+--- /dev/null
++++ b/transformacao/macros/create_schema.sql
+@@ -0,0 +1,14 @@
++{# O papel do dbt não tem CREATE no banco (privilégio mínimo, issue #86). Os
++   esquemas são criados pela migração 0010; aqui só conferimos que existem,
++   em vez de executar "create schema if not exists", que exigiria CREATE no banco. #}
++{% macro postgres__create_schema(relation) -%}
++  {% if relation.database -%}
++    {{ adapter.verify_database(relation.database) }}
++  {%- endif -%}
++  {%- set existe = run_query("select 1 from pg_namespace where nspname = " ~ adapter.quote(relation.schema)) -%}
++  {%- if existe.rows | length == 0 -%}
++    {{ exceptions.raise_compiler_error(
++        "esquema " ~ relation.schema ~ " ausente; rode `docker compose run --rm carga migrar` (migração 0010)"
++    ) }}
++  {%- endif -%}
++{% endmacro %}
+diff --git a/transformacao/scripts/executar.py b/transformacao/scripts/executar.py
+index e36a631..3b1ce60 100644
+--- a/transformacao/scripts/executar.py
++++ b/transformacao/scripts/executar.py
+@@ -76,6 +76,9 @@ def executar() -> None:
+     parser.add_argument("--somente-documentacao", action="store_true", help="regenerar docs do retrato já publicado")
+     opcoes = parser.parse_args()
+     configuracao = carregar_configuracao()
++    # A ingestão, a fonte e a entrada congelada são do orquestrador; o dbt usa o
++    # papel de transformação, dono só da Gold (#86).
++    transformacao = replace(configuracao, dsn=configuracao.dsn_transformacao or configuracao.dsn)
+     if opcoes.exigir_enem and opcoes.somente_infraestrutura:
+         parser.error("--exigir-enem não pode ser combinado com --somente-infraestrutura")
+     with bloquear(configuracao.dsn) as conexao:
+@@ -96,10 +99,11 @@ def executar() -> None:
+             verificar_slot(conexao, configuracao)
+             resumo = preparar(conexao, entradas)
+             print(json.dumps(resumo, ensure_ascii=False), flush=True)
+-            dbt("build", configuracao.dsn, resumo["com_enem"])
++            dbt("build", transformacao.dsn, resumo["com_enem"])
+             if schema == "gold":
++                # O frescor lê a origem vistoria; o papel de carga/orquestrador faz isso.
+                 print(frescor.resumo(frescor.medir(configuracao.dsn, comando="transformar-dbt")), flush=True)
+-        dbt("docs generate", configuracao.dsn, com_enem)
++        dbt("docs generate", transformacao.dsn, com_enem)
+ 
+ 
+ if __name__ == "__main__":

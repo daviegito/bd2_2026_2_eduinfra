@@ -4,8 +4,8 @@ Responde à issue #86. Até a E3, carga, dbt, CDC, orquestrador e painel usavam
 o mesmo `POSTGRES_USER` do Compose, que é superusuário. A migração
 `0010_controle_de_acesso.py` cria papéis com privilégio mínimo, aplica recorte
 de linha na fila de vistorias e recorte de coluna na tabela `tecnico`. O
-superusuário passa a ser usado **apenas** por `migrar`/`reverter`; o
-orquestrador não recebe `DATABASE_URL_ADMIN`.
+superusuário passa a ser usado **apenas** pelo serviço dedicado `migracao`
+(`migrar`/`reverter`); o orquestrador não recebe `DATABASE_URL_ADMIN`.
 
 ## Matriz papel × objeto × operação
 
@@ -29,15 +29,17 @@ Nenhum papel de serviço é superusuário, tem `BYPASSRLS` ou `CREATEDB`. `eduin
 
 | Serviço | `DATABASE_URL` | Observação |
 | --- | --- | --- |
-| `carga` | `eduinfra_carga` | `DATABASE_URL_ADMIN` (superusuário) só existe para `migrar`/`reverter` |
+| `carga` | `eduinfra_carga` | sem `DATABASE_URL_ADMIN`: nenhum serviço padrão carrega o superusuário |
+| `migracao` | `eduinfra_carga` | `DATABASE_URL_ADMIN` (superusuário) só neste serviço, para `migrar`/`reverter` (`profiles: [admin]`) |
 | `transformacao` | `eduinfra_orquestrador` | `DATABASE_URL_TRANSFORMACAO=eduinfra_dbt` para o dbt; prepara entrada/fonte como orquestrador |
 | `cdc` | `eduinfra_cdc` | `REPLICATION` + `SELECT` nas tabelas publicadas |
 | `orquestrador` | `eduinfra_orquestrador` | pertence a carga e dbt; sem `DATABASE_URL_ADMIN` |
 | `painel` | `eduinfra_painel` | só leitura da Gold/métricas (`docker compose --profile analitico run painel`) |
 
 O `banco` continua subindo com `POSTGRES_USER` (é o bootstrap do cluster). A
-partir daí, `migrar` conecta com `DATABASE_URL_ADMIN`; todo o resto usa os
-papéis acima. Para rodar fora do Docker, copie `.env.example` e ajuste
+partir daí, `docker compose --profile admin run --rm migracao` conecta com
+`DATABASE_URL_ADMIN` (use `... migracao reverter` para desfazer); todo o resto
+usa os papéis acima. Para rodar fora do Docker, copie `.env.example` e ajuste
 `EDUINFRA_SENHA_PAPEIS` (senha única local dos papéis, usada pela migração, pelo
 Compose e pela demonstração).
 
@@ -114,6 +116,7 @@ quebra.
 Execução feita no Compose, com os serviços já usando os papéis:
 
 ```bash
+docker compose --profile admin run --rm migracao                 # migrações
 docker compose run --rm --no-deps carga demonstrar-acesso        # 4/4 casos
 docker compose run --rm --no-deps --build transformacao
 docker compose run --rm --no-deps --build painel                 # docs/painel.html

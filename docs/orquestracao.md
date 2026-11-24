@@ -11,8 +11,8 @@ tudo que foi executado, que pode ser acompanhado por uma interface web.
 
 O Dagster roda o pipeline em lote chamando os comandos que já existiam na CLI
 `eduinfra`, como `ingerir` e `processar-janelas`, e o script do dbt para a Gold.
-A migração fica no serviço `carga`, que mantém `DATABASE_URL_ADMIN`; o
-orquestrador não recebe superusuário. O código está em
+A migração fica no serviço dedicado `migracao` (`profiles: [admin]`), que
+mantém `DATABASE_URL_ADMIN`; o orquestrador não recebe superusuário. O código está em
 [orquestrador.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py).
 
 ```mermaid

@@ -8,7 +8,7 @@
   {%- set existe = run_query("select 1 from pg_namespace where nspname = " ~ adapter.quote(relation.schema)) -%}
   {%- if existe.rows | length == 0 -%}
     {{ exceptions.raise_compiler_error(
-        "esquema " ~ relation.schema ~ " ausente; rode `docker compose run --rm carga migrar` (migração 0010)"
+        "esquema " ~ relation.schema ~ " ausente; rode `docker compose --profile admin run --rm migracao` (migração 0010)"
     ) }}
   {%- endif -%}
 {% endmacro %}
