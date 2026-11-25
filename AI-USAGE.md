@@ -717,6 +717,15 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
 - **Quem revisou:** lucasarruda9.
 
+### 2026-11-23 e 2026-11-24 — Controle de acesso
+
+- **Ferramenta:** OpenCode (implementação) e Gemini (auditoria do checklist, ajustes de integração e resolução de conflitos de merge).
+- **O que foi pedido:** eliminar o uso compartilhado do superusuário (`POSTGRES_USER`) nos serviços de rotina do Compose, criando papéis com privilégio mínimo via migração versionada, aplicando recorte de linha (RLS por UF) na fila de vistorias e recorte de coluna na tabela `tecnico`, além de implementar o comando `demonstrar-acesso`, os testes automatizados (permitidos e negados) e a documentação da issue #86.
+- **Onde:** `alembic/versions/0010_controle_de_acesso.py` (criação dos 9 papéis, propriedade de esquemas, privilégios padrão, funções `SECURITY DEFINER`, visão `public.fila_vistoria`, políticas RLS e `GRANT SELECT` por coluna em `tecnico`), `transformacao/macros/create_schema.sql`, `src/eduinfra/controle_de_acesso.py`, `src/eduinfra/cli.py`, `src/eduinfra/configuracao.py`, `src/eduinfra/modelo_analitico.py`, `src/eduinfra/fontes_transformacao.py`, `src/eduinfra/frescor.py`, `src/eduinfra/orquestrador.py`, `src/eduinfra/painel.py`, `transformacao/scripts/executar.py`, `docker-compose.yml` (isolamento de `DATABASE_URL_ADMIN` no serviço `migracao` sob `profiles: [admin]`), `.env.example`, `.github/workflows/docs.yml`, `tests/test_controle_de_acesso.py`, `docs/controle-de-acesso.md`, `docs/evidencias/controle-de-acesso/saida.txt`, `mkdocs.yml` e ajustes de integração com a `main` em `tests/test_orquestrador.py`.
+- **O que foi aproveitado:** a estrutura existente de migrações do Alembic, o pipeline de transformação dbt e a orquestração via Docker Compose e Dagster. O superusuário foi isolado exclusivamente no serviço dedicado `migracao` (`profiles: [admin]`), enquanto `carga`, `transformacao`, `cdc`, `orquestrador` e `painel` passaram a autenticar com papéis dedicados (`rolsuper = false`). Na integração com a `main`, foram preservadas as definições de métricas da #82 (`metricas/`, `test_metricas.py`) e a remoção da etapa `migrar` do Dagster.
+- **Como foi verificado:** execução de `demonstrar-acesso` aprovada nos 4 cenários (leitura permitida do painel na Gold, escrita negada em `municipio`, linha de outra UF invisível entre `DF` e `SP` via RLS e colunas pessoais `nome`/`matricula` negadas para `eduinfra_analise`), registrada em `docs/evidencias/controle-de-acesso/saida.txt`; suíte `tests/test_controle_de_acesso.py` (18 testes de declaração e integração) aprovada; build do dbt (39/39 testes) e geração do painel (`docs/painel.html`) validados sob os papéis restritos; `uv run pytest -m "not integracao"` e `mkdocs build --strict` aprovados sem erros.
+- **Quem revisou:** daviegito.
+
 ## 2026-11-24 — Experimento de cache de fontes no CI
 
 - **Ferramenta:** Codex.
