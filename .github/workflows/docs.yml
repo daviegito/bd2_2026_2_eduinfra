@@ -7,6 +7,7 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/consumo/painel.py"
+      - "transformacao/**"
       - "tests/consumo/test_painel.py"
       - "tests/gold/test_e3_gold.py"
       - "scripts/verificar_caminhos.py"
@@ -26,6 +27,7 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/consumo/painel.py"
+      - "transformacao/**"
       - "tests/consumo/test_painel.py"
       - "tests/gold/test_e3_gold.py"
       - "scripts/verificar_caminhos.py"
@@ -113,7 +115,7 @@ jobs:
           # Confere componentes funcionais sem depender do texto dos títulos.
           grep -Fq 'id="dados-painel"' docs/painel.html
           grep -Fq 'id="painel-calculos"' docs/painel.html
-          grep -Fq 'id="grafico-relacao"' docs/painel.html
+          grep -Fq 'id="grafico-perfil"' docs/painel.html
       - name: Guardar os tempos de preparo das fontes
         if: always()
         uses: actions/upload-artifact@v4

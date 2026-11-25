@@ -716,6 +716,53 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   caminhos sem acusação. `docker compose up --build` não executado.
 - **Quem revisou:** Artur (plano e resultados das verificações); revisão de outro membro da squad pendente.
 
+### 2026-11-23 — Tabelas de consumo da Gold e painel (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de modelagem e implementação.
+- **O que foi pedido:** publicar na Gold tabelas já agregadas para a pergunta de gestão, fazer o painel
+  ler só essas tabelas, sem cálculo no navegador, e levantar antes as práticas de referência para a
+  camada Gold e para a estrutura de projetos dbt.
+- **Onde:** `transformacao/models/intermediate/int_desempenho_escola*.sql`,
+  `transformacao/models/marts/gestao/` (sete tabelas de consumo e a exposição do painel), variáveis
+  `minimo_escolas` e `faixas_de_desempenho` em `transformacao/dbt_project.yml`, seis testes de dados em
+  `transformacao/tests/`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, workflow de documentação, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** os modelos de `marts/gestao`, os testes e o painel reescrito, seguindo o
+  padrão de estrela como núcleo e tabelas de consumo por cima (guia de estrutura do dbt e documentação
+  de medallion da Databricks). Artur definiu o que o painel precisa responder a partir da crítica da
+  docência e aprovou o desenho das tabelas. A faixa alta e a baixa usam o quintil dentro da rede,
+  sugerido na #94, e ainda precisam de confirmação do grupo. Pendentes: na #94, comparação por área e
+  localização e UF como características; na #95, lista de escolas com CSV e teste de uso com duas pessoas.
+- **Como foi verificado:** `dbt parse` com e sem ENEM; `dbt build` num PostgreSQL descartável com 60
+  escolas sintéticas de resultado conhecido, conferindo a diferença com e sem biblioteca, os quintis,
+  o perfil das faixas e a supressão de grupos pequenos; painel gerado dessa Gold sem nome de escola;
+  integração completa com 136 testes passando, contra 130 na main, e as mesmas 14 falhas de ambiente;
+  suíte sem banco e `mkdocs build --strict` passando. O painel ainda não foi gerado com os dados reais.
+- **Quem revisou:** Artur (desenho das tabelas e resultados das verificações); revisão de outro membro da
+  squad pendente.
+
+### 2026-11-23 — Perfil por área, características além dos itens e lista de escolas (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de implementação.
+- **O que foi pedido:** fechar o que faltava nas duas issues antes de abrir a PR. Na #94, comparar o perfil
+  por área da prova e incluir localização, UF e número de itens como características. Na #95, a lista de
+  escolas das duas faixas com CSV, a frase de onde olhar primeiro, um glossário e cores que não dependam só
+  do matiz.
+- **Onde:** `transformacao/models/intermediate/int_faixa_por_area.sql`, `perfil_alto_baixo_desempenho.sql` e
+  `escola_desempenho_infra.sql` em `transformacao/models/marts/gestao/`, `gestao.yml`, o teste
+  `perfil_alto_baixo_coerente`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** o perfil com grão de rede, área e característica, a lista com supressão da faixa
+  pequena e o CSV com proteção contra fórmula. Artur decidiu que a PR só fecha as issues com esses itens
+  feitos. "Pelo menos metade dos itens" como medida de quantidade de itens foi escolha nossa e entra na
+  revisão do grupo. Ficam fora do código o teste de uso com duas pessoas (#95) e a leitura pela camada
+  semântica (#94, depende das #82 e #83).
+- **Como foi verificado:** testes do painel com Node (13 passando), incluindo ordem e supressão da lista, CSV
+  com acento e nome começando por sinal de igual, e perfil seguindo a área do filtro; `dbt build` no
+  PostgreSQL descartável com Matemática invertida em relação à média geral, conferindo que o perfil de
+  Matemática dá a diferença oposta.
+- **Quem revisou:** Artur; revisão de outro membro da squad pendente.
+
 ## 2026-11-24 — Experimento de cache de fontes no CI
 
 - **Ferramenta:** Codex.
@@ -790,4 +837,16 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Como foi verificado:** script de caminhos sem acusação; suíte sem banco com 241 testes aprovados e a mesma
   falha de codificação no Windows que a main já tem em `test_cli_exporta_dados_e_calculos_reais_sem_duplicar_perfis_ou_anos`;
   `eduinfra --help` executado. Testes de integração e `docker compose up --build` não executados.
+- **Quem revisou:** revisão de outro membro da squad pendente.
+
+### 2026-11-24 — Atualização do painel com a reorganização atualizada (PR #108)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** resolver os conflitos do PR #108 com a branch do #107, que recebeu a main.
+- **Onde:** `AI-USAGE.md` e `.github/workflows/docs.yml`.
+- **O que foi aproveitado:** a junção das entradas em ordem de data e, no workflow, a conferência do painel
+  por componentes que veio da main, trocando o `grafico-relacao`, que o painel novo não tem, pelo
+  `grafico-perfil`. Artur pediu a atualização por merge.
+- **Como foi verificado:** suíte sem banco com 238 testes aprovados e script de caminhos sem acusação.
+  Testes de integração não executados.
 - **Quem revisou:** revisão de outro membro da squad pendente.
