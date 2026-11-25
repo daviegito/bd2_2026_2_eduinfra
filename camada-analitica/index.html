@@ -1497,6 +1497,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../adr/0003-armazenamento/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ADR 0003 — Armazenamento
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../adr/0004-ingestao/" class="md-nav__link">
         
   
@@ -2038,7 +2066,7 @@
 <p>Esta página descreve a tabela <code>warehouse/vistoria_item</code>, derivada da Silver do
 Censo. O CDC grava em outra tabela, <code>warehouse/eventos_vistoria</code>. A publicação
 descrita aqui não incorpora automaticamente as novas vistorias do CDC; consulte
-a <a href="../arquitetura/#caminhos-implementados-na-e2">arquitetura</a> para distinguir os destinos.</p>
+a <a href="../arquitetura/#caminhos-implementados-na-e2-e-na-e3">arquitetura</a> para distinguir os destinos.</p>
 <p>A camada analítica ficou guardada como uma tabela Delta na pasta
 <code>dados/warehouse/vistoria_item</code>. Os dados estão em arquivos Parquet com
 compressão zstd, a mesma usada na camada Silver, e são divididos em pastas por
@@ -2066,12 +2094,13 @@ ficassem diferentes.</p>
 <p>Também pesou o fato de a biblioteca do Delta para Python (<code>deltalake</code>) já
 conseguir juntar arquivos pequenos e apagar versões antigas sozinha, sem
 precisar do Spark. Foi com ela que as medições abaixo foram feitas.</p>
-<p>O Iceberg não chegou a ser testado. A comparação foi feita lendo a documentação
-das duas bibliotecas. Com essa escolha perdemos algumas vantagens do Iceberg. Ele
-é mais adotado por ferramentas de fornecedores diferentes e permite mais tipos
-de mudança no esquema, como renomear uma coluna sem regravar os dados. Se um dia
-for preciso trocar, regravar a tabela leva poucos segundos com o volume atual,
-mas o histórico de versões não vem junto.</p>
+<p>Na E2, essa comparação foi feita lendo a documentação das duas bibliotecas. Depois
+medimos Parquet puro, Delta e Iceberg com o Censo real, e os números estão no
+<a href="../adr/0003-armazenamento/">ADR 0003</a>. Com essa escolha perdemos algumas vantagens
+do Iceberg. Ele é mais adotado por ferramentas de fornecedores diferentes e permite
+mais tipos de mudança no esquema, como renomear uma coluna sem regravar os dados.
+Se um dia for preciso trocar, regravar a tabela leva poucos segundos com o volume
+atual, mas o histórico de versões não vem junto.</p>
 <h2 id="como-rodar">Como rodar<a class="headerlink" href="#como-rodar" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>publicar-analitica
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>carga<span class="w"> </span>comparar-particionamento<span class="w"> </span>--repeticoes<span class="w"> </span><span class="m">15</span>
