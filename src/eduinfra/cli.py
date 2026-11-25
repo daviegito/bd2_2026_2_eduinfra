@@ -8,6 +8,7 @@ from alembic import command
 from alembic.config import Config
 
 from eduinfra import (
+    anonimizacao,
     auditoria_cdc,
     camada_analitica,
     caracterizacao,
@@ -40,7 +41,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "anonimizar-tecnico"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
@@ -57,6 +58,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--motivo", choices=recuperacao_cdc.MOTIVOS, help="motivo padronizado do tratamento")
     parser.add_argument("--lsn", type=int, help="LSN decimal da ocorrência na fila; exige --chave")
     parser.add_argument("--chave", help="chave exata da ocorrência na fila; exige --lsn")
+    parser.add_argument("--matricula", help="em anonimizar-tecnico, matrícula original do técnico que pediu a eliminação")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
 
@@ -66,6 +68,21 @@ def main(argumentos: list[str] | None = None) -> int:
     )
 
     configuracao = carregar_configuracao()
+
+    if opcoes.comando == "anonimizar-tecnico":
+        try:
+            resultado = anonimizacao.anonimizar_tecnico(configuracao.dsn, opcoes.matricula)
+        except ValueError as erro:
+            log.error("%s", erro)
+            return 2
+        if resultado is None:
+            log.error("nenhum técnico com essa matrícula; se já foi anonimizado, a matrícula original não existe mais")
+            return 1
+        print(
+            f"Técnico {resultado.tecnico_id} anonimizado: nome e matrícula substituídos e cadastro desativado. "
+            f"{resultado.vistorias} vistorias continuam ligadas ao mesmo id."
+        )
+        return 0
 
     if opcoes.comando in ("reprocessar-fila-cdc", "tratar-desvio-cdc"):
         try:
