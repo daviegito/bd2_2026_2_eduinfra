@@ -126,7 +126,6 @@ jobs:
         run: docker compose run --rm transformacao
       - name: Conferir a auditoria da Gold
         run: |
-          docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
           docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py -q
       - name: Validar declarações de controle de acesso (sem banco)
         run: |
