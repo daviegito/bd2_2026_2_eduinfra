@@ -18,7 +18,7 @@ A pergunta é em que formato guardar o dado analítico depois da Bronze. A carga
 
 **Restrições:** execução local por Docker Compose, sem serviço pago nem cluster; ferramentas de código aberto; a equipe trabalha com Python e SQL e não opera Spark; o dado não pode ficar preso ao motor que o escreveu, exigência da E2.
 
-**Situação atual:** a Silver é Parquet puro e recebe uma gravação por ano. As tabelas `warehouse/vistoria_item` e `warehouse/eventos_vistoria` são Delta. Quase nada de negócio lê essas tabelas ainda. A Gold do PR #55 lê a origem no PostgreSQL, e a fonte da transformação depende das issues #45 e #48.
+**Situação em 2 de novembro**, quando a medição foi feita (o que mudou depois da E3 está na [revisão dos gatilhos](#revisao-dos-gatilhos-em-24-de-novembro-de-2026)): a Silver é Parquet puro e recebe uma gravação por ano. As tabelas `warehouse/vistoria_item` e `warehouse/eventos_vistoria` são Delta. Quase nada de negócio lê essas tabelas ainda. A Gold do PR #55 lê a origem no PostgreSQL, e a fonte da transformação depende das issues #45 e #48.
 
 ## Alternativas consideradas
 

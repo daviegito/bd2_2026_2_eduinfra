@@ -3,7 +3,7 @@
 Esta página descreve a tabela `warehouse/vistoria_item`, derivada da Silver do
 Censo. O CDC grava em outra tabela, `warehouse/eventos_vistoria`. A publicação
 descrita aqui não incorpora automaticamente as novas vistorias do CDC; consulte
-a [arquitetura](arquitetura.md#caminhos-implementados-na-e2) para distinguir os destinos.
+a [arquitetura](arquitetura.md#caminhos-implementados-na-e2-e-na-e3) para distinguir os destinos.
 
 A camada analítica ficou guardada como uma tabela Delta na pasta
 `dados/warehouse/vistoria_item`. Os dados estão em arquivos Parquet com
