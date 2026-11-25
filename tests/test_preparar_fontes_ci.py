@@ -12,8 +12,8 @@ from zipfile import ZipFile
 
 import pytest
 
-from eduinfra import microdados
-from eduinfra.configuracao import Configuracao
+from eduinfra.ingestao import microdados
+from eduinfra.nucleo.configuracao import Configuracao
 from transformacao.scripts import preparar_fontes_ci
 
 

@@ -171,12 +171,12 @@ recriado a partir da origem, mas nenhum código o lê mais.
 
 ## Evidências
 
-- [Fonte canônica e janelas](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/eventos.py),
-  [reconciliação das janelas](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/janelas.py) e
-  [Gold](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/modelo_analitico.py).
-- Testes: `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`
+- [Fonte canônica e janelas](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/cdc/eventos.py),
+  [reconciliação das janelas](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/cdc/janelas.py) e
+  [Gold](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/experimentos/modelo_analitico.py).
+- Testes: `tests/cdc/test_fonte_de_eventos.py`, `tests/cdc/test_fonte_de_eventos_integracao.py`
   (o mesmo evento pelos dois caminhos, nas duas ordens) e
-  `tests/test_modelo_analitico.py` (a Gold lê só a fonte e confere com a origem).
+  `tests/experimentos/test_modelo_analitico.py` (a Gold lê só a fonte e confere com a origem).
 - [Dados atrasados](../dado-atrasado.md), com a demonstração sobre a fonte canônica.
 
 ## Histórico de Versões
@@ -185,3 +185,4 @@ recriado a partir da origem, mas nenhum código o lê mais.
 | --- | --- | --- | --- | --- |
 | 1.0 | Fonte canônica de eventos e unificação dos caminhos de dado atrasado | Squad EduInfra |  | 8 de novembro de 2026 |
 | 1.1 | Fonte `UNLOGGED`, cabeçalhos sem item pendentes nas janelas e frescor pela chave do evento (revisão do PR #70) | Squad EduInfra | [Pedro Vargas](https://github.com/Pedrovargas10) | 9 de novembro de 2026 |
+| 1.2 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |

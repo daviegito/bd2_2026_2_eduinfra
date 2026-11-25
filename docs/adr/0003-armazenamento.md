@@ -126,9 +126,9 @@ Com o primeiro gatilho disparado, a `vistoria_item` cobra a gravação Delta em 
 
 ## Evidências
 
-- `src/eduinfra/formatos_de_tabela.py`, `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py` e `comparacao_leitor_delta.py`, com testes em `tests/test_formatos_de_tabela.py`.
+- `src/eduinfra/experimentos/formatos_de_tabela.py`, `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py` e `comparacao_leitor_delta.py`, com testes em `tests/experimentos/test_formatos_de_tabela.py`.
 - [Camada analítica](../camada-analitica.md) e [serialização e compressão](../serializacao-compressao.md). O CSV de 116,4 MB citado nesta última é anterior à coluna `ano_censo` na Silver.
-- [CDC e semântica de entrega](../cdc-e-semantica-de-entrega.md), [modelo analítico](../modelo-analitico.md) e `src/eduinfra/fontes_transformacao.py`, que copia a Silver e a `eventos_vistoria` para a Gold.
+- [CDC e semântica de entrega](../cdc-e-semantica-de-entrega.md), [modelo analítico](../modelo-analitico.md) e `src/eduinfra/gold/fontes_dbt.py`, que copia a Silver e a `eventos_vistoria` para a Gold.
 
 ## Histórico de Versões
 

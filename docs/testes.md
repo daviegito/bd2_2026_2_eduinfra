@@ -50,7 +50,7 @@ respeitando os mesmos pré-requisitos e a pausa do consumidor.
 Para verificar o sistema contra defeitos de dados sujos nas tabelas da camada Gold, execute o script interativo de demonstração:
 
 ```bash
-docker compose run --rm --entrypoint uv carga run --no-sync python tests/rodar_demonstracao.py
+docker compose run --rm --entrypoint uv carga run --no-sync python tests/gold/rodar_demonstracao.py
 ```
 O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovará que a auditoria quebra a pipeline detectando o erro e, em seguida, fará o rollback automático.
 
@@ -58,21 +58,26 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 
 | Funcionalidade | Arquivos principais |
 | --- | --- |
-| Ingestão e recuperação da Silver | `tests/test_ingestao.py` |
-| ENEM: agregação, cobertura e ingestão idempotente | `tests/test_enem.py`, `tests/test_ingestao_enem.py` |
-| CDC e reentrega | `tests/test_pgoutput.py`, `tests/test_fluxo_cdc.py`, `tests/test_fluxo_cdc_integracao.py` |
-| Métricas do CDC | `tests/test_telemetria_cdc.py`, `tests/test_auditoria_cdc.py`, `tests/test_comparacao_latencia.py`, `tests/test_comparacao_latencia_integracao.py` |
-| Fila de erros e desvio de esquema | `tests/test_contrato_cdc.py`, `tests/test_resiliencia_cdc_integracao.py` |
-| Consulta otimizada | `tests/test_otimizacao_consulta.py`, `tests/test_otimizacao_consulta_integracao.py` |
-| Eventos e deduplicação | `tests/test_eventos.py` |
-| Janelas e atraso | `tests/test_janelas.py`, `tests/test_janelas_integracao.py` |
-| Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
-| Camada analítica | `tests/test_camada_analitica.py` |
-| Compressão | `tests/test_comparacao_compressao.py` |
-| Parquet puro, Delta e Iceberg (ADR 0003) | `tests/test_formatos_de_tabela.py`; os casos de Iceberg são ignorados sem o PyIceberg ou no Windows |
-| Histórico insert-only | `tests/test_insert_only.py` |
+| Ingestão e recuperação da Silver | `tests/ingestao/test_censo.py` |
+| ENEM: agregação, cobertura e ingestão idempotente | `tests/lake/test_silver_enem.py`, `tests/ingestao/test_enem.py` |
+| CDC e reentrega | `tests/cdc/test_pgoutput.py`, `tests/cdc/test_fluxo_cdc.py`, `tests/cdc/test_fluxo_cdc_integracao.py` |
+| Métricas do CDC | `tests/cdc/test_telemetria_cdc.py`, `tests/cdc/test_auditoria_cdc.py`, `tests/experimentos/test_comparacao_latencia.py`, `tests/experimentos/test_comparacao_latencia_integracao.py` |
+| Fila de erros e desvio de esquema | `tests/cdc/test_contrato_cdc.py`, `tests/cdc/test_resiliencia_cdc_integracao.py` |
+| Consulta otimizada | `tests/experimentos/test_otimizacao_consulta.py`, `tests/experimentos/test_otimizacao_consulta_integracao.py` |
+| Eventos e deduplicação | `tests/cdc/test_eventos.py` |
+| Janelas e atraso | `tests/cdc/test_janelas.py`, `tests/cdc/test_janelas_integracao.py` |
+| Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/cdc/test_fonte_de_eventos.py`, `tests/cdc/test_fonte_de_eventos_integracao.py`, `tests/experimentos/test_modelo_analitico.py` |
+| Camada analítica | `tests/lake/test_camada_analitica.py` |
+| Compressão | `tests/experimentos/test_comparacao_compressao.py` |
+| Histórico insert-only | `tests/origem/test_insert_only.py` |
+| Parquet puro, Delta e Iceberg (ADR 0003) | `tests/experimentos/test_formatos_de_tabela.py`; os casos de Iceberg são ignorados sem o PyIceberg ou no Windows |
 | Definições de métricas  | `tests/test_metricas.py` |
-| Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |
+| Frescor e SLA da Gold | `tests/gold/test_frescor.py`, `tests/gold/test_frescor_integracao.py` (exige `construir-gold` antes) |
+| Tabelas de consumo da Gold, construídas pelo dbt com 60 escolas de resultado conhecido | `tests/gold/test_gestao_dbt.py` |
+| Painel lendo só a Gold de consumo, frases geradas e proteção contra script no JSON | `tests/consumo/test_painel.py` |
+| Papéis, RLS por UF e recorte de coluna | `tests/seguranca/test_controle_de_acesso.py` |
+| Anonimização de dados pessoais sem alterar vistorias | `tests/origem/test_anonimizacao_integracao.py` |
+| Comandos da CLI, dependência entre pacotes e caminhos citados nos documentos | `tests/test_cli.py`, `tests/test_estrutura_do_codigo.py`, `tests/test_verificar_caminhos.py` |
 
 ## Verificações opcionais
 
@@ -80,7 +85,7 @@ Para testes baseados em propriedades e fuzzing, instale os extras:
 
 ```bash
 uv sync --group dev --extra dev_extra
-uv run python tests/fuzz_example_atheris.py
+uv run python tests/lake/fuzz_example_atheris.py
 ```
 
 O fuzzing executa continuamente até ser interrompido. Ele complementa a suíte;

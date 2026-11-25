@@ -165,7 +165,7 @@ não substituem reavaliação para outras cargas, slots ou pausas do consumidor.
 
 A suíte geral foi executada contra banco descartável populado com o recorte
 público do benchmark, com Gold disponível. Não houve skips na suíte selecionada.
-Foi excluído `tests/test_transformacao_property.py` porque a dependência opcional
+Foi excluído `tests/lake/test_silver_censo_property.py` porque a dependência opcional
 Hypothesis não está instalada; nenhuma dependência opcional foi instalada.
 As onze advertências são de APIs antigas de particionamento já existentes em
 `comparacao_latencia.py`, fora deste escopo.

@@ -12,7 +12,7 @@ A mesma Gold do PR #55 em três alternativas, sobre um recorte real do Censo 202
 | `comparar_resultados.sh` | compara duas Golds tabela a tabela, por contagem e pela soma dos hashes das linhas |
 | `resultados.txt` | saídas brutas das três rodadas de 03/11/2026 |
 
-O SQL dos modelos foi gerado das constantes de `src/eduinfra/modelo_analitico.py`, sem
+O SQL dos modelos foi gerado das constantes de `src/eduinfra/experimentos/modelo_analitico.py`, sem
 edição: só mudam as referências entre tabelas (`ref()` no dbt, `gold_sqlmesh.` no
 SQLMesh) e os cabeçalhos de cada ferramenta.
 

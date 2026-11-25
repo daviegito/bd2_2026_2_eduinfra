@@ -36,12 +36,8 @@ def rodar(*argumentos: str) -> None:
 
 
 @asset(retry_policy=RETRY)
-def migrar() -> None:
-    rodar("migrar")
-
-
-@asset(deps=[migrar], retry_policy=RETRY)
 def ingerir() -> None:
+    # O esquema é migrado pelo serviço de carga (que mantém DATABASE_URL_ADMIN).
     rodar("ingerir")
 
 
@@ -50,7 +46,14 @@ def publicar_analitica() -> None:
     rodar("publicar-analitica")
 
 
-@asset(deps=[ingerir], retry_policy=RETRY)
+@asset(group_name="ingestao", retry_policy=RETRY)
+def preparar_slot_cdc() -> str:
+    # O slot é criado com eduinfra_cdc; carga/orquestrador não têm REPLICATION.
+    rodar("preparar-slot-cdc")
+    return "slot lógico do CDC pronto"
+
+
+@asset(deps=[ingerir, preparar_slot_cdc], retry_policy=RETRY)
 def publicar_linha_de_base() -> None:
     # Carga inicial da fonte de eventos da Gold (ADR 0008). Quando a tabela já existe, não faz nada.
     rodar("publicar-analitico")
@@ -62,6 +65,8 @@ def processar_janelas() -> None:
 
 @asset(deps=[processar_janelas], retry_policy=RETRY)
 def construir_gold() -> None:
+    # O script usa DATABASE_URL (orquestrador, para ingerir o ENEM) e
+    # DATABASE_URL_TRANSFORMACAO (dbt, dono da Gold e das entradas).
     _executar([sys.executable, str(TRANSFORMACAO)], "transformação dbt")
 
 
@@ -70,7 +75,7 @@ def construir_gold() -> None:
 # A completude das definições de métricas (#82) roda no mesmo comando.
 @asset(deps=[construir_gold])
 def testar_gold() -> None:
-    _executar([sys.executable, "-m", "unittest", "tests.test_e3_gold", "tests.test_metricas"], "testes de dados da Gold")
+    _executar([sys.executable, "-m", "unittest", "tests.gold.test_e3_gold", "tests.test_metricas"], "testes de dados da Gold")
 
 
 @asset(deps=[construir_gold])
@@ -84,8 +89,8 @@ def reprocessar_janela(context: AssetExecutionContext) -> None:
 
 
 ETAPAS_DO_PIPELINE = [
-    migrar,
     ingerir,
+    preparar_slot_cdc,
     publicar_analitica,
     publicar_linha_de_base,
     processar_janelas,

@@ -31,3 +31,5 @@ dbt-docs/
 
 # Arquivos públicos restaurados pelo cache do CI
 .cache/fontes-inep/
+
+docs/painel.html

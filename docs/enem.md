@@ -178,7 +178,7 @@ Silver levou de 6,6 s a 12,3 s.
 ## Como rodar
 
 ```bash
-docker compose run --rm carga migrar               # aplica a 0008
+docker compose --profile admin run --rm migracao   # aplica as migrações
 docker compose run --rm carga ingerir-enem         # baixa cerca de 526 MB na primeira vez
 docker compose run --rm carga ingerir-enem         # de novo: ignorada pelo manifesto
 docker compose run --rm carga medir-cobertura-enem # exige também a Silver do Censo (ingerir)

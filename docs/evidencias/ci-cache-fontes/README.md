@@ -71,7 +71,7 @@ Os demais PRs precisam incorporar o novo workflow para usufruir da otimização.
 ## Verificação local
 
 ```bash
-uv run --no-sync pytest tests/test_preparar_fontes_ci.py tests/test_painel.py -q
+uv run --no-sync pytest tests/test_preparar_fontes_ci.py tests/consumo/test_painel.py -q
 ```
 
 Um servidor HTTP local entrega ZIPs de teste. A execução fria faz duas requisições;

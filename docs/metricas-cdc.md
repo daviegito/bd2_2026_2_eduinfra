@@ -30,7 +30,8 @@ aceitou. As decisões de arquitetura estão no
 
 ```bash
 docker compose build carga cdc
-docker compose run --rm carga migrar
+docker compose --profile admin run --rm migracao
+docker compose run --no-deps --rm cdc preparar-slot-cdc
 docker compose up -d --no-deps cdc
 
 # Insere vistorias de teste, mede latência e ordem e termina com a auditoria.
@@ -311,8 +312,8 @@ juntos. Para obter esses valores sem imprimir o conteúdo das linhas:
 
 ```bash
 docker compose run --rm -T --entrypoint python carga - <<'PYTHON'
-from eduinfra.configuracao import carregar_configuracao
-from eduinfra.fila_de_erros import ler
+from eduinfra.nucleo.configuracao import carregar_configuracao
+from eduinfra.cdc.fila_de_erros import ler
 for entrada in ler(carregar_configuracao()).to_pylist():
     print(entrada["lsn_origem"], entrada["chave"], entrada["operacao"])
 PYTHON
@@ -406,3 +407,4 @@ docker compose run --rm -T -e LINHA_A_LINHA=1 --entrypoint uv carga run --no-syn
 | --- | --- | --- | --- | --- |
 | 1.0 | Medição das métricas de consistência, latência, frescor e resiliência do CDC | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.1 | Inclui as saídas brutas e os scripts das falhas provocadas | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
+| 1.2 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |

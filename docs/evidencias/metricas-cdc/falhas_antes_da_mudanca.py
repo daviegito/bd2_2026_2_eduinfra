@@ -15,8 +15,8 @@ import psycopg
 from alembic import command
 from alembic.config import Config
 
-from eduinfra import cdc, eventos, fluxo_cdc
-from eduinfra.configuracao import carregar_configuracao
+from eduinfra.cdc import eventos, fluxo_cdc, replicacao
+from eduinfra.nucleo.configuracao import carregar_configuracao
 
 BANCO = "eduinfra_falhas_antes"
 SLOT = "eduinfra_falhas_antes"
@@ -126,7 +126,7 @@ def main() -> int:
                 "values (100001, 'Escola', 1, 1, 1, 2024)"
             )
             conexao.execute("insert into tecnico (matricula, nome, lotacao_uf) values ('FALHAS', 'Falhas', 'DF')")
-            cdc.garantir_slot(conexao, SLOT)
+            replicacao.garantir_slot(conexao, SLOT)
             provocar(conexao, configuracao)
     finally:
         with psycopg.connect(base.dsn, autocommit=True) as admin:

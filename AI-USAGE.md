@@ -717,14 +717,71 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
 - **Quem revisou:** lucasarruda9.
 
-### 2026-11-23 e 2026-11-24 — Controle de acesso
+### 2026-11-23 — Reorganização do src/ e dos testes em pacotes (issues #96 e #97)
 
-- **Ferramenta:** OpenCode (implementação) e Gemini (auditoria do checklist, ajustes de integração e resolução de conflitos de merge).
-- **O que foi pedido:** eliminar o uso compartilhado do superusuário (`POSTGRES_USER`) nos serviços de rotina do Compose, criando papéis com privilégio mínimo via migração versionada, aplicando recorte de linha (RLS por UF) na fila de vistorias e recorte de coluna na tabela `tecnico`, além de implementar o comando `demonstrar-acesso`, os testes automatizados (permitidos e negados) e a documentação da issue #86.
-- **Onde:** `alembic/versions/0010_controle_de_acesso.py` (criação dos 9 papéis, propriedade de esquemas, privilégios padrão, funções `SECURITY DEFINER`, visão `public.fila_vistoria`, políticas RLS e `GRANT SELECT` por coluna em `tecnico`), `transformacao/macros/create_schema.sql`, `src/eduinfra/controle_de_acesso.py`, `src/eduinfra/cli.py`, `src/eduinfra/configuracao.py`, `src/eduinfra/modelo_analitico.py`, `src/eduinfra/fontes_transformacao.py`, `src/eduinfra/frescor.py`, `src/eduinfra/orquestrador.py`, `src/eduinfra/painel.py`, `transformacao/scripts/executar.py`, `docker-compose.yml` (isolamento de `DATABASE_URL_ADMIN` no serviço `migracao` sob `profiles: [admin]`), `.env.example`, `.github/workflows/docs.yml`, `tests/test_controle_de_acesso.py`, `docs/controle-de-acesso.md`, `docs/evidencias/controle-de-acesso/saida.txt`, `mkdocs.yml` e ajustes de integração com a `main` em `tests/test_orquestrador.py`.
-- **O que foi aproveitado:** a estrutura existente de migrações do Alembic, o pipeline de transformação dbt e a orquestração via Docker Compose e Dagster. O superusuário foi isolado exclusivamente no serviço dedicado `migracao` (`profiles: [admin]`), enquanto `carga`, `transformacao`, `cdc`, `orquestrador` e `painel` passaram a autenticar com papéis dedicados (`rolsuper = false`). Na integração com a `main`, foram preservadas as definições de métricas da #82 (`metricas/`, `test_metricas.py`) e a remoção da etapa `migrar` do Dagster.
-- **Como foi verificado:** execução de `demonstrar-acesso` aprovada nos 4 cenários (leitura permitida do painel na Gold, escrita negada em `municipio`, linha de outra UF invisível entre `DF` e `SP` via RLS e colunas pessoais `nome`/`matricula` negadas para `eduinfra_analise`), registrada em `docs/evidencias/controle-de-acesso/saida.txt`; suíte `tests/test_controle_de_acesso.py` (18 testes de declaração e integração) aprovada; build do dbt (39/39 testes) e geração do painel (`docs/painel.html`) validados sob os papéis restritos; `uv run pytest -m "not integracao"` e `mkdocs build --strict` aprovados sem erros.
-- **Quem revisou:** daviegito.
+- **Ferramenta:** Claude Code, como assistente de refatoração.
+- **O que foi pedido:** executar o mapa de pacotes da #96 e a verificação da #97: mover os módulos de
+  `src/eduinfra` e de `tests/`, reescrever os imports, dividir a CLI por pacote e checar os caminhos
+  citados nos documentos.
+- **Onde:** pacotes `nucleo`, `origem`, `ingestao`, `lake`, `cdc`, `gold`, `consumo` e `experimentos`;
+  `cli.py` e um `comandos.py` por pacote; `scripts/verificar_caminhos.py`; workflows `docs.yml` e
+  `caminhos.yml`; `docs/estrutura-do-codigo.md`, README e caminhos citados em `docs/`.
+- **O que foi aproveitado:** a movimentação com `git mv`, a reescrita dos imports, a divisão da CLI e os
+  testes de CLI, de dependência entre pacotes e de caminhos. Artur aprovou os ajustes ao mapa da #96
+  (pontos de entrada na raiz, sufixo `_cdc` mantido, `docs/` no mesmo lugar) e definiu a entrega em duas
+  branches. As entradas antigas deste registro e do diário não foram alteradas.
+- **Como foi verificado:** `eduinfra --help` idêntico ao da main; suíte sem banco com o resultado da main
+  mais os testes novos; os 160 testes de integração num PostgreSQL descartável iguais aos da main, teste
+  a teste (130 passaram; as 14 falhas de ambiente são as mesmas); `mkdocs build --strict` e script de
+  caminhos sem acusação. `docker compose up --build` não executado.
+- **Quem revisou:** Artur (plano e resultados das verificações); revisão de outro membro da squad pendente.
+
+### 2026-11-23 — Tabelas de consumo da Gold e painel (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de modelagem e implementação.
+- **O que foi pedido:** publicar na Gold tabelas já agregadas para a pergunta de gestão, fazer o painel
+  ler só essas tabelas, sem cálculo no navegador, e levantar antes as práticas de referência para a
+  camada Gold e para a estrutura de projetos dbt.
+- **Onde:** `transformacao/models/intermediate/int_desempenho_escola*.sql`,
+  `transformacao/models/marts/gestao/` (sete tabelas de consumo e a exposição do painel), variáveis
+  `minimo_escolas` e `faixas_de_desempenho` em `transformacao/dbt_project.yml`, seis testes de dados em
+  `transformacao/tests/`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, workflow de documentação, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** os modelos de `marts/gestao`, os testes e o painel reescrito, seguindo o
+  padrão de estrela como núcleo e tabelas de consumo por cima (guia de estrutura do dbt e documentação
+  de medallion da Databricks). Artur definiu o que o painel precisa responder a partir da crítica da
+  docência e aprovou o desenho das tabelas. A faixa alta e a baixa usam o quintil dentro da rede,
+  sugerido na #94, e ainda precisam de confirmação do grupo. Pendentes: na #94, comparação por área e
+  localização e UF como características; na #95, lista de escolas com CSV e teste de uso com duas pessoas.
+- **Como foi verificado:** `dbt parse` com e sem ENEM; `dbt build` num PostgreSQL descartável com 60
+  escolas sintéticas de resultado conhecido, conferindo a diferença com e sem biblioteca, os quintis,
+  o perfil das faixas e a supressão de grupos pequenos; painel gerado dessa Gold sem nome de escola;
+  integração completa com 136 testes passando, contra 130 na main, e as mesmas 14 falhas de ambiente;
+  suíte sem banco e `mkdocs build --strict` passando. O painel ainda não foi gerado com os dados reais.
+- **Quem revisou:** Artur (desenho das tabelas e resultados das verificações); revisão de outro membro da
+  squad pendente.
+
+### 2026-11-23 — Perfil por área, características além dos itens e lista de escolas (issues #94 e #95)
+
+- **Ferramenta:** Claude Code, como assistente de implementação.
+- **O que foi pedido:** fechar o que faltava nas duas issues antes de abrir a PR. Na #94, comparar o perfil
+  por área da prova e incluir localização, UF e número de itens como características. Na #95, a lista de
+  escolas das duas faixas com CSV, a frase de onde olhar primeiro, um glossário e cores que não dependam só
+  do matiz.
+- **Onde:** `transformacao/models/intermediate/int_faixa_por_area.sql`, `perfil_alto_baixo_desempenho.sql` e
+  `escola_desempenho_infra.sql` em `transformacao/models/marts/gestao/`, `gestao.yml`, o teste
+  `perfil_alto_baixo_coerente`, `src/eduinfra/consumo/painel.py`, `tests/consumo/test_painel.py`,
+  `tests/gold/test_gestao_dbt.py`, README e `docs/modelo-analitico.md`.
+- **O que foi aproveitado:** o perfil com grão de rede, área e característica, a lista com supressão da faixa
+  pequena e o CSV com proteção contra fórmula. Artur decidiu que a PR só fecha as issues com esses itens
+  feitos. "Pelo menos metade dos itens" como medida de quantidade de itens foi escolha nossa e entra na
+  revisão do grupo. Ficam fora do código o teste de uso com duas pessoas (#95) e a leitura pela camada
+  semântica (#94, depende das #82 e #83).
+- **Como foi verificado:** testes do painel com Node (13 passando), incluindo ordem e supressão da lista, CSV
+  com acento e nome começando por sinal de igual, e perfil seguindo a área do filtro; `dbt build` no
+  PostgreSQL descartável com Matemática invertida em relação à média geral, conferindo que o perfil de
+  Matemática dá a diferença oposta.
+- **Quem revisou:** Artur; revisão de outro membro da squad pendente.
 
 ## 2026-11-24 — Experimento de cache de fontes no CI
 
@@ -787,6 +844,33 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   depende de integrar o workflow e semear o cache na main.
 - **Quem revisou:** revisão humana pendente.
 
+### 2026-11-24 — Atualização da reorganização com a main (PR #107)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** resolver os conflitos do PR #107 com a main depois do merge do #98 e do #105.
+- **Onde:** `AI-USAGE.md`, `docs/testes.md`, `.github/workflows/docs.yml`, `src/eduinfra/orquestrador.py`,
+  `tests/test_orquestrador.py`, `tests/test_metricas.py`, `tests/test_preparar_fontes_ci.py`,
+  `transformacao/scripts/preparar_fontes_ci.py`, `scripts/verificar_caminhos.py` e `README.md`.
+- **O que foi aproveitado:** a junção dos dois lados de cada conflito, os imports e caminhos dos arquivos novos
+  da main apontando para os pacotes, a pasta `docs/evidencias/` fora do verificador de caminhos e a correção do
+  módulo da auditoria no README. Artur pediu a atualização por merge, sem reescrever o histórico da branch.
+- **Como foi verificado:** script de caminhos sem acusação; suíte sem banco com 241 testes aprovados e a mesma
+  falha de codificação no Windows que a main já tem em `test_cli_exporta_dados_e_calculos_reais_sem_duplicar_perfis_ou_anos`;
+  `eduinfra --help` executado. Testes de integração e `docker compose up --build` não executados.
+- **Quem revisou:** revisão de outro membro da squad pendente.
+
+### 2026-11-24 — Atualização do painel com a reorganização atualizada (PR #108)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** resolver os conflitos do PR #108 com a branch do #107, que recebeu a main.
+- **Onde:** `AI-USAGE.md` e `.github/workflows/docs.yml`.
+- **O que foi aproveitado:** a junção das entradas em ordem de data e, no workflow, a conferência do painel
+  por componentes que veio da main, trocando o `grafico-relacao`, que o painel novo não tem, pelo
+  `grafico-perfil`. Artur pediu a atualização por merge.
+- **Como foi verificado:** suíte sem banco com 238 testes aprovados e script de caminhos sem acusação.
+  Testes de integração não executados.
+- **Quem revisou:** revisão de outro membro da squad pendente.
+
 ### 2026-11-24 — Revisão dos gatilhos do ADR 0003 depois da E3 (issue #4)
 
 - **Ferramenta:** Claude Code, como assistente de revisão.
@@ -801,3 +885,23 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `tests/test_formatos_de_tabela.py` com 11 testes aprovados e os 3 de Iceberg ignorados sem o PyIceberg.
   Os gatilhos de tamanho de arquivo não foram medidos.
 - **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad.
+
+### 2026-11-25 — Integração da issue #86 com a reorganização de pacotes (PR #107)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** adaptar o controle de acesso da issue #86 e os ajustes do PR #101 ao código atual,
+  mantendo a integração com a branch `refactor/pacotes-src`, que já contém o #108, e com os PRs #106 e #109.
+- **Onde:** worktree `feat/controle-acesso-integrado`, criada de `origin/refactor/pacotes-src` com merge de
+  `origin/main`; pacote `src/eduinfra/seguranca/`, migração `0010`, papéis nos serviços do Compose,
+  CLI, orquestrador, transformação dbt, documentação, CI e testes movidos para os pacotes correspondentes.
+- **O que foi aproveitado:** os papéis de privilégio mínimo e a RLS da #86, a anonimização da #106,
+  os módulos de comparação da #109 em `experimentos/`, e os modelos de gestão e o painel da #108. O painel
+  passou a ler apenas a Gold, sem depender de `entrada_transformacao`, para funcionar como `eduinfra_painel`.
+- **Como foi verificado:** `python -m compileall`, `scripts/verificar_caminhos.py`, `docker compose config`
+  com os perfis `admin` e `analitico`, `mkdocs build --strict` com `docs/painel.html` gerado, suíte sem
+  banco com 258 testes aprovados e 4 skips, migração 0010, preparo do slot CDC, `dbt build` com 66/66 nós,
+  auditoria da Gold, 16 testes de integração de acesso, 3 de anonimização e geração do painel como
+  `eduinfra_painel`, tudo em contêineres com a porta PostgreSQL alternativa 55432. A primeira tentativa
+  da transformação falhou por margem insuficiente do slot e passou após o CDC drenar a carga inicial;
+  o teste de CDC da suíte de acesso precisou de `tecnico_id`, `origem` válida e limpeza com superusuário.
+- **Quem revisou:** revisão de outro membro da squad pendente.

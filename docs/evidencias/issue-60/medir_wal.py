@@ -12,9 +12,10 @@ import psycopg
 import pyarrow.dataset as ds
 from deltalake import DeltaTable
 
-from eduinfra import cdc, eventos, fluxo_cdc, modelo_analitico
-from eduinfra.configuracao import carregar_configuracao
-from eduinfra.vistorias_de_teste import inserir_vistoria
+from eduinfra.cdc import eventos, fluxo_cdc, replicacao
+from eduinfra.experimentos import modelo_analitico
+from eduinfra.nucleo.configuracao import carregar_configuracao
+from eduinfra.origem.vistorias_de_teste import inserir_vistoria
 
 
 def medir(opcoes):
@@ -41,7 +42,7 @@ def medir(opcoes):
             with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
                 ultimo_checkpoint = time.monotonic()
                 while not parar.is_set():
-                    estado = cdc.estado_do_slot(conexao)
+                    estado = replicacao.estado_do_slot(conexao)
                     amostras.append({"segundos": round(time.monotonic() - inicio, 3),
                                      "wal_retido_bytes": estado.wal_retido_em_bytes,
                                      "atraso_bytes": estado.atraso_em_bytes,
@@ -61,7 +62,7 @@ def medir(opcoes):
         raise RuntimeError("consumidor não iniciou: " + str(erros))
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
         limite = conexao.execute("show max_slot_wal_keep_size").fetchone()[0]
-        inicio_lsn = cdc.posicao_persistida(conexao)
+        inicio_lsn = replicacao.posicao_persistida(conexao)
         escolas = conexao.execute("select count(*) from escola").fetchone()[0]
         itens = conexao.execute("select count(*) from vistoria_item").fetchone()[0]
     inicio = time.monotonic()
@@ -110,8 +111,8 @@ def medir(opcoes):
         consumidor.join(timeout=120)
         monitor.join(timeout=120)
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
-        final = cdc.estado_do_slot(conexao)
-        fim_lsn = cdc.posicao_persistida(conexao)
+        final = replicacao.estado_do_slot(conexao)
+        fim_lsn = replicacao.posicao_persistida(conexao)
     tabela = DeltaTable(str(eventos.caminho_da_tabela(configuracao)))
     dados = tabela.to_pyarrow_dataset().to_table(filter=ds.field("vistoria_id") == marcador)
     chaves = set(zip(dados.column("vistoria_id").to_pylist(), dados.column("item_codigo").to_pylist()))

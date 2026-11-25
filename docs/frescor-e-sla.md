@@ -72,7 +72,10 @@ este SLA inclui esse trecho e a construção da Gold.
   num horário fixo, a vistoria registrada logo depois espera quase 24 h. A margem
   cobre a construção e uma nova tentativa se a primeira falhar.
 
-O valor é ajustável com `medir-frescor --sla-horas`.
+O valor é ajustável com `medir-frescor --sla-horas`. O `construir-gold` roda
+como `eduinfra_orquestrador` e entra como `eduinfra_dbt` só na escrita da Gold;
+`medir-frescor` registra a leitura como `eduinfra_carga`, que tem `SELECT` na
+Gold e na origem, sem ser superusuário.
 
 ## Registro e falha
 
@@ -87,10 +90,10 @@ docker compose run --rm carga medir-frescor    # registra; código 1 fora do SLA
   violado. É o comando que a orquestração (issue #50) deve agendar depois de cada
   construção, para a falha aparecer como falha da execução.
 
-O registro fica fora do schema `gold`, que é apagado a cada construção. O comando
-cria `monitoramento.frescor_gold` na primeira medição, como `construir-gold` cria o
-schema `gold`: são dados derivados, não da origem, e por isso ficam fora das
-migrações.
+O registro fica fora do schema `gold`, que é limpo a cada construção. A migração
+0010 cria `monitoramento` e `gold`; `medir-frescor` grava em
+`monitoramento.frescor_gold`. São dados derivados, não da origem, e por isso não
+entram nas migrações de origem.
 
 ```sql
 select medido_em, comando, vistorias_pendentes, frescor_s, sla_s, dentro_do_sla

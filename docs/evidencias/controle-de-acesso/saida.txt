@@ -1,0 +1,32 @@
+# Saída de `demonstrar-acesso` (base de desenvolvimento, Censo 2024)
+
+Demonstração de controle de acesso (issue #86)
+[OK] leitura permitida (painel -> gold): esperado SELECT aceito; obtido 181065 linhas
+[OK] escrita negada (painel -> municipio): esperado permission denied; obtido permission denied
+[OK] linha invisível (técnico -> UF): esperado só a própria UF; obtido DF vê 1325/1325 e 0 da vistoria 144148 de SP; SP vê 30746/30746 (148996 de outras UFs ocultas)
+[OK] coluna negada (análise -> tecnico): esperado nome e matricula negados; obtido id/lotacao_uf liberados; nome e matricula negados
+4/4 casos como esperado
+
+# Atributos dos papéis (nenhum superusuário; só cdc e cdc_bancada replicam)
+
+ rolname               | rolsuper | rolbypassrls | rolreplication | rolcanlogin
+------------------------+----------+--------------+----------------+-------------
+ eduinfra_analise       | f        | f            | f              | t
+ eduinfra_carga         | f        | f            | f              | t
+ eduinfra_cdc           | f        | f            | t              | t
+ eduinfra_cdc_bancada   | f        | f            | t              | t
+ eduinfra_dbt           | f        | f            | f              | t
+ eduinfra_orquestrador  | f        | f            | f              | t
+ eduinfra_painel        | f        | f            | f              | t
+ eduinfra_tecnico_df    | f        | f            | f              | t
+ eduinfra_tecnico_sp    | f        | f            | f              | t
+
+# Conferências de catálogo (has_table_privilege)
+
+- painel lê gold.dim_escola e metricas; não lê public.vistoria, entrada_transformacao.enem_escola_ano nem monitoramento.frescor_gold.
+- dbt escreve em gold e metricas; não cria tabela em entrada_transformacao, não insere em monitoramento nem em public.vistoria.
+- analise lê colunas id/lotacao_uf/ativo/registrado_em de tecnico; nome e matricula negados.
+- tecnico não lê public.escola/municipio direto; lê public.fila_vistoria filtrada pela UF do papel.
+- carga lê gold; não escreve em gold e não tem REPLICATION.
+- cdc lê vistoria, vistoria_item, escola e municipio e avança o slot lógico como eduinfra_cdc.
+- migracao é o único serviço com DATABASE_URL_ADMIN (profiles: [admin]).

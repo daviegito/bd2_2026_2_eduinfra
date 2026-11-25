@@ -69,7 +69,7 @@ a chave estrangeira de todo o histórico.
 
 A saída escolhida é **anonimizar o técnico e manter o id**. A tabela `tecnico`
 não é insert-only, então o comando `anonimizar-tecnico`
-(`src/eduinfra/anonimizacao.py`) faz quatro coisas:
+(`src/eduinfra/origem/anonimizacao.py`) faz quatro coisas:
 
 - troca o nome por "Técnico anonimizado";
 - troca a matrícula por `anonimizado-<id>`, que continua única;
@@ -96,7 +96,7 @@ está em [evidencias/lgpd/anonimizacao.txt](evidencias/lgpd/anonimizacao.txt):
 Na mesma evidência, repetir o comando sai com código 1 sem mudar nada, e um
 UPDATE em `vistoria` continua bloqueado pela trigger de insert-only.
 
-Os testes em `tests/test_anonimizacao_integracao.py` cobrem três casos, cada um
+Os testes em `tests/origem/test_anonimizacao_integracao.py` cobrem três casos, cada um
 num banco criado e apagado pelo teste:
 
 - o técnico é anonimizado, o outro técnico fica intacto e as vistorias ficam
@@ -138,11 +138,11 @@ por escola (`CO_ESCOLA` = `CO_ENTIDADE`, [ENEM e junção com o Censo](enem.md))
   `RESULTADOS`. Assim, o perfil socioeconômico do aluno (sexo, idade, cor/raça,
   renda) nunca é ligado à escola nem às notas.
 - **Nada no grão da pessoa a partir da Silver.** A Silver do ENEM já sai agregada
-  por escola (`src/eduinfra/enem.py`). Nenhuma camada a partir dela tem uma
+  por escola (`src/eduinfra/ingestao/enem.py`). Nenhuma camada a partir dela tem uma
   linha por inscrito.
 - **Supressão no painel.** O painel suprime a média de qualquer grupo com menos
   de 10 escolas com nota válida, inclusive depois de filtrar (`MINIMO_ESCOLAS`
-  em `src/eduinfra/painel.py`).
+  em `src/eduinfra/consumo/painel.py`).
 
 **O que sobra**
 
