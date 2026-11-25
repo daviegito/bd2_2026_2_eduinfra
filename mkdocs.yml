@@ -62,6 +62,7 @@ nav:
       - Modelo da origem: modelo-origem.md
       - Modelo analítico: modelo-analitico.md
       - Métricas: metricas.md
+      - LGPD: lgpd.md
       - Fontes, equipe e entregas: projeto.md
   - Execução:
       - Como executar e demonstrar: execucao.md
