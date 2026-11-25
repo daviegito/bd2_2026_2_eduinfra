@@ -13,6 +13,7 @@ from eduinfra.ingestao import comandos as ingestao
 from eduinfra.lake import comandos as lake
 from eduinfra.nucleo.configuracao import Configuracao, carregar_configuracao
 from eduinfra.origem import comandos as origem
+from eduinfra.seguranca import comandos as seguranca
 
 COMANDOS = {
     **origem.COMANDOS,
@@ -22,6 +23,7 @@ COMANDOS = {
     **gold.COMANDOS,
     **experimentos.COMANDOS,
     **consumo.COMANDOS,
+    **seguranca.COMANDOS,
 }
 
 
@@ -46,7 +48,7 @@ def main(argumentos: list[str] | None = None) -> int:
 
 
 def _tudo(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    origem.migrar(opcoes, configuracao)
+    # A migração é um passo administrativo separado (serviço migracao).
     ingestao.ingerir(opcoes, configuracao)
     cdc.publicar_linha_de_base(configuracao, opcoes.forcar)
     experimentos.caracterizar(opcoes, configuracao)
@@ -58,10 +60,11 @@ def montar_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
                                            "processar-janelas", "reprocessar-janela", "demonstrar-atraso", "tudo", "gerar_amostra",
-                                           "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
+                                           "preparar-slot-cdc", "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel",
+                                           "demonstrar-acesso", "anonimizar-tecnico"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
@@ -78,6 +81,7 @@ def montar_parser() -> argparse.ArgumentParser:
     parser.add_argument("--motivo", choices=recuperacao_cdc.MOTIVOS, help="motivo padronizado do tratamento")
     parser.add_argument("--lsn", type=int, help="LSN decimal da ocorrência na fila; exige --chave")
     parser.add_argument("--chave", help="chave exata da ocorrência na fila; exige --lsn")
+    parser.add_argument("--matricula", help="em anonimizar-tecnico, matrícula original do técnico que pediu a eliminação")
     parser.add_argument("--verboso", action="store_true")
     return parser
 

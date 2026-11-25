@@ -219,16 +219,24 @@ com [uv](https://docs.astral.sh/uv/).
 ```bash
 git clone https://github.com/daviegito/bd2_2026_2_eduinfra.git
 cd bd2_2026_2_eduinfra
-cp .env.example .env        # troque POSTGRES_PASSWORD e a senha em DATABASE_URL
+cp .env.example .env        # troque POSTGRES_PASSWORD e as senhas EDUINFRA_SENHA_*
+docker compose --profile admin run --rm migracao
+docker compose run --no-deps --rm cdc preparar-slot-cdc
 docker compose up --build
 ```
 
-O serviço `carga` roda as migrações, baixa e ingere o Censo 2024, publica a
-linha de base nas tabelas Delta, imprime a caracterização da base e termina com
-código 0. Em seguida, o serviço `cdc` sobe e fica consumindo o slot lógico a
-cada 2 segundos. O `orquestrador` aguarda a carga e o CDC saudável e disponibiliza
-o Dagster em <http://localhost:3000>. A agenda padrão é `0 3 * * *`, diariamente
-às 3h no fuso `America/Sao_Paulo`, configurável por `AGENDA_ORQUESTRADOR`.
+A migração administrativa roda com o superusuário apenas no serviço `migracao`
+(`profiles: [admin]`). Em seguida, o papel `eduinfra_cdc` cria o slot lógico e o
+serviço `carga` baixa e ingere o Censo 2024, publica a linha de base nas tabelas
+Delta, imprime a caracterização da base e termina com código 0. O `cdc` sobe e
+fica consumindo o slot lógico a cada 2 segundos. O `orquestrador` aguarda a
+carga e o CDC saudável e disponibiliza o Dagster em <http://localhost:3000>. A
+agenda padrão é `0 3 * * *`, diariamente às 3h no fuso `America/Sao_Paulo`,
+configurável por `AGENDA_ORQUESTRADOR`.
+
+Nenhum serviço de rotina recebe `DATABASE_URL_ADMIN`: apenas `migracao` usa o
+superusuário. A matriz completa está em
+[docs/controle-de-acesso.md](docs/controle-de-acesso.md).
 
 Para construir e testar imediatamente a Gold completa da E3, execute também:
 
@@ -264,8 +272,10 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 
 | Comando | O que faz |
 | --- | --- |
-| `docker compose run --rm carga migrar` | aplica as migrações até a última revisão |
-| `docker compose run --rm carga reverter --revisao 0003` | volta o esquema até a revisão indicada |
+| `docker compose --profile admin run --rm migracao` | aplica as migrações até a última revisão, com o superusuário isolado |
+| `docker compose --profile admin run --rm migracao reverter --revisao 0003` | volta o esquema até a revisão indicada |
+| `docker compose run --no-deps --rm cdc preparar-slot-cdc` | cria o slot lógico com `eduinfra_cdc` (`REPLICATION`), antes da linha de base |
+| `docker compose run --rm carga demonstrar-acesso` | demonstra leitura, escrita negada, linha por UF e coluna negada (4/4 casos) |
 | `docker compose run --rm carga ingerir` | baixa o Censo, se preciso, e ingere; é idempotente e registra a execução no manifesto |
 | `docker compose run --rm carga ingerir --forcar` | reexecuta mesmo que o arquivo já conste no manifesto (não duplica linhas) |
 | `docker compose run --rm carga carregar` | sinônimo de `ingerir`, mantido por compatibilidade com a E1 |
@@ -277,7 +287,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga processar-janelas` | reconcilia com a origem as janelas mensais tocadas pelas vistorias registradas desde a última execução, completando a fonte canônica de eventos ([dado atrasado](docs/dado-atrasado.md)) |
 | `docker compose run --rm carga reprocessar-janela --mes AAAA-MM` | regrava a janela de um mês a partir da origem; idempotente |
 | `docker compose run --rm carga demonstrar-atraso` | insere vistorias atrasadas e mostra em que janela cada uma cai |
-| `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta e cria o slot lógico; idempotente |
+| `docker compose run --rm carga publicar-analitico` | carrega a origem na tabela Delta; idempotente e exige o slot lógico já preparado |
 | `docker compose run --rm carga cdc` | uma passada do consumidor do slot lógico (`--continuo` fica acompanhando) |
 | `docker compose run --rm carga demonstrar-cdc` | demonstra o CDC, a retomada e a reentrega |
 | `docker compose run --rm carga comparar-ingestao` | mede slot lógico contra recarga incremental |
@@ -287,7 +297,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga comparar-particionamento` | mede particionamento, compactação e evolução de esquema da tabela Delta ([resultado](docs/camada-analitica.md)) |
 | `docker compose run --build --rm transformacao` | prepara Censo, ENEM e eventos canônicos, constrói e testa a Gold com dbt e gera sua documentação; fluxo completo da E3 |
 | `docker compose run --rm carga construir-gold` | construtor SQL de infraestrutura, mantido para comparação com dbt; não entrega o fato ENEM exigido pelo painel |
-| `docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel` | exporta `docs/painel.html` a partir da Gold completa |
+| `docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel` | exporta `docs/painel.html` a partir da Gold completa, como `eduinfra_painel` |
 | `docker compose run --rm carga auditar-cdc` | confere consistência, fila, contrato e saúde do slot |
 | `docker compose run --rm carga reprocessar-fila-cdc --responsavel operador-01 --motivo esquema_corrigido` | recupera os INSERTs rejeitados pela chave, mantendo itens inválidos pendentes e registrando recibos ([procedimento](docs/metricas-cdc.md)) |
 | `docker compose run --rm carga tratar-desvio-cdc --lsn <decimal> --chave <chave> --responsavel operador-01 --motivo desvio_revisado` | registra o aceite explícito de uma alteração fora do insert-only (`UPDATE`, `DELETE`, `TRUNCATE`) que está na fila, pela ocorrência exata |
@@ -296,7 +306,7 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 | `docker compose run --rm carga medir-frescor` | mede o frescor da Gold e registra em `monitoramento.frescor_gold`; sai com código 1 fora do SLA de 25 h (`--sla-horas` muda o limite); ver [frescor e SLA](docs/frescor-e-sla.md) |
 | `docker compose run --rm carga demonstrar-frescor` | insere uma vistoria fora da Gold e mostra a violação do SLA |
 | `docker compose run --rm carga gerar_amostra --escolas 200` | popula a origem com uma amostra sintética de escolas e vistorias, para testes em banco descartável |
-| `docker compose run --rm carga tudo` | migrar, ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência; é o padrão do compose |
+| `docker compose run --rm carga tudo` | ingerir, publicar-analitico, caracterizar e publicar-analitica em sequência, sem migrar; é o padrão do compose |
 
 No Compose, a opção `--saida` grava dentro do contêiner. Para o arquivo
 aparecer no repositório, monte a pasta, por exemplo
@@ -308,7 +318,9 @@ compose publicado na porta do `.env`:
 ```bash
 uv sync
 set -a && source .env && set +a
-uv run eduinfra tudo
+uv run eduinfra migrar                    # usa DATABASE_URL_ADMIN
+uv run eduinfra preparar-slot-cdc         # usa DATABASE_URL_CDC
+uv run eduinfra tudo                      # rotina como eduinfra_carga
 ```
 
 ## Transformações declarativas da Gold (E3, issue #48)
@@ -352,7 +364,7 @@ Para gerar localmente com Censo, ENEM e eventos canônicos reais:
 
 ```bash
 docker compose run --build --rm transformacao
-docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
 uv run mkdocs serve
 ```
 
@@ -479,7 +491,7 @@ as notas. A Silver tem uma linha por escola, com participantes, notas válidas e
 médias por área e da redação.
 
 ```bash
-docker compose run --rm carga migrar
+docker compose --profile admin run --rm migracao
 docker compose run --rm carga ingerir-enem          # na primeira vez, baixa cerca de 526 MB
 docker compose run --rm carga ingerir-enem          # repetir é ignorado pelo manifesto
 docker compose run --rm carga medir-cobertura-enem  # precisa também da Silver do Censo
@@ -500,9 +512,10 @@ numa tabela Delta Lake, `eventos_vistoria`, em
 particionada pelo mês de `ocorrido_em`. O DuckDB lê com `delta_scan`.
 
 ```bash
-docker compose run --rm carga publicar-analitico      # linha de base: origem -> Delta, idempotente
-docker compose run --rm carga cdc                     # uma passada do consumidor do slot lógico
-docker compose run --rm carga demonstrar-cdc          # insere na origem e mostra o efeito até o Delta
+docker compose run --no-deps --rm cdc preparar-slot-cdc  # cria o slot como eduinfra_cdc
+docker compose run --rm carga publicar-analitico         # linha de base: origem -> Delta, idempotente
+docker compose run --rm carga cdc                        # uma passada do consumidor do slot lógico
+docker compose run --rm carga demonstrar-cdc             # insere na origem e mostra o efeito até o Delta
 ```
 
 O serviço `cdc` do Compose roda o consumidor de forma contínua, a cada 2
@@ -599,7 +612,7 @@ seguinte. Detalhes, procedimentos e logs em
 Para repetir as demonstrações, com o ambiente no ar:
 
 - **Retry:** pare o banco com `docker compose stop banco`, abra o job
-  `pipeline` na interface e clique em *Materialize all*. O passo `migrar`
+  `pipeline` na interface e clique em *Materialize all*. O passo `ingerir`
   falha e o Dagster agenda nova tentativa em 30 s. Religue o banco com
   `docker compose start banco`; a tentativa seguinte passa.
 - **Backfill:** abra o asset `reprocessar_janela`, clique em *Materialize*,
@@ -648,7 +661,7 @@ dependência entre os pacotes e a tabela dos caminhos antigos estão em
 [docs/estrutura-do-codigo.md](docs/estrutura-do-codigo.md).
 
 ```
-alembic/versions/     migrações do esquema, em ordem (0001 a 0009)
+alembic/versions/     migrações do esquema, em ordem (0001 a 0010)
 src/eduinfra/
   cli.py              comandos da CLI eduinfra; cada pacote registra os seus em comandos.py
   orquestrador.py     pipeline em lote, agenda, retry e backfill no Dagster
@@ -658,6 +671,7 @@ src/eduinfra/
   lake/               Silver do Censo e do ENEM em Parquet e tabela Delta da camada analítica
   cdc/                slot lógico, pgoutput, fonte canônica de eventos, janelas, fila de erros e auditoria
   gold/               preparo das fontes do dbt e SLA de frescor (os modelos ficam em transformacao/)
+  seguranca/          papéis, RLS por UF e demonstração de privilégios mínimos
   consumo/            painel HTML gerado a partir da Gold
   experimentos/       medições, comparações e demonstrações dos ADRs; fora do pipeline agendado
 transformacao/        projeto dbt da Gold: staging, intermediate, marts (estrela) e marts/gestao (consumo)

@@ -62,11 +62,40 @@ class Conversao:
     rejeicoes: list[dict]
 
 
-def publicar_linha_de_base(configuracao: Configuracao, forcar: bool = False) -> eventos.ResultadoDaGravacao:
-    # O slot nasce antes da leitura da origem: o que entrar durante a carga chega
-    # pelo CDC, e o que chegar pelos dois caminhos é descartado pela chave.
+def _slot_existe(conexao: psycopg.Connection, slot: str) -> bool:
+    linha = conexao.execute(
+        "select 1 from pg_replication_slots where slot_name = %s",
+        (slot,),
+    ).fetchone()
+    return linha is not None
+
+
+def preparar_slot(configuracao: Configuracao, slot: str = replicacao.SLOT_PADRAO) -> None:
+    """Cria o slot de replicação lógica usando um papel com atributo REPLICATION."""
+    dsn_replicacao = configuracao.dsn_cdc or configuracao.dsn
+    with psycopg.connect(dsn_replicacao, autocommit=True) as conexao:
+        replicacao.garantir_slot(conexao, slot)
+
+
+def publicar_linha_de_base(
+    configuracao: Configuracao,
+    forcar: bool = False,
+    slot: str = replicacao.SLOT_PADRAO,
+) -> eventos.ResultadoDaGravacao:
+    # O slot precisa existir antes da leitura da origem: o que entrar durante a carga
+    # chega pelo CDC, e o que chegar pelos dois caminhos é descartado pela chave.
     with psycopg.connect(configuracao.dsn, autocommit=True) as conexao:
-        replicacao.garantir_slot(conexao)
+        existe = _slot_existe(conexao, slot)
+
+    if not existe:
+        if configuracao.dsn_cdc:
+            preparar_slot(configuracao, slot)
+        else:
+            raise RuntimeError(
+                f"Slot lógico '{slot}' ainda não existe e o papel atual não possui "
+                "privilégio REPLICATION; execute 'eduinfra preparar-slot-cdc' com "
+                "eduinfra_cdc antes de publicar a linha de base."
+            )
 
     if not forcar and eventos.contar(configuracao) > 0:
         log.info("tabela analítica já publicada; o CDC cuida do que mudou. Use --forcar para reler a origem.")

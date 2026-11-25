@@ -70,10 +70,13 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Camada analítica | `tests/lake/test_camada_analitica.py` |
 | Compressão | `tests/experimentos/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/origem/test_insert_only.py` |
+| Parquet puro, Delta e Iceberg (ADR 0003) | `tests/experimentos/test_formatos_de_tabela.py`; os casos de Iceberg são ignorados sem o PyIceberg ou no Windows |
 | Definições de métricas  | `tests/test_metricas.py` |
 | Frescor e SLA da Gold | `tests/gold/test_frescor.py`, `tests/gold/test_frescor_integracao.py` (exige `construir-gold` antes) |
 | Tabelas de consumo da Gold, construídas pelo dbt com 60 escolas de resultado conhecido | `tests/gold/test_gestao_dbt.py` |
 | Painel lendo só a Gold de consumo, frases geradas e proteção contra script no JSON | `tests/consumo/test_painel.py` |
+| Papéis, RLS por UF e recorte de coluna | `tests/seguranca/test_controle_de_acesso.py` |
+| Anonimização de dados pessoais sem alterar vistorias | `tests/origem/test_anonimizacao_integracao.py` |
 | Comandos da CLI, dependência entre pacotes e caminhos citados nos documentos | `tests/test_cli.py`, `tests/test_estrutura_do_codigo.py`, `tests/test_verificar_caminhos.py` |
 
 ## Verificações opcionais

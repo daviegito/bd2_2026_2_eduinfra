@@ -38,15 +38,19 @@ com [uv](https://docs.astral.sh/uv/).
 git clone https://github.com/daviegito/bd2_2026_2_eduinfra.git
 cd bd2_2026_2_eduinfra
 cp .env.example .env
-# Edite .env: ajuste POSTGRES_PASSWORD e a senha correspondente em DATABASE_URL.
+# Edite .env: troque POSTGRES_PASSWORD e as nove EDUINFRA_SENHA_* (uma por papel).
+docker compose --profile admin run --rm migracao
+docker compose run --no-deps --rm cdc preparar-slot-cdc
 docker compose up --build
 ```
 
-O serviço `carga` aplica as migrações, ingere o Censo 2024, publica a linha de
-base analítica, imprime a caracterização e verifica as contagens da tabela
-derivada da Silver. Ao terminar com código 0, libera o serviço `cdc`, que
-acompanha novas vistorias a cada dois segundos. `banco` e `cdc` continuam no ar.
-O tempo depende da máquina, da rede e do cache das imagens.
+O superusuário (`DATABASE_URL_ADMIN`) fica restrito ao serviço `migracao`; a
+rotina usa papéis de privilégio mínimo. O serviço `carga` ingere o Censo 2024,
+publica a linha de base analítica, imprime a caracterização e verifica as
+contagens da tabela derivada da Silver. Ao terminar com código 0, libera o
+serviço `cdc`, que acompanha novas vistorias a cada dois segundos. `banco` e
+`cdc` continuam no ar. O tempo depende da máquina, da rede e do cache das
+imagens.
 
 ```bash
 docker compose ps
@@ -82,15 +86,18 @@ A imagem expõe a CLI `eduinfra`. Com o banco no ar:
 
 | Comando | O que faz |
 | --- | --- |
-| `docker compose run --rm carga migrar` | Aplica as migrações |
+| `docker compose --profile admin run --rm migracao` | Aplica as migrações (serviço dedicado com `DATABASE_URL_ADMIN`) |
+| `docker compose --profile admin run --rm migracao reverter` | Reverte a última migração |
+| `docker compose run --no-deps --rm cdc preparar-slot-cdc` | Cria o slot lógico com `eduinfra_cdc` antes da linha de base |
 | `docker compose run --rm carga ingerir` | Ingere o Censo com manifesto e publicação da Silver |
 | `docker compose run --rm carga ingerir-enem` | Ingere o ENEM 2024 no mesmo manifesto e publica a Silver por escola ([ENEM](enem.md)) |
 | `docker compose run --rm carga medir-cobertura-enem` | Mede a junção das escolas do ENEM com as do Censo |
 | `docker compose run --rm carga caracterizar` | Exibe contagens e tamanhos da origem |
-| `docker compose run --rm carga tudo` | Migra, ingere, publica a linha de base e verifica a tabela analítica |
+| `docker compose run --rm carga tudo` | Ingere, publica a linha de base e verifica a tabela analítica (não migra) |
 | `docker compose run --rm carga publicar-analitica` | Republica a tabela Delta derivada da Silver |
 | `docker compose run --rm carga demonstrar-cdc` | Demonstra captura, interrupção e reentrega sem duplicação |
 | `docker compose run --rm carga demonstrar-atraso` | Demonstra o tratamento de eventos atrasados |
+| `docker compose run --rm carga demonstrar-acesso` | Demonstra leitura, escrita negada, recorte de linha e de coluna ([Controle de acesso](controle-de-acesso.md)) |
 | `docker compose run --rm carga comparar-ingestao` | Compara captura incremental com captura pelo slot, sem medir a escrita Delta |
 | `docker compose run --rm carga medir-cdc --repeticoes 30` | Insere vistorias de teste, mede latência e ordem com o consumidor ligado e termina com a auditoria |
 | `docker compose run --rm carga auditar-cdc` | Só lê: confere checksum, contagem por operação, fila de erros, esquema e frescor. Sai com código 1 se houver violação |
@@ -119,6 +126,8 @@ compose publicado na porta do `.env`:
 ```bash
 uv sync
 set -a && source .env && set +a
+uv run eduinfra migrar
+uv run eduinfra preparar-slot-cdc
 uv run eduinfra tudo
 ```
 
@@ -128,13 +137,23 @@ uv run eduinfra tudo
 | --- | --- | --- |
 | Retomada e deduplicação | `demonstrar-cdc` | [CDC e semântica de entrega](cdc-e-semantica-de-entrega.md#demonstracao) |
 | Vistoria digitada com atraso | `demonstrar-atraso` | [Dados atrasados](dado-atrasado.md#demonstracao) |
+| Papéis, recorte de linha e de coluna | `demonstrar-acesso` | [Controle de acesso](controle-de-acesso.md#demonstracao) |
 | Formato e compressão | `comparar-compressao --repeticoes 15` | [Compressão](serializacao-compressao.md#resultados) |
 | Organização dos arquivos | `comparar-particionamento --repeticoes 15` | [Camada analítica](camada-analitica.md#resultados) |
 | Alternativas de captura | `comparar-ingestao` | [Comparação de ingestão](cdc-e-semantica-de-entrega.md#medicao-slot-logico-contra-recarga-incremental) |
 | Consistência, latência e resiliência do CDC | `medir-cdc --repeticoes 30`, `auditar-cdc` | [Métricas do CDC](metricas-cdc.md) |
 | Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
 
-Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
+Use o prefixo `docker compose run --rm carga` antes do comando da CLI. A CLI
+troca de papel conforme o comando: `construir-gold` usa
+`DATABASE_URL_ORQUESTRADOR` (e entra como `eduinfra_dbt` na Gold); as ferramentas
+de bancada do CDC (`demonstrar-cdc`, `comparar-ingestao`, `medir-cdc`,
+`medir-recarga`, `auditar-cdc`) usam `DATABASE_URL_CDC_BANCADA`; os demais usam
+`DATABASE_URL` (`eduinfra_carga`).
+
+A comparação entre Parquet puro, Delta e Iceberg fica fora da CLI, porque o
+PyIceberg não é dependência do projeto; os comandos estão no
+[ADR 0003](adr/0003-armazenamento.md#medicao) e rodam em Linux.
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos
 podem variar em outra máquina. A comparação de ingestão mede captura, sem a
 escrita no Delta. Para a suíte automatizada, consulte [Testes](testes.md).

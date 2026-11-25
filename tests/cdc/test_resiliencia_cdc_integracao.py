@@ -52,9 +52,9 @@ def _semear(dsn: str) -> None:
 
 @pytest.fixture(scope="module")
 def banco_modelo():
-    dsn = os.environ.get("DATABASE_URL")
+    dsn = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
     if not dsn:
-        pytest.skip("DATABASE_URL não definida")
+        pytest.skip("DATABASE_URL_ADMIN não definida")
 
     modelo = _dsn_do_banco(dsn, BANCO_MODELO)
     _executar_como_admin(dsn, f"drop database if exists {BANCO_MODELO} with (force)", f"create database {BANCO_MODELO}")

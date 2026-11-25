@@ -16,6 +16,7 @@ def test_nenhum_pacote_registra_o_mesmo_comando_que_outro():
     registros = [
         cli.origem.COMANDOS, cli.ingestao.COMANDOS, cli.cdc.COMANDOS, cli.lake.COMANDOS,
         cli.gold.COMANDOS, cli.experimentos.COMANDOS, cli.consumo.COMANDOS,
+        cli.seguranca.COMANDOS,
     ]
     assert sum(len(registro) for registro in registros) == len(cli.COMANDOS)
 

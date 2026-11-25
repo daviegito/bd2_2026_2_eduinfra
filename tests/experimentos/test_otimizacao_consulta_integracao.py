@@ -15,7 +15,8 @@ from eduinfra.experimentos import otimizacao_consulta
 
 pytestmark = pytest.mark.integracao
 
-DSN_ADMIN = os.environ.get("DATABASE_URL")
+DSN_ADMIN = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
+DSN_ROTINA = os.environ.get("DATABASE_URL")
 RAIZ = Path(__file__).resolve().parents[2]
 ROTULOS = ("antes", "depois", "painel")
 
@@ -23,7 +24,7 @@ ROTULOS = ("antes", "depois", "painel")
 @pytest.fixture
 def dsn():
     if not DSN_ADMIN:
-        pytest.skip("DATABASE_URL não definida")
+        pytest.skip("DATABASE_URL_ADMIN não definida")
 
     nome = f"eduinfra_consulta_{uuid.uuid4().hex[:10]}"
     with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
@@ -36,7 +37,7 @@ def dsn():
         _semear(destino)
         yield destino
     finally:
-        os.environ["DATABASE_URL"] = DSN_ADMIN
+        os.environ["DATABASE_URL"] = DSN_ROTINA
         with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
             admin.execute(f'drop database if exists "{nome}" with (force)')
 

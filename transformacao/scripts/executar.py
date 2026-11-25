@@ -78,6 +78,9 @@ def executar() -> None:
     parser.add_argument("--somente-documentacao", action="store_true", help="regenerar docs do retrato já publicado")
     opcoes = parser.parse_args()
     configuracao = carregar_configuracao()
+    # A ingestão, a fonte e a entrada congelada são do orquestrador; o dbt usa o
+    # papel de transformação, dono só da Gold (#86).
+    transformacao = replace(configuracao, dsn=configuracao.dsn_transformacao or configuracao.dsn)
     if opcoes.exigir_enem and opcoes.somente_infraestrutura:
         parser.error("--exigir-enem não pode ser combinado com --somente-infraestrutura")
     with bloquear(configuracao.dsn) as conexao:
@@ -98,10 +101,10 @@ def executar() -> None:
             verificar_slot(conexao, configuracao)
             resumo = preparar(conexao, entradas)
             print(json.dumps(resumo, ensure_ascii=False), flush=True)
-            dbt("build", configuracao.dsn, resumo["com_enem"])
+            dbt("build", transformacao.dsn, resumo["com_enem"])
             if schema == "gold":
                 print(frescor.resumo(frescor.medir(configuracao.dsn, comando="transformar-dbt")), flush=True)
-        dbt("docs generate", configuracao.dsn, com_enem)
+        dbt("docs generate", transformacao.dsn, com_enem)
 
 
 if __name__ == "__main__":

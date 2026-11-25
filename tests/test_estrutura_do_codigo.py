@@ -15,6 +15,7 @@ DEPENDENCIAS_PERMITIDAS = {
     "cdc": {"nucleo"},
     "gold": {"nucleo", "origem"},
     "consumo": {"nucleo"},
+    "seguranca": {"nucleo"},
     "experimentos": {"nucleo", "lake", "origem", "ingestao", "cdc", "gold"},
 }
 

@@ -30,7 +30,8 @@ aceitou. As decisões de arquitetura estão no
 
 ```bash
 docker compose build carga cdc
-docker compose run --rm carga migrar
+docker compose --profile admin run --rm migracao
+docker compose run --no-deps --rm cdc preparar-slot-cdc
 docker compose up -d --no-deps cdc
 
 # Insere vistorias de teste, mede latência e ordem e termina com a auditoria.

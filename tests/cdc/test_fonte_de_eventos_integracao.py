@@ -23,7 +23,8 @@ from tests.experimentos.test_modelo_analitico import _semear_cadastro, vistoria
 
 pytestmark = pytest.mark.integracao
 
-DSN_ADMIN = os.environ.get("DATABASE_URL")
+DSN_ADMIN = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
+DSN_ROTINA = os.environ.get("DATABASE_URL")
 RAIZ = Path(__file__).resolve().parents[2]
 ITENS = {"biblioteca": "existente", "lab_ciencias": "inexistente"}
 
@@ -31,7 +32,7 @@ ITENS = {"biblioteca": "existente", "lab_ciencias": "inexistente"}
 @pytest.fixture
 def ambiente(tmp_path):
     if not DSN_ADMIN:
-        pytest.skip("DATABASE_URL não definida")
+        pytest.skip("DATABASE_URL_ADMIN não definida")
 
     sufixo = uuid.uuid4().hex[:10]
     nome, slot = f"eduinfra_fonte_{sufixo}", f"eduinfra_teste_fonte_{sufixo}"
@@ -55,7 +56,7 @@ def ambiente(tmp_path):
             arquivo_alembic=RAIZ / "alembic.ini",
         ), slot
     finally:
-        os.environ["DATABASE_URL"] = DSN_ADMIN
+        os.environ["DATABASE_URL"] = DSN_ROTINA
         with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
             admin.execute(f"select pg_drop_replication_slot(slot_name) from pg_replication_slots where database = '{nome}'")
             admin.execute(f'drop database if exists "{nome}" with (force)')

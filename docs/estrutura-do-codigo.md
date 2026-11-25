@@ -15,6 +15,7 @@ nome e o `eduinfra --help` saiu idêntico ao de antes.
 | CDC | [`cdc/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/cdc/) | slot lógico, decodificação do pgoutput, fonte canônica de eventos, janelas, fila de erros, telemetria, auditoria e recuperação |
 | Gold | [`transformacao/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/transformacao/) e [`gold/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/gold/) | os modelos dbt ficam em `transformacao/models`; o pacote Python prepara as fontes do dbt e mede o SLA de frescor |
 | Consumo | [`consumo/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/consumo/) | painel HTML gerado a partir das tabelas de consumo da Gold |
+| Segurança | [`seguranca/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/seguranca/) | papéis, RLS por UF, recorte de coluna e demonstração de privilégios mínimos |
 | Experimentos | [`experimentos/`](https://github.com/daviegito/bd2_2026_2_eduinfra/tree/main/src/eduinfra/experimentos/) | medições, comparações e demonstrações citadas nos ADRs; nada aqui roda no pipeline agendado |
 
 [`cli.py`](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/cli.py) e [`orquestrador.py`](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py)
@@ -58,6 +59,7 @@ quebrar ou se um módulo importar uma função com sublinhado de outro.
 | `cdc` | `nucleo` |
 | `gold` | `nucleo`, `origem` |
 | `consumo` | `nucleo` |
+| `seguranca` | `nucleo` |
 | `experimentos` | todos, menos `consumo` |
 
 ## O que mudou além do lugar dos arquivos

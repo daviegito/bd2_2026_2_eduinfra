@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+from dataclasses import replace
 
 from eduinfra.cdc.comandos import auditar
 from eduinfra.experimentos import (
@@ -22,6 +23,10 @@ from eduinfra.nucleo.configuracao import Configuracao
 from eduinfra.nucleo.saida import imprimir
 
 log = logging.getLogger(__name__)
+
+
+def _como_bancada(configuracao: Configuracao) -> Configuracao:
+    return replace(configuracao, dsn=configuracao.dsn_cdc_bancada or configuracao.dsn)
 
 
 def caracterizar(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
@@ -55,24 +60,25 @@ def comparar_particionamento(opcoes: argparse.Namespace, configuracao: Configura
 
 
 def comparar_ingestao(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    capturas, ociosa = comparacao_ingestao.medir(configuracao)
+    capturas, ociosa = comparacao_ingestao.medir(_como_bancada(configuracao))
     print(comparacao_ingestao.formatar_markdown(capturas, ociosa))
     return 0
 
 
 def medir_cdc(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
+    configuracao = _como_bancada(configuracao)
     print(comparacao_latencia.formatar_cdc(comparacao_latencia.medir_cdc(configuracao, opcoes.repeticoes)))
     print(comparacao_latencia.formatar_ordem(comparacao_latencia.medir_ordem(configuracao, opcoes.repeticoes)))
     return auditar(configuracao, opcoes.sla_frescor)
 
 
 def medir_recarga(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    print(comparacao_latencia.formatar_recarga(comparacao_latencia.medir_recarga(configuracao, opcoes.repeticoes)))
+    print(comparacao_latencia.formatar_recarga(comparacao_latencia.medir_recarga(_como_bancada(configuracao), opcoes.repeticoes)))
     return 0
 
 
 def demonstrar_cdc(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    print(demonstracao_cdc.demonstrar(configuracao))
+    print(demonstracao_cdc.demonstrar(_como_bancada(configuracao)))
     return 0
 
 
@@ -90,7 +96,10 @@ def demonstrar_frescor(opcoes: argparse.Namespace, configuracao: Configuracao) -
 
 def construir_gold(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
     # Construtor SQL anterior ao dbt, mantido como opção nula do ADR 0005; o pipeline agendado usa o dbt.
-    resumo = modelo_analitico.construir(configuracao)
+    # A opção nula é executada pelo orquestrador: ele prepara a fonte e entra
+    # como dbt só na etapa que escreve a Gold.
+    alvo = replace(configuracao, dsn=configuracao.dsn_orquestrador or configuracao.dsn)
+    resumo = modelo_analitico.construir(alvo)
     fonte = resumo.fonte
     log.info(
         "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",

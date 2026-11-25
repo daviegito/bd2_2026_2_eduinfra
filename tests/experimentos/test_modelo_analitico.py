@@ -24,7 +24,8 @@ from eduinfra.nucleo.configuracao import Configuracao
 
 pytestmark = pytest.mark.integracao
 
-DSN_ADMIN = os.environ.get("DATABASE_URL")
+DSN_ADMIN = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
+DSN_ROTINA = os.environ.get("DATABASE_URL")
 RAIZ = Path(__file__).resolve().parents[2]
 DIRETORIOS: dict[str, Path] = {}
 
@@ -32,7 +33,7 @@ DIRETORIOS: dict[str, Path] = {}
 @pytest.fixture
 def dsn(tmp_path):
     if not DSN_ADMIN:
-        pytest.skip("DATABASE_URL não definida")
+        pytest.skip("DATABASE_URL_ADMIN não definida")
 
     nome = f"eduinfra_gold_{uuid.uuid4().hex[:10]}"
     with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
@@ -47,7 +48,7 @@ def dsn(tmp_path):
         yield destino
     finally:
         DIRETORIOS.pop(destino, None)
-        os.environ["DATABASE_URL"] = DSN_ADMIN
+        os.environ["DATABASE_URL"] = DSN_ROTINA
         with psycopg.connect(DSN_ADMIN, autocommit=True) as admin:
             admin.execute(f'drop database if exists "{nome}" with (force)')
 

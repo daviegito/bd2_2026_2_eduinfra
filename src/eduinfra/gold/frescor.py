@@ -28,7 +28,8 @@ TABELA_MONITORADA = "gold.fato_infra_escola_ano"
 SLA_PADRAO = timedelta(hours=25)
 
 CRIAR_REGISTRO = [
-    "create schema if not exists monitoramento",
+    # O esquema é criado pela migração 0010 (dono: papel de carga). Recriá-lo
+    # aqui exigiria CREATE no banco, que o papel de rotina não tem.
     """
     create table if not exists monitoramento.frescor_gold (
         id bigint generated always as identity primary key,

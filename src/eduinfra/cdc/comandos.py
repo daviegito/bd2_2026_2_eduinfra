@@ -1,5 +1,6 @@
 import argparse
 import logging
+from dataclasses import replace
 from pathlib import Path
 
 from eduinfra.cdc import auditoria_cdc, fluxo_cdc, janelas, recuperacao_cdc
@@ -8,6 +9,21 @@ from eduinfra.nucleo.configuracao import Configuracao
 log = logging.getLogger(__name__)
 
 ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
+COMANDOS_DE_BANCADA = ("demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
+
+
+def _como_bancada(configuracao: Configuracao) -> Configuracao:
+    return replace(configuracao, dsn=configuracao.dsn_cdc_bancada or configuracao.dsn)
+
+
+def preparar_slot_cdc(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
+    if not configuracao.dsn_cdc:
+        raise RuntimeError(
+            "DATABASE_URL_CDC não definida; o slot lógico exige o papel eduinfra_cdc."
+        )
+    fluxo_cdc.preparar_slot(configuracao)
+    log.info("cdc: slot lógico pronto")
+    return 0
 
 
 def publicar_linha_de_base(configuracao: Configuracao, forcar: bool) -> None:
@@ -27,6 +43,7 @@ def publicar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) -
 
 
 def acompanhar_slot(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
+    configuracao = replace(configuracao, dsn=configuracao.dsn_cdc or configuracao.dsn)
     if opcoes.continuo:
         fluxo_cdc.acompanhar(configuracao, opcoes.intervalo, ARQUIVO_DE_VIDA)
     else:
@@ -34,10 +51,8 @@ def acompanhar_slot(opcoes: argparse.Namespace, configuracao: Configuracao) -> i
     return 0
 
 
-
-
 def auditar_cdc(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    return auditar(configuracao, opcoes.sla_frescor)
+    return auditar(_como_bancada(configuracao), opcoes.sla_frescor)
 
 
 def reprocessar_fila(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
@@ -71,9 +86,8 @@ def reprocessar_janela(opcoes: argparse.Namespace, configuracao: Configuracao) -
     return 0
 
 
-
-
 COMANDOS = {
+    "preparar-slot-cdc": preparar_slot_cdc,
     "publicar-analitico": publicar_analitico,
     "cdc": acompanhar_slot,
     "auditar-cdc": auditar_cdc,

@@ -23,10 +23,13 @@ OBSERVACAO = "Teste de integração do CDC"
 
 @pytest.fixture
 def configuracao(tmp_path):
-    if not os.environ.get("DATABASE_URL"):
-        pytest.skip("DATABASE_URL não definida")
+    dsn_bancada = os.environ.get("DATABASE_URL_CDC_BANCADA")
+    if not dsn_bancada:
+        pytest.skip("DATABASE_URL_CDC_BANCADA não definida")
 
-    return replace(carregar_configuracao(), diretorio_dados=tmp_path)
+    return replace(
+        carregar_configuracao(), dsn=dsn_bancada, dsn_cdc=dsn_bancada, diretorio_dados=tmp_path
+    )
 
 
 @pytest.fixture

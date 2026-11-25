@@ -14,6 +14,7 @@ from eduinfra.orquestrador import (
     construir_gold,
     defs,
     medir_frescor,
+    preparar_slot_cdc,
     processar_janelas,
     reprocessar_janela,
     testar_gold,
@@ -41,10 +42,10 @@ def test_pipeline_roda_cada_etapa_depois_das_suas_dependencias(chamadas):
     resultado = materialize(ETAPAS_DO_PIPELINE)
 
     assert resultado.success
-    assert chamadas[:2] == ["migrar", "ingerir"]
+    assert set(chamadas[:2]) == {"ingerir", "preparar-slot-cdc"}
     assert set(chamadas) == {
-        "migrar",
         "ingerir",
+        "preparar-slot-cdc",
         "publicar-analitica",
         "publicar-analitico",
         "processar-janelas",
@@ -96,7 +97,7 @@ def test_comando_que_falha_vira_falha_que_o_retry_repete(monkeypatch):
     monkeypatch.setattr(orquestrador.subprocess, "run", lambda comando, env, cwd: subprocess.CompletedProcess(comando, 1))
 
     with pytest.raises(Failure) as falha:
-        orquestrador.rodar("migrar")
+        orquestrador.rodar("ingerir")
 
     assert falha.value.allow_retries
 

@@ -23,14 +23,16 @@ INVALIDAS = ["-infinity", "infinity", "4000-01-01 BC", "0001-12-31 23:59:59 BC",
 
 @pytest.fixture
 def banco(monkeypatch, tmp_path):
-    admin_dsn = os.environ.get("DATABASE_URL")
+    admin_dsn = os.environ.get("DATABASE_URL_ADMIN") or os.environ.get("DATABASE_URL")
     if not admin_dsn:
-        pytest.skip("DATABASE_URL não definida")
+        pytest.skip("DATABASE_URL_ADMIN não definida")
     nome = f"eduinfra_datas_{uuid4().hex[:10]}"
     with psycopg.connect(admin_dsn, autocommit=True) as admin:
         admin.execute(f'create database "{nome}"')
     dsn = urlsplit(admin_dsn)._replace(path=f"/{nome}").geturl()
     monkeypatch.setenv("DATABASE_URL", dsn)
+    monkeypatch.setenv("DATABASE_URL_ADMIN", dsn)
+    monkeypatch.setenv("EDUINFRA_ALEMBIC_URL", dsn)
     monkeypatch.setenv("DIRETORIO_DADOS", str(tmp_path))
     try:
         yield carregar_configuracao()

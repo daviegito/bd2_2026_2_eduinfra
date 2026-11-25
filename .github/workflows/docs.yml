@@ -20,6 +20,18 @@ on:
       - "tests/test_preparar_fontes_ci.py"
       - "src/eduinfra/ingestao/microdados.py"
       - "src/eduinfra/nucleo/configuracao.py"
+      - "alembic/**"
+      - "src/eduinfra/seguranca/**"
+      - "src/eduinfra/origem/**"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/cdc/**"
+      - "src/eduinfra/orquestrador.py"
+      - "tests/seguranca/**"
+      - "tests/origem/**"
+      - "tests/test_orquestrador.py"
+      - "tests/test_cli.py"
+      - "tests/test_estrutura_do_codigo.py"
+      - "transformacao/macros/**"
   push:
     branches: [main]
     paths:
@@ -40,6 +52,18 @@ on:
       - "tests/test_preparar_fontes_ci.py"
       - "src/eduinfra/ingestao/microdados.py"
       - "src/eduinfra/nucleo/configuracao.py"
+      - "alembic/**"
+      - "src/eduinfra/seguranca/**"
+      - "src/eduinfra/origem/**"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/cdc/**"
+      - "src/eduinfra/orquestrador.py"
+      - "tests/seguranca/**"
+      - "tests/origem/**"
+      - "tests/test_orquestrador.py"
+      - "tests/test_cli.py"
+      - "tests/test_estrutura_do_codigo.py"
+      - "transformacao/macros/**"
   workflow_dispatch:
 
 permissions:
@@ -62,6 +86,15 @@ jobs:
       ANO_ENEM: 2024
       DATA_REFERENCIA_ENEM: "2024-11-03"
       MAX_SLOT_WAL_KEEP_SIZE: 2GB
+      EDUINFRA_SENHA_CARGA: senha_local_carga
+      EDUINFRA_SENHA_DBT: senha_local_dbt
+      EDUINFRA_SENHA_CDC: senha_local_cdc
+      EDUINFRA_SENHA_CDC_BANCADA: senha_local_cdc_bancada
+      EDUINFRA_SENHA_PAINEL: senha_local_painel
+      EDUINFRA_SENHA_ANALISE: senha_local_analise
+      EDUINFRA_SENHA_TECNICO_DF: senha_local_tecnico_df
+      EDUINFRA_SENHA_TECNICO_SP: senha_local_tecnico_sp
+      EDUINFRA_SENHA_ORQUESTRADOR: senha_local_orquestrador
       COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
       # Aumentar a revisão força o download se a fonte do mesmo ano for republicada.
       REVISAO_CACHE_FONTES: v1
@@ -78,7 +111,14 @@ jobs:
         id: diretorios-cache
         run: mkdir -p .cache/fontes-inep/enem
       - name: Construir as imagens
-        run: docker compose build carga cdc transformacao
+        run: docker compose build carga migracao cdc transformacao
+      - name: Aplicar a migração de papéis e RLS
+        run: docker compose --profile admin run --rm migracao
+      - name: Validar declarações de controle de acesso (sem banco)
+        run: |
+          docker compose run --no-deps --rm --entrypoint uv carga run --locked --group dev pytest tests/seguranca/test_controle_de_acesso.py -q -m "not integracao"
+      - name: Preparar o slot lógico do CDC
+        run: docker compose run --no-deps --rm cdc preparar-slot-cdc
       - name: Conferir o painel e o preparo das fontes antes da carga nacional
         run: |
           docker compose run --no-deps --rm -v "$PWD/.github/workflows:/app/.github/workflows:ro" --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/consumo/test_painel.py tests/test_preparar_fontes_ci.py -q
@@ -108,9 +148,15 @@ jobs:
       - name: Conferir a auditoria da Gold
         run: |
           docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.gold.test_e3_gold -v
+      - name: Validar controle de acesso no PostgreSQL (integração)
+        run: |
+          docker compose run --no-deps --rm -e DATABASE_URL_ADMIN=postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@banco:5432/$POSTGRES_DB --entrypoint uv carga run --locked --group dev pytest tests/seguranca/test_controle_de_acesso.py -q -m integracao
+      - name: Validar anonimização no PostgreSQL (integração)
+        run: |
+          docker compose --profile admin run --no-deps --rm --entrypoint uv migracao run --locked --group dev pytest tests/origem/test_anonimizacao_integracao.py -q -m integracao
       - name: Gerar o painel real
         run: |
-          docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel
+          docker compose --profile analitico run --no-deps --rm -v "$PWD/docs:/app/docs" painel
           test -s docs/painel.html
           # Confere componentes funcionais sem depender do texto dos títulos.
           grep -Fq 'id="dados-painel"' docs/painel.html
@@ -125,7 +171,7 @@ jobs:
           if-no-files-found: ignore
       - name: Mostrar logs do pipeline se houver falha
         if: failure()
-        run: docker compose logs banco carga cdc
+        run: docker compose logs banco migracao carga cdc
       - name: Gerar o site e verificar a inclusão do painel
         run: |
           mkdocs build --strict

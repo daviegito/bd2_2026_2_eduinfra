@@ -10,14 +10,18 @@ tudo que foi executado, que pode ser acompanhado por uma interface web.
 ## O que ele faz neste projeto
 
 O Dagster roda o pipeline em lote chamando os comandos que já existiam na CLI
-`eduinfra`, como `migrar`, `ingerir` e `processar-janelas`, e o script do dbt para a Gold. O código está em
+`eduinfra`, como `ingerir` e `processar-janelas`, e o script do dbt para a Gold.
+A migração fica no serviço dedicado `migracao` (`profiles: [admin]`), que
+mantém `DATABASE_URL_ADMIN`; o orquestrador não recebe superusuário. O código está em
 [orquestrador.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/orquestrador.py).
 
 ```mermaid
 flowchart LR
-    MIGRAR["migrar"] --> INGERIR["ingerir"]
+    INGERIR["ingerir"]
+    SLOT["preparar_slot_cdc"]
     INGERIR --> ANALITICA["publicar_analitica"]
     INGERIR --> BASE["publicar_linha_de_base"]
+    SLOT --> BASE
     BASE --> JANELAS["processar_janelas"]
     JANELAS --> GOLD["construir_gold"]
     GOLD --> TESTES["testar_gold"]
@@ -27,6 +31,8 @@ flowchart LR
 
 - **Ordem das etapas.** Cada etapa só roda depois que as anteriores terminam
   bem. Se uma falha, as seguintes não rodam.
+- **Slot do CDC.** `preparar_slot_cdc` cria o slot lógico como `eduinfra_cdc`
+  antes da linha de base; o orquestrador não tem `REPLICATION`.
 - **Gold.** A Gold é construída pelo dbt, com o mesmo script do serviço
   `transformacao`, que também ingere o ENEM.
 - **Testes de dados.** Depois da Gold, o `testar_gold` roda os testes de
@@ -61,7 +67,7 @@ A interface fica em <http://localhost:3000>.
 
 1. Com o ambiente no ar, derrube o banco com `docker compose stop banco`.
 2. Na interface, abra o job `pipeline` e clique em *Materialize all*.
-3. Em *Runs*, o passo `migrar` falha e o log avisa que vai tentar de novo em
+3. Em *Runs*, o passo `ingerir` falha e o log avisa que vai tentar de novo em
    30 segundos.
 4. Religue o banco com `docker compose start banco`.
 5. A tentativa seguinte passa e o pipeline vai até o fim.
@@ -91,7 +97,7 @@ itens cada.
 
 | Demonstração | O que aconteceu | Registro |
 | --- | --- | --- |
-| Retry | Com o banco parado, `migrar` falhou ao conectar e o Dagster agendou nova tentativa em 30 s. O banco voltou 26 s depois de parado, a segunda tentativa passou e a execução terminou com `RUN_SUCCESS` | [retry.log](evidencias/orquestracao/retry.log) |
+| Retry | Com o banco parado, `ingerir` falhou ao conectar e o Dagster agendou nova tentativa em 30 s. O banco voltou 26 s depois de parado, a segunda tentativa passou e a execução terminou com `RUN_SUCCESS` | [retry.log](evidencias/orquestracao/retry.log) |
 | Backfill | `reprocessar_janela` rodou para 2024-04, 2024-05 e 2024-06, uma execução por mês, e cada uma reconciliou 15 eventos. A fonte de eventos, que só tinha novembro de 2026, ficou com 15 eventos em cada um dos três meses | [backfill.log](evidencias/orquestracao/backfill.log) |
 
 Pela CLI, um intervalo de partições só roda quando o asset tem política de execução

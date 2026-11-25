@@ -392,6 +392,26 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `mkdocs build --strict` sem erro
 - **Quem revisou:** Davi (PR #62)
 
+### 2026-11-02 — ADR 0003 e comparação entre Parquet puro, Delta e Iceberg (issue #4)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório)
+- **Onde:** `docs/adr/0003-armazenamento.md`, `src/eduinfra/formatos_de_tabela.py`,
+  `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py`,
+  `comparacao_leitor_delta.py`, `tests/test_formatos_de_tabela.py` e os índices em `docs/`
+- **O que foi pedido:** verificar se o rascunho do ADR 0003 se sustentava, medir as
+  três alternativas e reescrever o texto com o resultado
+- **O que foi aproveitado:** os quatro módulos, os testes e o texto do ADR. A medição
+  derrubou dois argumentos do rascunho: reaplicar lote em Parquet puro não exige
+  regravar a partição, e o Parquet puro é mais rápido que o Delta com poucos arquivos.
+  A decisão ficou limitada aos destinos analíticos, com a Silver em Parquet puro
+- **Como foi verificado:** comandos rodados com o Censo 2024 real em Linux no WSL2, com
+  respostas conferidas entre as variantes e a falha testada matando o processo gravador.
+  Uma primeira versão da opção nula, sem pasta temporária, a deixava pior do que ela é;
+  foi corrigida antes de medir. A divergência do CSV (132,7 contra 116,4 MB) foi explicada
+  pela coluna `ano_censo`, tabela por tabela. As fontes externas foram lidas diretamente.
+  Não rodou em `docker compose` nem em armazenamento de objetos
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad
+
 ### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
@@ -849,4 +869,60 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `grafico-perfil`. Artur pediu a atualização por merge.
 - **Como foi verificado:** suíte sem banco com 238 testes aprovados e script de caminhos sem acusação.
   Testes de integração não executados.
+- **Quem revisou:** revisão de outro membro da squad pendente.
+
+### 2026-11-24 — Revisão dos gatilhos do ADR 0003 depois da E3 (issue #4)
+
+- **Ferramenta:** Claude Code, como assistente de revisão.
+- **O que foi pedido:** conferir se o ADR 0003 atende ao guia e à rubrica de ADR da disciplina e
+  trazê-lo para a main atual.
+- **Onde:** `docs/adr/0003-armazenamento.md`, `docs/adr/README.md` e este registro.
+- **O que foi aproveitado:** a conferência de cada gatilho contra o código da main e a seção de revisão
+  com o resultado. A medição e a decisão de 2 de novembro não mudaram. Artur decidiu publicar o ADR no
+  portfólio depois dessa conferência.
+- **Como foi verificado:** leitura do `fontes_transformacao.py`, do `cli.py`, do `orquestrador.py` e do
+  `fluxo_cdc.py` na main para saber quem lê cada tabela Delta e se a compactação está agendada;
+  `tests/test_formatos_de_tabela.py` com 11 testes aprovados e os 3 de Iceberg ignorados sem o PyIceberg.
+  Os gatilhos de tamanho de arquivo não foram medidos.
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad.
+
+### 2026-11-25 — Integração da issue #86 com a reorganização de pacotes (PR #107)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** adaptar o controle de acesso da issue #86 e os ajustes do PR #101 ao código atual,
+  mantendo a integração com a branch `refactor/pacotes-src`, que já contém o #108, e com os PRs #106 e #109.
+- **Onde:** worktree `feat/controle-acesso-integrado`, criada de `origin/refactor/pacotes-src` com merge de
+  `origin/main`; pacote `src/eduinfra/seguranca/`, migração `0010`, papéis nos serviços do Compose,
+  CLI, orquestrador, transformação dbt, documentação, CI e testes movidos para os pacotes correspondentes.
+- **O que foi aproveitado:** os papéis de privilégio mínimo e a RLS da #86, a anonimização da #106,
+  os módulos de comparação da #109 em `experimentos/`, e os modelos de gestão e o painel da #108. O painel
+  passou a ler apenas a Gold, sem depender de `entrada_transformacao`, para funcionar como `eduinfra_painel`.
+- **Como foi verificado:** `python -m compileall`, `scripts/verificar_caminhos.py`, `docker compose config`
+  com os perfis `admin` e `analitico`, `mkdocs build --strict` com `docs/painel.html` gerado, suíte sem
+  banco com 258 testes aprovados e 4 skips, migração 0010, preparo do slot CDC, `dbt build` com 66/66 nós,
+  auditoria da Gold, 16 testes de integração de acesso, 3 de anonimização e geração do painel como
+  `eduinfra_painel`, tudo em contêineres com a porta PostgreSQL alternativa 55432. A primeira tentativa
+  da transformação falhou por margem insuficiente do slot e passou após o CDC drenar a carga inicial;
+  o teste de CDC da suíte de acesso precisou de `tecnico_id`, `origem` válida e limpeza com superusuário.
+- **Quem revisou:** revisão de outro membro da squad pendente.
+
+### 2026-11-25 — Acoplamento das branches do PR #110 sem perder o controle de acesso
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** comparar as branches do PR #110 — `refactor/pacotes-src` (base) e
+  `feat/controle_acesso` (head) — e integrá-las preservando o controle de acesso da issue #86,
+  objetivo principal da branch.
+- **Onde:** merge de `origin/refactor/pacotes-src` em `feat/controle_acesso` com resolução `-X ours`
+  e este registro.
+- **O que foi aproveitado:** o merge-base `f38633e` e o `git diff` mostraram que o commit `00b536e`
+  já tinha reaplicado manualmente o refactor de pacotes e os PRs #106, #108 e #109. Por isso o Git
+  apontava 18 conflitos aparentes (12 de conteúdo e 6 de `add/add`) em arquivos como `cli.py`,
+  `README.md`, `AI-USAGE.md`, `mkdocs.yml`, `docs/testes.md` e comandos dos pacotes. A simulação
+  `git merge-tree --write-tree -X ours feat/controle_acesso origin/refactor/pacotes-src` deu zero
+  conflitos e árvore idêntica à do head, então a resolução manteve integralmente
+  `src/eduinfra/seguranca/`, a migração `0010`, `docs/controle-de-acesso.md` e `tests/seguranca/`.
+- **Como foi verificado:** o merge foi feito sem conflitos e a árvore do commit resultante é igual à
+  de `00b536e`, confirmando que nenhum arquivo do controle de acesso foi perdido; `git diff --check`
+  e `scripts/verificar_caminhos.py` sem acusação; suíte sem banco com 258 testes aprovados, 4 skips
+  e 42 subtests. Testes de integração, Docker e dbt não refeitos nesta etapa.
 - **Quem revisou:** revisão de outro membro da squad pendente.
