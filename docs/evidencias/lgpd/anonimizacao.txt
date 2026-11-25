@@ -1,0 +1,38 @@
+# Demonstração do comando anonimizar-tecnico em banco descartável (2026-11-25T00:36Z)
+# Técnico e vistorias fictícios, inseridos só para a demonstração.
+
+## Antes
+ id | matricula |           nome           | lotacao_uf | ativo 
+----+-----------+--------------------------+------------+-------
+  1 | T-0042    | Pessoa Fictícia da Silva | DF         | t
+(1 row)
+
+ id | co_entidade | tecnico_id |       origem        
+----+-------------+------------+---------------------
+  1 |    53000001 |          1 | vistoria_presencial
+  2 |    53000001 |          1 | vistoria_presencial
+(2 rows)
+
+## Comando: eduinfra anonimizar-tecnico --matricula T-0042
+Técnico 1 anonimizado: nome e matrícula substituídos e cadastro desativado. 2 vistorias continuam ligadas ao mesmo id.
+(código de saída: 0)
+
+## Depois
+ id |   matricula   |        nome         | lotacao_uf | ativo 
+----+---------------+---------------------+------------+-------
+  1 | anonimizado-1 | Técnico anonimizado | DF         | f
+(1 row)
+
+ id | co_entidade | tecnico_id |       origem        
+----+-------------+------------+---------------------
+  1 |    53000001 |          1 | vistoria_presencial
+  2 |    53000001 |          1 | vistoria_presencial
+(2 rows)
+
+## Repetir o comando não altera nada
+ERROR nenhum técnico com essa matrícula; se já foi anonimizado, a matrícula original não existe mais
+(código de saída: 1)
+
+## O UPDATE na vistoria continua bloqueado (insert-only)
+ERROR:  a tabela vistoria é insert-only e o comando UPDATE foi bloqueado; registre uma nova vistoria em vez de alterar o passado
+CONTEXT:  PL/pgSQL function impedir_alteracao_de_evento() line 3 at RAISE
