@@ -1,4 +1,31 @@
-migracao:
+services:
+  banco:
+    image: pgvector/pgvector:pg16
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+      - -c
+      - max_slot_wal_keep_size=${MAX_SLOT_WAL_KEEP_SIZE:-1GB}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${PORTA_POSTGRES:-5432}:5432"
+    volumes:
+      - dados_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  migracao:
     build: .
     profiles: [admin]
     environment:
@@ -19,7 +46,7 @@ migracao:
     restart: "no"
     command: ["migrar"]
 
-    carga:
+  carga:
     build: .
     environment:
       DATABASE_URL: postgresql://eduinfra_carga:${EDUINFRA_SENHA_CARGA:-senha_local_carga}@banco:5432/${POSTGRES_DB}
@@ -39,7 +66,7 @@ migracao:
     restart: "no"
     command: ["tudo"]
 
-    transformacao:
+  transformacao:
     build: .
     environment:
       DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}@banco:5432/${POSTGRES_DB}
@@ -60,7 +87,7 @@ migracao:
         condition: service_completed_successfully
     restart: "no"
 
-    cdc:
+  cdc:
     build: .
     environment:
       DATABASE_URL: postgresql://eduinfra_cdc:${EDUINFRA_SENHA_CDC:-senha_local_cdc}@banco:5432/${POSTGRES_DB}
@@ -71,9 +98,16 @@ migracao:
     depends_on:
       banco:
         condition: service_healthy
-    command: ["cdc", "--continuo"]
+    restart: unless-stopped
+    command: ["cdc", "--continuo", "--intervalo", "2"]
+    healthcheck:
+      test: ["CMD-SHELL", "test $$(($$(date +%s) - $$(stat -c %Y /tmp/cdc_vivo))) -lt 60"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
 
-    orquestrador:
+  orquestrador:
     build: .
     environment:
       DATABASE_URL: postgresql://eduinfra_orquestrador:${EDUINFRA_SENHA_ORQUESTRADOR:-senha_local_orquestrador}@banco:5432/${POSTGRES_DB}
@@ -89,13 +123,16 @@ migracao:
       ANO_ENEM: ${ANO_ENEM:-2024}
       DATA_REFERENCIA_ENEM: ${DATA_REFERENCIA_ENEM:-2024-11-03}
       AGENDA_ORQUESTRADOR: ${AGENDA_ORQUESTRADOR:-0 3 * * *}
+    ports:
+      - "${PORTA_DAGSTER:-3000}:3000"
     volumes:
       - dados_censo:/dados
+      - dados_dagster:/opt/dagster/dagster_home
     depends_on:
       banco:
         condition: service_healthy
 
-    painel:
+  painel:
     build: .
     profiles: [analitico]
     environment:
@@ -106,3 +143,8 @@ migracao:
     depends_on:
       banco:
         condition: service_healthy
+
+volumes:
+  dados_postgres:
+  dados_censo:
+  dados_dagster:

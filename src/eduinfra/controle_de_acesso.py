@@ -13,6 +13,7 @@ A matriz completa e as decisões estão em ``docs/controle-de-acesso.md``.
 
 import os
 from dataclasses import dataclass
+from urllib.parse import quote_plus, urlsplit, urlunsplit
 
 import psycopg
 from psycopg import errors
@@ -20,7 +21,17 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from eduinfra.configuracao import carregar_configuracao
 
-SENHA_PADRAO = "senha_local_dos_papeis"
+SENHAS_PADRAO: dict[str, tuple[str, str]] = {
+    "eduinfra_carga": ("EDUINFRA_SENHA_CARGA", "senha_local_carga"),
+    "eduinfra_dbt": ("EDUINFRA_SENHA_DBT", "senha_local_dbt"),
+    "eduinfra_cdc": ("EDUINFRA_SENHA_CDC", "senha_local_cdc"),
+    "eduinfra_cdc_bancada": ("EDUINFRA_SENHA_CDC_BANCADA", "senha_local_cdc_bancada"),
+    "eduinfra_painel": ("EDUINFRA_SENHA_PAINEL", "senha_local_painel"),
+    "eduinfra_analise": ("EDUINFRA_SENHA_ANALISE", "senha_local_analise"),
+    "eduinfra_tecnico_df": ("EDUINFRA_SENHA_TECNICO_DF", "senha_local_tecnico_df"),
+    "eduinfra_tecnico_sp": ("EDUINFRA_SENHA_TECNICO_SP", "senha_local_tecnico_sp"),
+    "eduinfra_orquestrador": ("EDUINFRA_SENHA_ORQUESTRADOR", "senha_local_orquestrador"),
+}
 
 # Mesmos nomes da migração 0010. Mantidos aqui para o comando e os testes.
 PAPEIS = (
@@ -60,17 +71,19 @@ class Caso:
         return f"[{situacao}] {self.nome}: esperado {self.esperado}; obtido {self.obtido}"
 
 
-def senha_dos_papeis() -> str:
-    return os.environ.get("EDUINFRA_SENHA_PAPEIS", SENHA_PADRAO)
+def senha_do_papel(papel: str) -> str:
+    variavel, padrao = SENHAS_PADRAO[papel]
+    return os.environ.get(variavel, padrao)
 
 
 def dsn_do_papel(papel: str, base: str | None = None) -> str:
-    """Troca usuário e senha da DSN base, mantendo host, porta e banco."""
-    base = base or carregar_configuracao().dsn
-    partes = conninfo_to_dict(base)
-    partes["user"] = papel
-    partes["password"] = senha_dos_papeis()
-    return make_conninfo(**partes)
+    origem = base or os.environ["DATABASE_URL"]
+    partes = urlsplit(origem)
+    host = partes.hostname or "localhost"
+    porta = f":{partes.port}" if partes.port else ""
+    senha = quote_plus(senha_do_papel(papel))
+    netloc = f"{papel}:{senha}@{host}{porta}"
+    return urlunsplit((partes.scheme, netloc, partes.path, partes.query, partes.fragment))
 
 
 def _contar(dsn: str, consulta: str, parametros: tuple = ()) -> int:

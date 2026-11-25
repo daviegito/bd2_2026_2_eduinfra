@@ -88,7 +88,7 @@ def test_dsn_do_papel_troca_usuario_e_mantem_destino():
     )
     partes = psycopg.conninfo.conninfo_to_dict(dsn)
     assert partes["user"] == "eduinfra_painel"
-    assert partes["password"] == controle_de_acesso.senha_dos_papeis()
+    assert partes["password"] == controle_de_acesso.senha_do_papel("eduinfra_painel")
     assert partes["dbname"] == "eduinfra"
     assert partes["host"] == "banco"
     assert partes["port"] == "5432"
@@ -366,12 +366,17 @@ def test_cdc_passar_uma_vez_com_papel_de_rotina(base):
                 (co_municipio,),
             )
             conn.execute(
-                """
-                insert into public.escola (co_entidade, no_entidade, co_municipio)
-                values (%s, 'Escola Teste CDC', %s)
-                on conflict (co_entidade) do nothing
-                """,
-                (co_entidade, co_municipio),
+                                """
+                                insert into public.escola (
+                                    co_entidade,
+                                    no_entidade,
+                                    co_municipio,
+                                    tp_dependencia
+                                )
+                                values (%s, 'Escola Teste CDC', %s, 3)
+                                on conflict (co_entidade) do nothing
+                                """,
+                                (co_entidade, co_municipio),
             )
             item = conn.execute("select codigo from public.item_infraestrutura limit 1").fetchone()
             if item is None:
