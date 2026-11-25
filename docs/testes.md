@@ -70,6 +70,7 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Camada analítica | `tests/lake/test_camada_analitica.py` |
 | Compressão | `tests/experimentos/test_comparacao_compressao.py` |
 | Histórico insert-only | `tests/origem/test_insert_only.py` |
+| Definições de métricas  | `tests/test_metricas.py` |
 | Frescor e SLA da Gold | `tests/gold/test_frescor.py`, `tests/gold/test_frescor_integracao.py` (exige `construir-gold` antes) |
 | Tabelas de consumo da Gold, construídas pelo dbt com 60 escolas de resultado conhecido | `tests/gold/test_gestao_dbt.py` |
 | Painel lendo só a Gold de consumo, frases geradas e proteção contra script no JSON | `tests/consumo/test_painel.py` |
@@ -108,3 +109,15 @@ uv run mkdocs build --strict --site-dir /tmp/eduinfra-site
 
 A validação gera o site e acusa links internos quebrados. A renderização dos
 diagramas também deve ser conferida no navegador.
+
+## Experimento de desempenho do workflow
+
+O experimento de [cache dos arquivos públicos](evidencias/ci-cache-fontes/README.md)
+antecipa os testes do painel e do preparo das fontes, restaura somente ZIPs e mede
+o preparo antes de iniciar a integração. Carga, CDC, dbt, auditoria e painel continuam
+sendo executados sobre banco novo. A comparação remota registrou
+16 min 14 s sem reaproveitamento e 5 min 29 s com cache; o relatório documenta
+as revisões, os hashes, os testes mantidos e os limites dessa amostra.
+
+Isso não substitui o workflow de suíte geral solicitado na #99. O cache e seu
+bind em `/dados/bruto` são habilitados apenas pelo override `docker-compose.ci.yml`.

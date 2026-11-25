@@ -7,8 +7,9 @@ from pathlib import Path
 
 REPOSITORIO = "github.com/daviegito/bd2_2026_2_eduinfra"
 
-# Registros da época: citam os caminhos como eram, e a tabela de docs/estrutura-do-codigo.md cobre a leitura.
-IGNORADOS = ("AI-USAGE.md", "docs/diario/", ".venv/", "site/", "node_modules/")
+# Registros da época (AI-USAGE, diário e evidências de medição): citam os caminhos como eram, e a tabela
+# de docs/estrutura-do-codigo.md cobre a leitura.
+IGNORADOS = ("AI-USAGE.md", "docs/diario/", "docs/evidencias/", ".venv/", "site/", "node_modules/")
 
 CAMINHO_LOCAL = re.compile(r"(?<![\w/.-])(?P<subida>(?:\.\./)*)(?P<caminho>(?:src|tests|scripts)/[\w./*-]*[\w/*])")
 # Link fixado em commit continua válido depois de uma mudança de caminho; só o que aponta para main é conferido.

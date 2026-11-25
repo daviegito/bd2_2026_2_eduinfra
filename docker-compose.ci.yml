@@ -1,0 +1,9 @@
+# O banco e os destinos continuam nos volumes normais. Só os arquivos brutos
+# ficam no host para o GitHub restaurar/salvar os ZIPs entre execuções.
+services:
+  carga:
+    volumes:
+      - ./.cache/fontes-inep:/dados/bruto
+  transformacao:
+    volumes:
+      - ./.cache/fontes-inep:/dados/bruto
