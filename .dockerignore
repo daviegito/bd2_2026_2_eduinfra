@@ -5,3 +5,6 @@ docs
 .env
 __pycache__
 *.pyc
+
+# Arquivos públicos restaurados pelo cache do CI
+.cache/fontes-inep/
