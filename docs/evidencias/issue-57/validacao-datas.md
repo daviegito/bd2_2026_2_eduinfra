@@ -71,10 +71,10 @@ Com as dependências do projeto já disponíveis e `DATABASE_URL` apontando para
 PostgreSQL **descartável**, com `wal_level=logical` e permissão para criar bancos:
 
 ```bash
-PYTHONPATH=src python -m pytest tests/test_datas_vistoria_integracao.py -q
+PYTHONPATH=src python -m pytest tests/origem/test_datas_vistoria_integracao.py -q
 PYTHONPATH=src python -m pytest \
-  tests/test_resiliencia_cdc_integracao.py tests/test_eventos.py -q
-PYTHONPATH=src python -m pytest --ignore=tests/test_transformacao_property.py -q
+  tests/cdc/test_resiliencia_cdc_integracao.py tests/cdc/test_eventos.py -q
+PYTHONPATH=src python -m pytest --ignore=tests/lake/test_silver_censo_property.py -q
 ```
 
 Os 26 testes específicos cobrem os dois infinitos, datas a.C., ano 10000,

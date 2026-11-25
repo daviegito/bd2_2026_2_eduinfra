@@ -6,9 +6,10 @@ on:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
-      - "src/eduinfra/painel.py"
-      - "tests/test_painel.py"
-      - "tests/test_e3_gold.py"
+      - "src/eduinfra/consumo/painel.py"
+      - "tests/consumo/test_painel.py"
+      - "tests/gold/test_e3_gold.py"
+      - "scripts/verificar_caminhos.py"
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
@@ -16,17 +17,18 @@ on:
       - "docker-compose.ci.yml"
       - "transformacao/scripts/preparar_fontes_ci.py"
       - "tests/test_preparar_fontes_ci.py"
-      - "src/eduinfra/microdados.py"
-      - "src/eduinfra/configuracao.py"
+      - "src/eduinfra/ingestao/microdados.py"
+      - "src/eduinfra/nucleo/configuracao.py"
   push:
     branches: [main]
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
-      - "src/eduinfra/painel.py"
-      - "tests/test_painel.py"
-      - "tests/test_e3_gold.py"
+      - "src/eduinfra/consumo/painel.py"
+      - "tests/consumo/test_painel.py"
+      - "tests/gold/test_e3_gold.py"
+      - "scripts/verificar_caminhos.py"
       - "pyproject.toml"
       - "uv.lock"
       - "Dockerfile"
@@ -34,8 +36,8 @@ on:
       - "docker-compose.ci.yml"
       - "transformacao/scripts/preparar_fontes_ci.py"
       - "tests/test_preparar_fontes_ci.py"
-      - "src/eduinfra/microdados.py"
-      - "src/eduinfra/configuracao.py"
+      - "src/eduinfra/ingestao/microdados.py"
+      - "src/eduinfra/nucleo/configuracao.py"
   workflow_dispatch:
 
 permissions:
@@ -68,6 +70,8 @@ jobs:
           python-version: "3.12"
       - name: Instalar ferramentas de documentação
         run: python -m pip install mkdocs==1.6.1 mkdocs-material==9.7.7
+      - name: Conferir os caminhos de código citados nos documentos
+        run: python scripts/verificar_caminhos.py
       - name: Preparar diretórios do cache no runner
         id: diretorios-cache
         run: mkdir -p .cache/fontes-inep/enem
@@ -75,7 +79,7 @@ jobs:
         run: docker compose build carga cdc transformacao
       - name: Conferir o painel e o preparo das fontes antes da carga nacional
         run: |
-          docker compose run --no-deps --rm -v "$PWD/.github/workflows:/app/.github/workflows:ro" --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/test_painel.py tests/test_preparar_fontes_ci.py -q
+          docker compose run --no-deps --rm -v "$PWD/.github/workflows:/app/.github/workflows:ro" --entrypoint uv carga run --locked --group dev --group transformacao pytest tests/consumo/test_painel.py tests/test_preparar_fontes_ci.py -q
       - name: Restaurar os ZIPs públicos do INEP
         id: fontes-cache
         uses: actions/cache/restore@v4
@@ -84,7 +88,7 @@ jobs:
           path: |
             .cache/fontes-inep/censo_escolar_${{ env.ANO_CENSO }}.zip
             .cache/fontes-inep/enem/microdados_enem_${{ env.ANO_ENEM }}.zip
-          key: ${{ runner.os }}-inep-zip-${{ env.REVISAO_CACHE_FONTES }}-${{ env.ANO_CENSO }}-${{ env.ANO_ENEM }}-${{ hashFiles('src/eduinfra/configuracao.py', 'src/eduinfra/microdados.py', 'docker-compose.yml') }}
+          key: ${{ runner.os }}-inep-zip-${{ env.REVISAO_CACHE_FONTES }}-${{ env.ANO_CENSO }}-${{ env.ANO_ENEM }}-${{ hashFiles('src/eduinfra/nucleo/configuracao.py', 'src/eduinfra/ingestao/microdados.py', 'docker-compose.yml') }}
       - name: Preparar e medir as fontes sem iniciar o banco
         run: |
           docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python transformacao/scripts/preparar_fontes_ci.py --saida /dados/bruto/tempos-ci.json
@@ -101,7 +105,7 @@ jobs:
         run: docker compose run --rm transformacao
       - name: Conferir a auditoria da Gold
         run: |
-          docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
+          docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.gold.test_e3_gold -v
       - name: Gerar o painel real
         run: |
           docker compose run --no-deps --rm -v "$PWD/docs:/app/docs" carga gerar-painel

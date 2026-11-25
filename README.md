@@ -617,7 +617,7 @@ Os registros de retry e backfill estão em
 Com a Gold completa construída, execute a auditoria de dados:
 
 ```bash
-docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
+docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.gold.test_e3_gold -v
 ```
 
 Para os testes sem banco, com Python e uv disponíveis:
@@ -642,54 +642,37 @@ mesmo retrato de origem usado em sua construção.
 
 ## Estrutura do repositório
 
+O código em `src/eduinfra/` está agrupado em pacotes pelo caminho do dado. O mapa completo, a regra de
+dependência entre os pacotes e a tabela dos caminhos antigos estão em
+[docs/estrutura-do-codigo.md](docs/estrutura-do-codigo.md).
+
 ```
-alembic/versions/   migrações do esquema, em ordem (0001 a 0009)
-src/eduinfra/       CLI, download, ingestão, CDC e camada analítica
-  cli.py            comandos da CLI eduinfra
-  configuracao.py   variáveis de ambiente, URLs e anos das fontes
-  microdados.py     download retomável do pacote do INEP
-  tls.py            completa a cadeia de certificados do INEP (ADR 0002)
-  transformacao.py  valida o cabeçalho e gera a Silver em Parquet
-  carga.py          staging, consolidação idempotente e resumo
-  ingestao.py       ingestão em lote idempotente, com manifesto (E2)
-  enem.py           Silver do ENEM: resultados agregados por escola
-  ingestao_enem.py  ingestão idempotente do ENEM, no mesmo manifesto
-  cobertura_enem.py junção das escolas do ENEM com as do Censo
-  cdc.py            leitura do slot de replicação lógica da origem
-  pgoutput.py       decodificação das mensagens do plugin pgoutput
-  fluxo_cdc.py      consumidor do CDC: do slot à tabela Delta de eventos
-  contrato_cdc.py   colunas que o consumidor espera da origem (ADR 0007)
-  telemetria_cdc.py telemetria por transação entregue (ADR 0007)
-  fila_de_erros.py  fila do que o CDC leu e não aplicou (ADR 0007)
-  eventos.py        tabela Delta de eventos de vistoria
-  janelas.py        eventos em janelas mensais, com dado atrasado tratado
-  camada_analitica.py tabela Delta da camada analítica e conferência com o OLTP
-  caracterizacao.py contagens e tamanhos da base populada
-  comparacao_*.py   medições citadas nos ADRs e em docs/
-  demonstracao_*.py demonstrações do CDC e do dado atrasado
-  vistorias_de_teste.py vistorias sintéticas para medições e demonstrações
-  sample_generator.py amostra sintética da origem (gerar_amostra)
-  otimizacao_consulta.py planos de execução da consulta otimizada
-  orquestrador.py   pipeline em lote, agenda, retry e backfill no Dagster
-  fontes_transformacao.py prepara e confere as sources PostgreSQL do dbt
-  modelo_analitico.py construtor SQL e consultas de comparação
-  frescor.py        medição do SLA da Gold
-  painel.py         geração do painel HTML a partir da Gold
-  auditoria_cdc.py  conferência da origem, Delta, fila e slot
-  recuperacao_cdc.py reprocessamento seletivo e recibos do CDC
-transformacao/      projeto dbt: modelos, contratos e testes
-  scripts/          executar.py (fluxo completo) e comparar.py (dbt × SQL)
-tests/              testes unitários e de integração (ver docs/testes.md)
-docs/               guias, decisões e evidências da E1, E2 e E3
-docs/adr/           registros de decisão de arquitetura
-docs/diario/        diário de bordo semanal
-docs/evidencias/    medições, logs e scripts citados nos documentos
-mkdocs.yml          site de documentação publicado no GitHub Pages
-.github/workflows/  CI: constrói a Gold, gera o painel e publica o site
-docker-compose.yml  PostgreSQL, carga, CDC, transformação dbt e Dagster
-Dockerfile          imagem da carga, com uv
-.env.example        variáveis de ambiente; copie para .env
-AI-USAGE.md         registro de uso de IA
+alembic/versions/     migrações do esquema, em ordem (0001 a 0009)
+src/eduinfra/
+  cli.py              comandos da CLI eduinfra; cada pacote registra os seus em comandos.py
+  orquestrador.py     pipeline em lote, agenda, retry e backfill no Dagster
+  nucleo/             configuração por variável de ambiente e gravação da saída em arquivo
+  origem/             OLTP: carga a partir da Silver, vistorias sintéticas e amostra
+  ingestao/           download do INEP, TLS (ADR 0002) e ingestão em lote do Censo e do ENEM
+  lake/               Silver do Censo e do ENEM em Parquet e tabela Delta da camada analítica
+  cdc/                slot lógico, pgoutput, fonte canônica de eventos, janelas, fila de erros e auditoria
+  gold/               preparo das fontes do dbt e SLA de frescor (os modelos ficam em transformacao/)
+  consumo/            painel HTML gerado a partir da Gold
+  experimentos/       medições, comparações e demonstrações dos ADRs; fora do pipeline agendado
+transformacao/        projeto dbt da Gold: staging, intermediate e marts
+  scripts/            executar.py (fluxo completo) e comparar.py (dbt x SQL)
+tests/                mesmos pacotes de src/, com testes unitários e de integração (ver docs/testes.md)
+scripts/              verificar_caminhos.py: falha se um documento citar caminho inexistente
+docs/                 guias, decisões e evidências da E1 à E4
+docs/adr/             registros de decisão de arquitetura
+docs/diario/          diário de bordo semanal
+docs/evidencias/      medições, logs e scripts citados nos documentos
+mkdocs.yml            site de documentação publicado no GitHub Pages
+.github/workflows/    CI: constrói a Gold, gera o painel, confere os caminhos e publica o site
+docker-compose.yml    PostgreSQL, carga, CDC, transformação dbt e Dagster
+Dockerfile            imagem da carga, com uv
+.env.example          variáveis de ambiente; copie para .env
+AI-USAGE.md           registro de uso de IA
 ```
 
 ## Documentação do processo

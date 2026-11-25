@@ -83,7 +83,7 @@ class TestDefinicoesDeMetricas(unittest.TestCase):
                         self.assertTrue((MODELOS_DA_GOLD / f"{tabela}.sql").is_file(), f"modelo dbt de {fonte} não existe")
 
     def test_painel_usa_o_minimo_da_definicao(self):
-        texto = (RAIZ / "src" / "eduinfra" / "painel.py").read_text(encoding="utf-8")
+        texto = (RAIZ / "src" / "eduinfra" / "consumo" / "painel.py").read_text(encoding="utf-8")
         minimo_no_painel = int(re.search(r"^MINIMO_ESCOLAS = (\d+)$", texto, re.M).group(1))
         definicao = next(m for m in self.metricas.values() if m["nome"] == "media_enem_escolas")
         self.assertEqual(minimo_no_painel, definicao["supressao"]["minimo"])

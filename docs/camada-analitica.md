@@ -58,7 +58,7 @@ erro. Esse comando também roda no final do `tudo`. Cada ano é gravado
 substituindo apenas as linhas daquele ano, então rodar de novo não duplica nada.
 
 O comando `comparar-particionamento` está em
-`src/eduinfra/comparacao_particionamento.py`. Ele grava a mesma tabela de cinco
+`src/eduinfra/experimentos/comparacao_particionamento.py`. Ele grava a mesma tabela de cinco
 formas diferentes numa pasta temporária, mede cada uma e apaga a pasta no final.
 As cinco formas são estas.
 

@@ -37,7 +37,7 @@ Montar o contexto TLS do download buscando o certificado intermediário pela URL
 declarada na extensão AIA do certificado do servidor, e adicioná-lo ao contexto de
 verificação. As âncoras de confiança continuam sendo as raízes públicas já
 instaladas no sistema, somadas às do pacote `certifi`. A implementação está em
-[tls.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/tls.py).
+[tls.py](https://github.com/daviegito/bd2_2026_2_eduinfra/blob/main/src/eduinfra/ingestao/tls.py).
 
 Tanto a inspeção do certificado quanto a transferência do arquivo têm novas
 tentativas com espera, e o download é retomável por `Range`.
@@ -104,3 +104,4 @@ tentativas com espera, e o download é retomável por `Range`.
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Registro da decisão sobre a cadeia TLS incompleta do INEP | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de setembro de 2026 |
+| 1.1 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |

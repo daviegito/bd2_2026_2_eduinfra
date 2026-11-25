@@ -1,38 +1,59 @@
 import argparse
 import logging
 import sys
-from datetime import timedelta
 from pathlib import Path
 
-from alembic import command
-from alembic.config import Config
+from eduinfra.cdc import auditoria_cdc, recuperacao_cdc
+from eduinfra.cdc import comandos as cdc
+from eduinfra.consumo import comandos as consumo
+from eduinfra.experimentos import comandos as experimentos
+from eduinfra.gold import comandos as gold
+from eduinfra.gold import frescor
+from eduinfra.ingestao import comandos as ingestao
+from eduinfra.lake import comandos as lake
+from eduinfra.nucleo.configuracao import Configuracao, carregar_configuracao
+from eduinfra.origem import comandos as origem
 
-from eduinfra import (
-    auditoria_cdc,
-    camada_analitica,
-    caracterizacao,
-    cobertura_enem,
-    comparacao_compressao,
-    comparacao_ingestao,
-    comparacao_latencia,
-    comparacao_modelagem,
-    comparacao_particionamento,
-    demonstracao_cdc,
-    fluxo_cdc,
-    frescor,
-    janelas,
-    modelo_analitico,
-    recuperacao_cdc,
-    otimizacao_consulta,
-)
-from eduinfra.ingestao import ingerir
-from eduinfra.ingestao_enem import ingerir_enem
-from eduinfra.configuracao import Configuracao, carregar_configuracao
-
-log = logging.getLogger("eduinfra")
+COMANDOS = {
+    **origem.COMANDOS,
+    **ingestao.COMANDOS,
+    **cdc.COMANDOS,
+    **lake.COMANDOS,
+    **gold.COMANDOS,
+    **experimentos.COMANDOS,
+    **consumo.COMANDOS,
+}
 
 
 def main(argumentos: list[str] | None = None) -> int:
+    parser = montar_parser()
+    opcoes = parser.parse_args(argumentos)
+
+    logging.basicConfig(
+        level=logging.DEBUG if opcoes.verboso else logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+
+    configuracao = carregar_configuracao()
+
+    if opcoes.comando == "reprocessar-janela" and not opcoes.mes:
+        parser.error("reprocessar-janela exige --mes AAAA-MM")
+
+    if opcoes.comando == "tudo":
+        return _tudo(opcoes, configuracao)
+
+    return COMANDOS[opcoes.comando](opcoes, configuracao)
+
+
+def _tudo(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
+    origem.migrar(opcoes, configuracao)
+    ingestao.ingerir(opcoes, configuracao)
+    cdc.publicar_linha_de_base(configuracao, opcoes.forcar)
+    experimentos.caracterizar(opcoes, configuracao)
+    return lake.publicar_analitica(opcoes, configuracao)
+
+
+def montar_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="eduinfra", description="Origem OLTP do EduInfra AI")
 
     parser.add_argument("comando", choices=("migrar", "reverter", "carregar", "ingerir", "caracterizar", "comparar-modelagem", "comparar-compressao",
@@ -58,239 +79,7 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--lsn", type=int, help="LSN decimal da ocorrência na fila; exige --chave")
     parser.add_argument("--chave", help="chave exata da ocorrência na fila; exige --lsn")
     parser.add_argument("--verboso", action="store_true")
-    opcoes = parser.parse_args(argumentos)
-
-    logging.basicConfig(
-        level=logging.DEBUG if opcoes.verboso else logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-    )
-
-    configuracao = carregar_configuracao()
-
-    if opcoes.comando in ("reprocessar-fila-cdc", "tratar-desvio-cdc"):
-        try:
-            if opcoes.comando == "reprocessar-fila-cdc":
-                resultado = recuperacao_cdc.reprocessar(configuracao, opcoes.responsavel, opcoes.motivo, opcoes.lsn, opcoes.chave)
-                print(resultado)
-                return 1 if resultado.pendentes else 0
-            novo = recuperacao_cdc.tratar_desvio(configuracao, opcoes.responsavel, opcoes.motivo, opcoes.lsn, opcoes.chave)
-            print("Tratamento registrado." if novo else "A ocorrência já possui um recibo de tratamento.")
-            return 0
-        except ValueError as erro:
-            log.error("%s", erro)
-            return 1
-
-    if opcoes.comando == "reverter":
-        command.downgrade(_alembic(configuracao), opcoes.revisao)
-        return 0
-
-    if opcoes.comando in COMANDOS_ANALITICOS:
-        return _executar_analitico(opcoes, configuracao)
-
-    if opcoes.comando == "construir-gold":
-        resumo = modelo_analitico.construir(configuracao)
-        fonte = resumo.fonte
-        log.info(
-            "fonte de eventos: versão %d da tabela Delta, %d eventos; origem com %d; %d só na origem, %d só na fonte",
-            fonte.versao_delta, fonte.na_fonte, fonte.na_origem, fonte.so_na_origem, fonte.so_na_fonte,
-        )
-        for tabela, linhas in resumo.linhas.items():
-            log.info("gold.%s: %d linhas", tabela, linhas)
-        # Cada construção registra o frescor; a violação só reprova em medir-frescor.
-        frescor.medir(configuracao.dsn, comando="construir-gold")
-        return 0 if _auditar_gold() else 1
-
-    if opcoes.comando == "medir-frescor":
-        medicao = frescor.medir(configuracao.dsn, timedelta(hours=opcoes.sla_horas))
-        print(frescor.resumo(medicao))
-        return 0 if medicao.dentro_do_sla else 1
-
-    if opcoes.comando == "demonstrar-frescor":
-        print(frescor.demonstrar(configuracao.dsn))
-        return 0
-
-    if opcoes.comando == "comparar-granularidades":
-        texto = modelo_analitico.formatar_markdown(
-            modelo_analitico.comparar(configuracao.dsn, opcoes.repeticoes)
-        )
-        _imprimir(texto, opcoes.saida)
-        return 0
-
-    if opcoes.comando == "ingerir-enem":
-        resultado = ingerir_enem(configuracao, forcar=opcoes.forcar)
-        if resultado.ignorada:
-            log.info("ingestão do ENEM ignorada: arquivo já registrado no manifesto (use --forcar para reexecutar)")
-        elif resultado.silver_republicada:
-            log.info("Silver do ENEM republicada: o manifesto já estava na versão deste arquivo")
-        else:
-            log.info("ingestão do ENEM concluída: %d escolas agregadas", resultado.escolas)
-        return 0
-
-    if opcoes.comando == "medir-cobertura-enem":
-        _imprimir(cobertura_enem.formatar_markdown(cobertura_enem.medir(configuracao)), opcoes.saida)
-        return 0
-
-    if opcoes.comando == "comparar-modelagem":
-        print(comparacao_modelagem.formatar_markdown(comparacao_modelagem.comparar(configuracao.dsn)))
-        return 0
-
-    if opcoes.comando == "comparar-compressao":
-        silver = configuracao.diretorio_dados / "silver"
-        print(comparacao_compressao.formatar_markdown(comparacao_compressao.comparar(silver, opcoes.repeticoes)))
-        return 0
-
-    if opcoes.comando == "processar-janelas":
-        print(janelas.resumo_texto(janelas.processar(configuracao)))
-        return 0
-
-    if opcoes.comando == "reprocessar-janela":
-        if not opcoes.mes:
-            parser.error("reprocessar-janela exige --mes AAAA-MM")
-        janela = janelas.reprocessar_janela(configuracao, opcoes.mes)
-        print(f"janela {janela.mes}: {janela.linhas} linhas, impressão {janela.impressao}")
-        return 0
-
-    if opcoes.comando == "demonstrar-atraso":
-        from eduinfra.demonstracao_atraso import demonstrar
-
-        print(demonstrar(configuracao))
-        return 0
-
-    if opcoes.comando == "comparar-particionamento":
-        silver = configuracao.diretorio_dados / "silver"
-        comparacao = comparacao_particionamento.comparar(silver, opcoes.repeticoes, opcoes.lotes)
-        print(comparacao_particionamento.formatar_markdown(comparacao))
-        return 0
-
-    if opcoes.comando == "comparar-consulta":
-        comparacao = otimizacao_consulta.comparar(configuracao.dsn, opcoes.repeticoes)
-        otimizacao_consulta.gravar_planos(comparacao, opcoes.pasta_dos_planos)
-        print(otimizacao_consulta.formatar_markdown(comparacao))
-        return 0 if comparacao.mesmo_resultado else 1
-
-    if opcoes.comando in ("migrar", "tudo"):
-        command.upgrade(_alembic(configuracao), opcoes.revisao)
-
-    if opcoes.comando in ("carregar", "ingerir", "tudo"):
-        resultado = ingerir(configuracao, forcar=opcoes.forcar)
-        if resultado.ignorada:
-            log.info("ingestão ignorada: arquivo já registrado no manifesto (use --forcar para reexecutar)")
-        elif resultado.silver_republicada:
-            log.info("Silver republicada: o banco já estava na versão deste arquivo")
-        else:
-            resumo = resultado.carga
-            log.info(
-                "ingestão concluída: %d municípios, %d escolas, %d vistorias, %d itens inseridos",
-                resumo.municipios,
-                resumo.escolas,
-                resumo.vistorias,
-                resumo.itens,
-            )
-
-    if opcoes.comando == "tudo":
-        _publicar_linha_de_base(configuracao, opcoes.forcar)
-
-    if opcoes.comando in ("caracterizar", "tudo"):
-        medidas = caracterizacao.medir(configuracao.dsn)
-        tamanhos = caracterizacao.tamanhos_em_disco(configuracao.dsn)
-        print(caracterizacao.formatar_markdown(medidas, tamanhos))
-
-    if opcoes.comando in ("publicar-analitica", "tudo"):
-        resumo = camada_analitica.publicar(configuracao.diretorio_dados)
-        no_duckdb = camada_analitica.contar_no_duckdb(resumo.caminho)
-        no_oltp = camada_analitica.contar_no_oltp(configuracao.dsn)
-        print(camada_analitica.formatar_markdown(resumo, no_duckdb, no_oltp))
-        if no_duckdb != no_oltp:
-            log.error("a tabela analítica não confere com o OLTP")
-            return 1
-
-    if opcoes.comando == "gerar_amostra":
-        from eduinfra.sample_generator import gerar_amostra
-
-        gerar_amostra(configuracao, opcoes.escolas)
-
-    if opcoes.comando == "gerar-painel":
-        from eduinfra.painel import gerar_painel
-        gerar_painel()
-        return 0
-
-    return 0
-
-
-def _auditar_gold() -> bool:
-    log.info("Iniciando auditoria E3 automática...")
-    import unittest
-    import sys
-
-    # Garante que a raiz do container e o diretório atual estejam no sys.path
-    caminhos_busca = ["/app", str(Path.cwd()), str(Path(__file__).resolve().parents[2])]
-    for caminho in caminhos_busca:
-        if caminho not in sys.path:
-            sys.path.insert(0, caminho)
-
-    loader = unittest.TestLoader()
-    suite = loader.loadTestsFromName("tests.test_e3_gold")
-    runner = unittest.TextTestRunner(verbosity=2)
-    resultado = runner.run(suite)
-
-    if not resultado.wasSuccessful():
-        log.error("A auditoria E3 FALHOU! Os dados da Gold estão inconsistentes.")
-        return False
-
-    log.info("Auditoria E3 concluída com sucesso!")
-    return True
-
-
-COMANDOS_ANALITICOS = ("publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao", "medir-cdc", "medir-recarga", "auditar-cdc")
-
-ARQUIVO_DE_VIDA = Path("/tmp/cdc_vivo")
-
-
-def _executar_analitico(opcoes: argparse.Namespace, configuracao: Configuracao) -> int:
-    if opcoes.comando == "publicar-analitico":
-        _publicar_linha_de_base(configuracao, opcoes.forcar)
-    elif opcoes.comando == "cdc" and opcoes.continuo:
-        fluxo_cdc.acompanhar(configuracao, opcoes.intervalo, ARQUIVO_DE_VIDA)
-    elif opcoes.comando == "cdc":
-        print(fluxo_cdc.passar_uma_vez(configuracao))
-    elif opcoes.comando == "demonstrar-cdc":
-        print(demonstracao_cdc.demonstrar(configuracao))
-    elif opcoes.comando == "medir-cdc":
-        print(comparacao_latencia.formatar_cdc(comparacao_latencia.medir_cdc(configuracao, opcoes.repeticoes)))
-        print(comparacao_latencia.formatar_ordem(comparacao_latencia.medir_ordem(configuracao, opcoes.repeticoes)))
-        return _auditar(configuracao, opcoes.sla_frescor)
-    elif opcoes.comando == "auditar-cdc":
-        return _auditar(configuracao, opcoes.sla_frescor)
-    elif opcoes.comando == "medir-recarga":
-        print(comparacao_latencia.formatar_recarga(comparacao_latencia.medir_recarga(configuracao, opcoes.repeticoes)))
-    else:
-        capturas, ociosa = comparacao_ingestao.medir(configuracao)
-        print(comparacao_ingestao.formatar_markdown(capturas, ociosa))
-
-    return 0
-
-
-def _auditar(configuracao: Configuracao, sla_de_frescor_s: float) -> int:
-    auditoria = auditoria_cdc.auditar(configuracao, sla_de_frescor_s=sla_de_frescor_s)
-    print(auditoria_cdc.formatar(auditoria))
-
-    return 1 if auditoria_cdc.violacoes(auditoria) else 0
-
-
-def _publicar_linha_de_base(configuracao: Configuracao, forcar: bool) -> None:
-    resultado = fluxo_cdc.publicar_linha_de_base(configuracao, forcar)
-    log.info("analítico: %d recebidos, %d inseridos", resultado.recebidas, resultado.inseridas)
-
-
-def _imprimir(texto: str, saida: Path | None) -> None:
-    print(texto)
-    if saida:
-        saida.parent.mkdir(parents=True, exist_ok=True)
-        saida.write_text(texto + "\n", encoding="utf-8")
-
-
-def _alembic(configuracao: Configuracao) -> Config:
-    return Config(str(configuracao.arquivo_alembic))
+    return parser
 
 
 if __name__ == "__main__":

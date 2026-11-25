@@ -14,7 +14,7 @@ o grafo, integrar as fontes e entender os limites de publicação.
 A Gold responde à pergunta de gestão do projeto: a infraestrutura de uma escola
 se reflete no desempenho dos seus alunos no ENEM? Esta página declara o grão de
 cada tabela, a decisão de modelagem, as regras da dimensão de variação lenta e o
-que ainda depende de outras entregas. O SQL fica em `src/eduinfra/modelo_analitico.py`,
+que ainda depende de outras entregas. O SQL fica em `src/eduinfra/experimentos/modelo_analitico.py`,
 em constantes como opção nula; o projeto dbt implementa a decisão do ADR 0005.
 
 ## Como rodar

@@ -6,8 +6,8 @@ import json
 from pathlib import Path
 import time
 
-from eduinfra.configuracao import Configuracao, carregar_configuracao
-from eduinfra.microdados import garantir_microdados, garantir_resultados_enem
+from eduinfra.nucleo.configuracao import Configuracao, carregar_configuracao
+from eduinfra.ingestao.microdados import garantir_microdados, garantir_resultados_enem
 
 
 def hash_zip(caminho: Path) -> str | None:

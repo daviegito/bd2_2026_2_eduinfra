@@ -66,7 +66,7 @@ Como reproduzir, em banco de desenvolvimento:
 docker compose run --rm carga medir-cdc --repeticoes 30
 docker compose run --rm carga auditar-cdc
 uv run python docs/evidencias/metricas-cdc/falhas_depois_da_mudanca.py
-uv run pytest tests/test_resiliencia_cdc_integracao.py -q
+uv run pytest tests/cdc/test_resiliencia_cdc_integracao.py -q
 ```
 
 ## Decisão
@@ -166,3 +166,4 @@ declarada pelo executor e não substitui controle de acesso.
 | 1.2 | Validação das datas na origem e na publicação completa (#57) | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente de PR | 8 de novembro de 2026 |
 | 1.3 | Passa de proposto a aceito, com a aprovação no PR #59 | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
 | 1.4 | Recuperação seletiva e recibos de tratamento da fila (#58), proposta em PR | [Pedro Vargas](https://github.com/Pedrovargas10) | Pendente | 10 de novembro de 2026 |
+| 1.5 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |

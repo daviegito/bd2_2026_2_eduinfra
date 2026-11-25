@@ -123,9 +123,9 @@ nem instala dependências.
 
 ```bash
 PYTHONPATH=src python -m pytest \
-  tests/test_recuperacao_cdc.py tests/test_recuperacao_cdc_integracao.py \
-  tests/test_auditoria_cdc.py tests/test_resiliencia_cdc_integracao.py -q
-PYTHONPATH=src python -m pytest --ignore=tests/test_transformacao_property.py -q -rs
+  tests/cdc/test_recuperacao_cdc.py tests/cdc/test_recuperacao_cdc_integracao.py \
+  tests/cdc/test_auditoria_cdc.py tests/cdc/test_resiliencia_cdc_integracao.py -q
+PYTHONPATH=src python -m pytest --ignore=tests/lake/test_silver_censo_property.py -q -rs
 python -m mkdocs build --strict --site-dir /tmp/eduinfra-issue58-site
 git diff --check
 ```
@@ -148,7 +148,7 @@ que exigem Gold ficaram pendentes naquela rodada; foram executados na revalidaç
 236 passed, 5 skipped, 11 warnings in 68.93s
 ```
 
-Os cinco skips são exclusivamente de `tests/test_frescor_integracao.py`, por
+Os cinco skips são exclusivamente de `tests/gold/test_frescor_integracao.py`, por
 Gold não construída nesse banco. As onze advertências são de APIs de particionamento
 já depreciadas em `comparacao_latencia.py`, fora do escopo desta entrega.
 `mkdocs build --strict` terminou sem erro; `git diff --check` também passou.
@@ -215,7 +215,7 @@ mesma execução, sem ignorar testes. Reprodução após construir a Gold, com
 uv run --group transformacao --with hypothesis python - <<'PYTEST'
 from pathlib import Path
 import pytest
-auditoria = Path('tests/test_e3_gold.py')
+auditoria = Path('tests/gold/test_e3_gold.py')
 arquivos = [str(auditoria)] + [
     str(p) for p in sorted(Path('tests').glob('test_*.py')) if p != auditoria
 ]

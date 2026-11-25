@@ -26,7 +26,7 @@ Alternativa para ampliar operações e consumidores, acrescentando serviços e m
 
 ## Medição
 
-O script `src/eduinfra/comparacao_ingestao.py` mede **somente captura**, sem gravação no Delta, sobre a origem do domínio com inserções de teste. Resultados registrados pela equipe em Docker Desktop/Windows: uma execução por volume; vinte leituras ociosas. A consulta incremental não tinha índice em `registrado_em`.
+O script `src/eduinfra/experimentos/comparacao_ingestao.py` mede **somente captura**, sem gravação no Delta, sobre a origem do domínio com inserções de teste. Resultados registrados pela equipe em Docker Desktop/Windows: uma execução por volume; vinte leituras ociosas. A consulta incremental não tinha índice em `registrado_em`.
 
 | Vistorias novas | Itens | A — incremental (ms) | B — slot lógico (ms) |
 | ---: | ---: | ---: | ---: |
@@ -81,6 +81,7 @@ Adotar B, com as seguintes garantias e limites:
 | Versão | Descrição | Autor | Revisão | Data |
 | --- | --- | --- | --- | --- |
 | 1.0 | Consolida as decisões e evidências de ingestão da E2 | [Pedro Vargas](https://github.com/Pedrovargas10) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) | 18 de outubro de 2026 |
+| 1.1 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |
 
 
 ## Revisão operacional — 08/11/2026 (issue #60)

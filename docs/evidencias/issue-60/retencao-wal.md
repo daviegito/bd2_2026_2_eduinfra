@@ -64,7 +64,7 @@ Comparação de três vias com as branches das PRs #61, #62, #63, #64 e #65: **n
 
 ## Testes
 
-`pytest tests --ignore=tests/test_transformacao_property.py -q`: **201 passaram**, com 11 avisos de depreciação já existentes, em 56,69 s. O arquivo opcional de Hypothesis ficou explicitamente de fora, pois a dependência não estava instalada. Os seis testes específicos de slot estão incluídos nessa contagem.
+`pytest tests --ignore=tests/lake/test_silver_censo_property.py -q`: **201 passaram**, com 11 avisos de depreciação já existentes, em 56,69 s. O arquivo opcional de Hypothesis ficou explicitamente de fora, pois a dependência não estava instalada. Os seis testes específicos de slot estão incluídos nessa contagem.
 
 ## Saídas e amostras das medições
 
@@ -4756,7 +4756,7 @@ os seis testes novos da #60.
 A PR #62 entrou na main durante a preparação desta PR. A branch foi atualizada
 por fast-forward e o patch reaplicado sem conflito. Na nova base, a suíte teve
 **215 testes passando e uma falha**, com os mesmos 11 avisos de depreciação:
-`tests/test_janelas_integracao.py::test_segunda_execucao_nao_reprocessa_o_que_ja_entrou`.
+`tests/cdc/test_janelas_integracao.py::test_segunda_execucao_nao_reprocessa_o_que_ja_entrou`.
 Os seis testes da correção foram repetidos e passaram em 2,68 s.
 
 A falha foi reproduzida também no snapshot da PR #62 sem o patch da #60

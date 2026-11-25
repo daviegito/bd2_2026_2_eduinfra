@@ -30,7 +30,7 @@ flowchart LR
 - **Gold.** A Gold é construída pelo dbt, com o mesmo script do serviço
   `transformacao`, que também ingere o ENEM.
 - **Testes de dados.** Depois da Gold, o `testar_gold` roda os testes de
-  `tests/test_e3_gold.py`: esquema, volume, unicidade, integridade referencial,
+  `tests/gold/test_e3_gold.py`: esquema, volume, unicidade, integridade referencial,
   distribuição e domínio da situação. Ele não tem retry, porque um teste que falha
   aponta defeito na Gold, e repetir não corrige.
 - **Frescor.** Depois da Gold, o `medir_frescor` falha se alguma vistoria
@@ -107,3 +107,4 @@ medições de [Transformação declarativa](transformacao.md).
 | 1.0 | Orquestração com Dagster: grafo, retry, agenda e backfill | [Lucas Mendonça Arruda](https://github.com/lucasarruda9) |  | 3 de novembro de 2026 |
 | 1.1 | Inclui a Gold pelo dbt e o frescor no pipeline | [Lucas Mendonça Arruda](https://github.com/lucasarruda9) |  | 9 de novembro de 2026 |
 | 1.2 | Inclui os testes de dados no pipeline e registra as execuções de retry e backfill | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
+| 1.3 | Caminhos de código atualizados para os pacotes de `src/` e `tests/` (issue #97) | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 22 de novembro de 2026 |

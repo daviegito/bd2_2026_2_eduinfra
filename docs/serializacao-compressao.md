@@ -38,7 +38,7 @@ uv run eduinfra comparar-compressao --repeticoes 15
 
 O comando lê os Parquet da Silver (`municipio`, `escola` e `vistoria_item`),
 regrava as três tabelas em cada formato numa pasta temporária, mede e apaga a
-pasta. O código está em `src/eduinfra/comparacao_compressao.py`.
+pasta. O código está em `src/eduinfra/experimentos/comparacao_compressao.py`.
 
 **Como se mede:**
 
@@ -108,7 +108,7 @@ byte a byte.
 
 **Manter Parquet com zstd na camada Silver.** É o menor em disco, sem custo
 mensurável de leitura nem de escrita neste volume. O codec agora é uma constante
-nomeada, `COMPRESSAO_PARQUET`, em `src/eduinfra/transformacao.py`.
+nomeada, `COMPRESSAO_PARQUET`, em `src/eduinfra/lake/silver_censo.py`.
 
 ## O que se perde
 

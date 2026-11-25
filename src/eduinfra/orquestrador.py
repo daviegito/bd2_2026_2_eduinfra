@@ -70,7 +70,7 @@ def construir_gold() -> None:
 # A completude das definições de métricas (#82) roda no mesmo comando.
 @asset(deps=[construir_gold])
 def testar_gold() -> None:
-    _executar([sys.executable, "-m", "unittest", "tests.test_e3_gold", "tests.test_metricas"], "testes de dados da Gold")
+    _executar([sys.executable, "-m", "unittest", "tests.gold.test_e3_gold", "tests.test_metricas"], "testes de dados da Gold")
 
 
 @asset(deps=[construir_gold])
