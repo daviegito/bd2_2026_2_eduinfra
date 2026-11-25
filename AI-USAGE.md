@@ -905,3 +905,24 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   da transformação falhou por margem insuficiente do slot e passou após o CDC drenar a carga inicial;
   o teste de CDC da suíte de acesso precisou de `tecnico_id`, `origem` válida e limpeza com superusuário.
 - **Quem revisou:** revisão de outro membro da squad pendente.
+
+### 2026-11-25 — Acoplamento das branches do PR #110 sem perder o controle de acesso
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** comparar as branches do PR #110 — `refactor/pacotes-src` (base) e
+  `feat/controle_acesso` (head) — e integrá-las preservando o controle de acesso da issue #86,
+  objetivo principal da branch.
+- **Onde:** merge de `origin/refactor/pacotes-src` em `feat/controle_acesso` com resolução `-X ours`
+  e este registro.
+- **O que foi aproveitado:** o merge-base `f38633e` e o `git diff` mostraram que o commit `00b536e`
+  já tinha reaplicado manualmente o refactor de pacotes e os PRs #106, #108 e #109. Por isso o Git
+  apontava 18 conflitos aparentes (12 de conteúdo e 6 de `add/add`) em arquivos como `cli.py`,
+  `README.md`, `AI-USAGE.md`, `mkdocs.yml`, `docs/testes.md` e comandos dos pacotes. A simulação
+  `git merge-tree --write-tree -X ours feat/controle_acesso origin/refactor/pacotes-src` deu zero
+  conflitos e árvore idêntica à do head, então a resolução manteve integralmente
+  `src/eduinfra/seguranca/`, a migração `0010`, `docs/controle-de-acesso.md` e `tests/seguranca/`.
+- **Como foi verificado:** o merge foi feito sem conflitos e a árvore do commit resultante é igual à
+  de `00b536e`, confirmando que nenhum arquivo do controle de acesso foi perdido; `git diff --check`
+  e `scripts/verificar_caminhos.py` sem acusação; suíte sem banco com 258 testes aprovados, 4 skips
+  e 42 subtests. Testes de integração, Docker e dbt não refeitos nesta etapa.
+- **Quem revisou:** revisão de outro membro da squad pendente.
