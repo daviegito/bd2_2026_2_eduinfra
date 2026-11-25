@@ -777,3 +777,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   de diretórios/montagem do teste; sem promessa de duração fixa. Reuso entre PRs
   depende de integrar o workflow e semear o cache na main.
 - **Quem revisou:** revisão humana pendente.
+
+### 2026-11-24 — Revisão dos gatilhos do ADR 0003 depois da E3 (issue #4)
+
+- **Ferramenta:** Claude Code, como assistente de revisão.
+- **O que foi pedido:** conferir se o ADR 0003 atende ao guia e à rubrica de ADR da disciplina e
+  trazê-lo para a main atual.
+- **Onde:** `docs/adr/0003-armazenamento.md`, `docs/adr/README.md` e este registro.
+- **O que foi aproveitado:** a conferência de cada gatilho contra o código da main e a seção de revisão
+  com o resultado. A medição e a decisão de 2 de novembro não mudaram. Artur decidiu publicar o ADR no
+  portfólio depois dessa conferência.
+- **Como foi verificado:** leitura do `fontes_transformacao.py`, do `cli.py`, do `orquestrador.py` e do
+  `fluxo_cdc.py` na main para saber quem lê cada tabela Delta e se a compactação está agendada;
+  `tests/test_formatos_de_tabela.py` com 11 testes aprovados e os 3 de Iceberg ignorados sem o PyIceberg.
+  Os gatilhos de tamanho de arquivo não foram medidos.
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad.

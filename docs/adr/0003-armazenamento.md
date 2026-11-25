@@ -109,11 +109,26 @@ O critério contra A é a leitura durante a manutenção. Com CDC a cada 2 s, a 
 - PyIceberg com reescrita de arquivos e `upsert` de 8.500 itens abaixo de **1 s**.
 - Saída do disco local para armazenamento de objetos, porque os números acima deixam de valer.
 
+## Revisão dos gatilhos em 24 de novembro de 2026
+
+Depois da E3, conferimos cada gatilho contra o código da main. A Gold passou a ser construída pelo dbt no PostgreSQL ([ADR 0005](0005-ferramenta-de-transformacao.md)), e a `eventos_vistoria` virou a fonte única de eventos ([ADR 0008](0008-fonte-canonica-de-eventos.md)).
+
+| Gatilho | Situação em 24/11 |
+| --- | --- |
+| #45 e #48 fecharem sem a transformação ler essas tabelas | Disparou para a `warehouse/vistoria_item`. As duas issues fecharam, e o `fontes_transformacao.py` copia para a Gold a Silver em Parquet e a `eventos_vistoria` em Delta. A `vistoria_item` continua gravada pelo `publicar-analitica` em toda execução do `tudo`, e só a conferência de contagem desse comando lê a tabela. |
+| Consulta de painel acima de 5 s | Deixou de medir esta decisão, porque o painel lê a Gold no PostgreSQL e não o lake. |
+| Mais de 500 arquivos sem compactação agendada, 128 MB por arquivo ou 1 GB por UF | Não medido nesta revisão. A compactação continua sem agendamento, porque nem o orquestrador da #50 nem o consumidor do CDC a chamam. A `eventos_vistoria` recebe um commit a cada passada do CDC com transação nova e é a tabela com mais chance de passar dos 500 arquivos. |
+| Ferramenta da E3 ou da E4 que só leia Iceberg | Não disparou na E3. O dbt lê o PostgreSQL, e a cópia para a Gold usa `deltalake` e DuckDB. |
+| PyIceberg com reescrita de arquivos e `upsert` de 8.500 itens abaixo de 1 s | Não conferido nesta revisão. |
+| Saída do disco local para armazenamento de objetos | Não disparou. O lake continua no volume local do Docker Compose. |
+
+Com o primeiro gatilho disparado, a `vistoria_item` cobra a gravação Delta em toda carga sem dar retorno na Gold. A Squad tem duas saídas, tirar a tabela do `tudo` e deixar a Silver como única cópia dos itens, ou dar a ela um consumidor na E4. A decisão para a `eventos_vistoria` continua de pé, e o custo que falta pagar é agendar a compactação dela.
+
 ## Evidências
 
 - `src/eduinfra/formatos_de_tabela.py`, `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py` e `comparacao_leitor_delta.py`, com testes em `tests/test_formatos_de_tabela.py`.
 - [Camada analítica](../camada-analitica.md) e [serialização e compressão](../serializacao-compressao.md). O CSV de 116,4 MB citado nesta última é anterior à coluna `ano_censo` na Silver.
-- [CDC e semântica de entrega](../cdc-e-semantica-de-entrega.md) e [modelo da Gold em revisão no PR #55](https://github.com/daviegito/bd2_2026_2_eduinfra/pull/55).
+- [CDC e semântica de entrega](../cdc-e-semantica-de-entrega.md), [modelo analítico](../modelo-analitico.md) e `src/eduinfra/fontes_transformacao.py`, que copia a Silver e a `eventos_vistoria` para a Gold.
 
 ## Histórico de Versões
 
@@ -121,3 +136,4 @@ O critério contra A é a leitura durante a manutenção. Com CDC a cada 2 s, a 
 | --- | --- | --- | --- | --- |
 | 1.0 | Registra a escolha de Parquet zstd com tabelas Delta Lake para a camada analítica | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 18 de outubro de 2026 |
 | 1.1 | Refaz a decisão com A, B e C medidos, falha e leitor concorrente; limita o Delta aos destinos analíticos | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 2 de novembro de 2026 |
+| 1.2 | Revisa os gatilhos depois da E3 e atualiza as referências da Gold | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 24 de novembro de 2026 |
