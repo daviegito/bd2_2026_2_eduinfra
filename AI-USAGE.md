@@ -776,3 +776,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   de diretórios/montagem do teste; sem promessa de duração fixa. Reuso entre PRs
   depende de integrar o workflow e semear o cache na main.
 - **Quem revisou:** revisão humana pendente.
+
+### 2026-11-24 — Atualização da reorganização com a main (PR #107)
+
+- **Ferramenta:** Claude Code, como assistente de integração.
+- **O que foi pedido:** resolver os conflitos do PR #107 com a main depois do merge do #98 e do #105.
+- **Onde:** `AI-USAGE.md`, `docs/testes.md`, `.github/workflows/docs.yml`, `src/eduinfra/orquestrador.py`,
+  `tests/test_orquestrador.py`, `tests/test_metricas.py`, `tests/test_preparar_fontes_ci.py`,
+  `transformacao/scripts/preparar_fontes_ci.py`, `scripts/verificar_caminhos.py` e `README.md`.
+- **O que foi aproveitado:** a junção dos dois lados de cada conflito, os imports e caminhos dos arquivos novos
+  da main apontando para os pacotes, a pasta `docs/evidencias/` fora do verificador de caminhos e a correção do
+  módulo da auditoria no README. Artur pediu a atualização por merge, sem reescrever o histórico da branch.
+- **Como foi verificado:** script de caminhos sem acusação; suíte sem banco com 241 testes aprovados e a mesma
+  falha de codificação no Windows que a main já tem em `test_cli_exporta_dados_e_calculos_reais_sem_duplicar_perfis_ou_anos`;
+  `eduinfra --help` executado. Testes de integração e `docker compose up --build` não executados.
+- **Quem revisou:** revisão de outro membro da squad pendente.

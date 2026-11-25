@@ -617,7 +617,7 @@ Os registros de retry e backfill estão em
 Com a Gold completa construída, execute a auditoria de dados:
 
 ```bash
-docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.test_e3_gold -v
+docker compose run --no-deps --rm --entrypoint uv carga run --no-sync python -m unittest tests.gold.test_e3_gold -v
 ```
 
 Para os testes sem banco, com Python e uv disponíveis:
