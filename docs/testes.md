@@ -69,6 +69,7 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
 | Camada analítica | `tests/test_camada_analitica.py` |
 | Compressão | `tests/test_comparacao_compressao.py` |
+| Parquet puro, Delta e Iceberg (ADR 0003) | `tests/test_formatos_de_tabela.py`; os casos de Iceberg são ignorados sem o PyIceberg ou no Windows |
 | Histórico insert-only | `tests/test_insert_only.py` |
 | Definições de métricas  | `tests/test_metricas.py` |
 | Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |

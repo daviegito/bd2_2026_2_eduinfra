@@ -392,6 +392,26 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `mkdocs build --strict` sem erro
 - **Quem revisou:** Davi (PR #62)
 
+### 2026-11-02 — ADR 0003 e comparação entre Parquet puro, Delta e Iceberg (issue #4)
+
+- **Ferramenta:** Claude (Claude Code, com acesso ao repositório)
+- **Onde:** `docs/adr/0003-armazenamento.md`, `src/eduinfra/formatos_de_tabela.py`,
+  `comparacao_formato_tabela.py`, `comparacao_falha_tabela.py`,
+  `comparacao_leitor_delta.py`, `tests/test_formatos_de_tabela.py` e os índices em `docs/`
+- **O que foi pedido:** verificar se o rascunho do ADR 0003 se sustentava, medir as
+  três alternativas e reescrever o texto com o resultado
+- **O que foi aproveitado:** os quatro módulos, os testes e o texto do ADR. A medição
+  derrubou dois argumentos do rascunho: reaplicar lote em Parquet puro não exige
+  regravar a partição, e o Parquet puro é mais rápido que o Delta com poucos arquivos.
+  A decisão ficou limitada aos destinos analíticos, com a Silver em Parquet puro
+- **Como foi verificado:** comandos rodados com o Censo 2024 real em Linux no WSL2, com
+  respostas conferidas entre as variantes e a falha testada matando o processo gravador.
+  Uma primeira versão da opção nula, sem pasta temporária, a deixava pior do que ela é;
+  foi corrigida antes de medir. A divergência do CSV (132,7 contra 116,4 MB) foi explicada
+  pela coluna `ano_censo`, tabela por tabela. As fontes externas foram lidas diretamente.
+  Não rodou em `docker compose` nem em armazenamento de objetos
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad
+
 ### 2026-11-03 — ADR 0005: ferramenta de transformação (issue #6)
 
 - **Ferramenta:** Claude (Claude Code, com acesso ao ambiente de execução), como
@@ -757,3 +777,18 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   de diretórios/montagem do teste; sem promessa de duração fixa. Reuso entre PRs
   depende de integrar o workflow e semear o cache na main.
 - **Quem revisou:** revisão humana pendente.
+
+### 2026-11-24 — Revisão dos gatilhos do ADR 0003 depois da E3 (issue #4)
+
+- **Ferramenta:** Claude Code, como assistente de revisão.
+- **O que foi pedido:** conferir se o ADR 0003 atende ao guia e à rubrica de ADR da disciplina e
+  trazê-lo para a main atual.
+- **Onde:** `docs/adr/0003-armazenamento.md`, `docs/adr/README.md` e este registro.
+- **O que foi aproveitado:** a conferência de cada gatilho contra o código da main e a seção de revisão
+  com o resultado. A medição e a decisão de 2 de novembro não mudaram. Artur decidiu publicar o ADR no
+  portfólio depois dessa conferência.
+- **Como foi verificado:** leitura do `fontes_transformacao.py`, do `cli.py`, do `orquestrador.py` e do
+  `fluxo_cdc.py` na main para saber quem lê cada tabela Delta e se a compactação está agendada;
+  `tests/test_formatos_de_tabela.py` com 11 testes aprovados e os 3 de Iceberg ignorados sem o PyIceberg.
+  Os gatilhos de tamanho de arquivo não foram medidos.
+- **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad.
