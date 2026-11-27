@@ -69,6 +69,7 @@ O script injetará dados fora do domínio esperado (ERRO_DE_DOMINIO), comprovar�
 | Fonte única de eventos: mesmo evento pelos dois caminhos, evento atrasado e Gold lendo a fonte | `tests/test_fonte_de_eventos.py`, `tests/test_fonte_de_eventos_integracao.py`, `tests/test_modelo_analitico.py` |
 | Camada analítica | `tests/test_camada_analitica.py` |
 | Compressão | `tests/test_comparacao_compressao.py` |
+| Parquet puro, Delta e Iceberg (ADR 0003) | `tests/test_formatos_de_tabela.py`; os casos de Iceberg são ignorados sem o PyIceberg ou no Windows |
 | Histórico insert-only | `tests/test_insert_only.py` |
 | Definições de métricas  | `tests/test_metricas.py` |
 | Frescor e SLA da Gold | `tests/test_frescor.py`, `tests/test_frescor_integracao.py` (exige `construir-gold` antes) |
@@ -106,3 +107,15 @@ uv run mkdocs build --strict --site-dir /tmp/eduinfra-site
 
 A validação gera o site e acusa links internos quebrados. A renderização dos
 diagramas também deve ser conferida no navegador.
+
+## Experimento de desempenho do workflow
+
+O experimento de [cache dos arquivos públicos](evidencias/ci-cache-fontes/README.md)
+antecipa os testes do painel e do preparo das fontes, restaura somente ZIPs e mede
+o preparo antes de iniciar a integração. Carga, CDC, dbt, auditoria e painel continuam
+sendo executados sobre banco novo. A comparação remota registrou
+16 min 14 s sem reaproveitamento e 5 min 29 s com cache; o relatório documenta
+as revisões, os hashes, os testes mantidos e os limites dessa amostra.
+
+Isso não substitui o workflow de suíte geral solicitado na #99. O cache e seu
+bind em `/dados/bruto` são habilitados apenas pelo override `docker-compose.ci.yml`.

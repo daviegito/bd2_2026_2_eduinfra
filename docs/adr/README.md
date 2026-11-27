@@ -12,7 +12,7 @@ Os 5 ADRs obrigatórios da disciplina, um por tema.
 | ADR | Decisão | Entrega | Status | Issue |
 | --- | --- | --- | --- | --- |
 | [0001](0001-modelagem-insert-only-do-sistema-de-origem.md) | Esquema insert-only com carimbo de tempo do evento na origem | E1 | Aceito | #3 |
-| 0003 | Armazenamento analítico em formato aberto | Tema livre | A escrever | #4 |
+| [0003](0003-armazenamento.md) | Usar tabelas Delta sobre Parquet zstd nos destinos analíticos e manter a Silver anual em Parquet puro | Tema livre | Proposto | #4 |
 | [0004](0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL | E2 | Aceito | #5 |
 | [0005](0005-ferramenta-de-transformacao.md) | Usar o dbt para as transformações da Gold | E3 | Proposto | #6 |
 | [0006](0006-consumo-etl-reverso.md) | Consumo (painel e camada semântica) e ETL reverso | E4 | Proposto | #7 / #83 |
@@ -36,3 +36,4 @@ arquitetura da camada de dados e ficam fora do portfólio avaliado.
 | 1.1 | Inclui o ADR 0007 nos registros complementares | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 31 de outubro de 2026 |
 | 1.2 | Inclui o ADR 0008 nos registros complementares | Squad EduInfra |  | 8 de novembro de 2026 |
 | 1.3 | Marca o ADR 0007 como aceito | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 9 de novembro de 2026 |
+| 1.4 | Inclui o ADR 0003 no portfólio avaliado | [Artur Mendonça Arruda](https://github.com/ArtyMend07) |  | 24 de novembro de 2026 |

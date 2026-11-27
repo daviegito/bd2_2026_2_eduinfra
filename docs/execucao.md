@@ -135,6 +135,9 @@ uv run eduinfra tudo
 | Plano de execução antes e depois | `comparar-consulta --repeticoes 5` | [Consulta otimizada](consulta-otimizada.md#como-reproduzir), fora do Compose porque grava em `docs/explain` e depende da Gold construída |
 
 Use o prefixo `docker compose run --rm carga` antes do comando da CLI.
+A comparação entre Parquet puro, Delta e Iceberg fica fora da CLI, porque o
+PyIceberg não é dependência do projeto; os comandos estão no
+[ADR 0003](adr/0003-armazenamento.md#medicao) e rodam em Linux.
 As medições publicadas descrevem os ambientes em que foram obtidas; os tempos
 podem variar em outra máquina. A comparação de ingestão mede captura, sem a
 escrita no Delta. Para a suíte automatizada, consulte [Testes](testes.md).
