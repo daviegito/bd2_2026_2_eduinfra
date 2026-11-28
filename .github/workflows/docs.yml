@@ -7,6 +7,15 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/semantica.py"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/orquestrador.py"
+      - "metricas/**"
+      - "tests/test_semantica*.py"
+      - "tests/test_metricas.py"
+      - "tests/test_orquestrador.py"
+      - "tests/preparar_semantica.py"
+      - "alembic/**"
       - "tests/test_painel.py"
       - "tests/test_e3_gold.py"
       - "pyproject.toml"
@@ -25,6 +34,15 @@ on:
       - "mkdocs.yml"
       - ".github/workflows/docs.yml"
       - "src/eduinfra/painel.py"
+      - "src/eduinfra/semantica.py"
+      - "src/eduinfra/cli.py"
+      - "src/eduinfra/orquestrador.py"
+      - "metricas/**"
+      - "tests/test_semantica*.py"
+      - "tests/test_metricas.py"
+      - "tests/test_orquestrador.py"
+      - "tests/preparar_semantica.py"
+      - "alembic/**"
       - "tests/test_painel.py"
       - "tests/test_e3_gold.py"
       - "pyproject.toml"
@@ -46,6 +64,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  semantica:
+    name: Validar contrato semântico e papéis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SEMANTICA_BANCADA_DSN: postgresql://eduinfra83:validacao83_local@127.0.0.1:55483/eduinfra83
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: eduinfra83
+          POSTGRES_PASSWORD: validacao83_local
+          POSTGRES_DB: eduinfra83
+        ports:
+          - 55483:5432
+        options: >-
+          --health-cmd "pg_isready -U eduinfra83"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v6
+      - name: Preparar dependências já declaradas
+        run: uv sync --locked --group dev
+      - name: Conferir a migração de acesso do PR 110
+        run: |
+          # Snapshot explícito; atualizar e revalidar quando o contrato do #110 mudar.
+          git fetch --depth=1 origin 0d83bc291bf49a3c6c28842cfb8e2ed305c6bb84
+          git show 0d83bc291bf49a3c6c28842cfb8e2ed305c6bb84:alembic/versions/0010_controle_de_acesso.py > /tmp/controle_acesso_0010.py
+          git fetch --depth=1 origin 8e873976a975a1053969196b2deddad8212ed475
+          mkdir -p /tmp/eduinfra103-legado
+          git show 8e873976a975a1053969196b2deddad8212ed475:src/eduinfra/semantica.py > /tmp/eduinfra103-legado/semantica.py
+          SEMANTICA_PUBLICADOR_LEGADO=/tmp/eduinfra103-legado/semantica.py uv run --no-sync python tests/preparar_semantica.py --dsn "$SEMANTICA_BANCADA_DSN" --migracao-acesso /tmp/controle_acesso_0010.py
+          # Repetir não reaplica políticas nem retrocede a revisão do Alembic.
+          SEMANTICA_PUBLICADOR_LEGADO=/tmp/eduinfra103-legado/semantica.py uv run --no-sync python tests/preparar_semantica.py --dsn "$SEMANTICA_BANCADA_DSN" --migracao-acesso /tmp/controle_acesso_0010.py
+      - name: Testar publicação, leitura, CLI e orquestração sem skips
+        run: |
+          uv run --no-sync pytest tests/test_semantica.py tests/test_semantica_cli.py tests/test_metricas.py tests/test_orquestrador.py -q -rs --junitxml=/tmp/semantica.xml
+          uv run --no-sync python -c "import xml.etree.ElementTree as E; r=E.parse('/tmp/semantica.xml'); assert sum(int(s.get('skipped',0)) for s in r.iter('testsuite')) == 0, 'Testes semânticos não podem ser ignorados no CI'"
+
   validar:
     name: Validar o site
     runs-on: ubuntu-latest
@@ -134,7 +194,7 @@ jobs:
 
   publicar:
     name: Publicar no GitHub Pages
-    needs: validar
+    needs: [validar, semantica]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:

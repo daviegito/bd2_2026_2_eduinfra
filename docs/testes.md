@@ -119,3 +119,15 @@ as revisões, os hashes, os testes mantidos e os limites dessa amostra.
 
 Isso não substitui o workflow de suíte geral solicitado na #99. O cache e seu
 bind em `/dados/bruto` são habilitados apenas pelo override `docker-compose.ci.yml`.
+
+## Contrato semântico da E4 no CI
+
+O workflow de documentação também executa o job `Validar contrato semântico e
+papéis`, com PostgreSQL descartável e dados sintéticos. Ele roda
+`tests/test_semantica.py`, `tests/test_semantica_cli.py`, `tests/test_metricas.py`
+e `tests/test_orquestrador.py`. Inclui integração com o snapshot da migração 0010
+do #110 e falha se algum desses testes for ignorado. A preparação e os comandos
+locais estão na [bancada da #83](evidencias/issue-83/README.md).
+
+Esse job não substitui a construção da Gold com as fontes reais no outro job nem
+a suíte geral da #99. Node e Hypothesis continuam pendências dessa suíte geral.
