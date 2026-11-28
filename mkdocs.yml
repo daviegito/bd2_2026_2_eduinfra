@@ -86,6 +86,7 @@ nav:
       - ADR 0003 — Armazenamento: adr/0003-armazenamento.md
       - ADR 0004 — Ingestão: adr/0004-ingestao.md
       - ADR 0005 — Transformação: adr/0005-ferramenta-de-transformacao.md
+      - ADR 0006 — Consumo e ETL reverso: adr/0006-consumo-etl-reverso.md
       - ADR 0007 — Telemetria e fila de erros: adr/0007-telemetria-e-fila-de-erros-do-cdc.md
       - ADR 0008 — Fonte única de eventos: adr/0008-fonte-canonica-de-eventos.md
   - Processo:

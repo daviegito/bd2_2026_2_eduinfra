@@ -1,49 +1,60 @@
 nome: diferenca_media_com_sem_item
 titulo: Diferença de nota entre escolas com e sem um item
-versao: 1.0.0
+versao: 1.2.0
 status: ativa
 historico:
-  - versao: 1.0.0
-    data: 2026-11-22
-    mudanca: primeira definição
+- versao: 1.2.0
+  data: '2026-11-27'
+  mudanca: contrato de publicação e acesso restrito, hash SQL e disponibilidade explícita sem ENEM; fórmulas preservadas
+- versao: 1.1.0
+  data: '2026-11-24'
+  mudanca: interface executável com ano e filtros parametrizados; preserva população, média e supressão
+- versao: 1.0.0
+  data: 2026-11-22
+  mudanca: primeira definição
 dono: lucasarruda9
-
 descricao: Diferença de média no ENEM entre escolas com e sem um item, por rede.
 grao: uma linha por escola e ano
-
 formula: |
-  -- exemplo com biblioteca; troque o código do item.
-  -- em obra, inutilizável e não informado não entram em nenhum dos lados.
-  select e.rede,
-         avg(f.media_geral)   filter (where d.itens ->> 'biblioteca' = 'existente')
-       - avg(f.media_geral)   filter (where d.itens ->> 'biblioteca' = 'inexistente') as diferenca,
-         count(f.media_geral) filter (where d.itens ->> 'biblioteca' = 'existente')   as n_com,
-         count(f.media_geral) filter (where d.itens ->> 'biblioteca' = 'inexistente') as n_sem
-  from gold.fato_desempenho_escola_ano f
-  join gold.dim_escola e using (co_entidade)
-  join gold.dim_escola_infraestrutura d on d.escola_infra_sk = f.escola_infra_sk
-  where f.ano = 2024
-    and e.ano_censo_referencia = 2024
-    and f.media_geral is not null
-  group by e.rede
-  having count(f.media_geral) filter (where d.itens ->> 'biblioteca' = 'existente') >= 10
-     and count(f.media_geral) filter (where d.itens ->> 'biblioteca' = 'inexistente') >= 10
-
+  with lados as (
+      select e.rede,
+             count(*) filter (where e.itens_enem->>q.item = 'existente') as n_com,
+             count(*) filter (where e.itens_enem->>q.item = 'inexistente') as n_sem,
+             avg((e.notas->>q.area)::numeric) filter (where e.itens_enem->>q.item = 'existente') as media_com,
+             avg((e.notas->>q.area)::numeric) filter (where e.itens_enem->>q.item = 'inexistente') as media_sem
+      from metricas.base_analise e cross join parametros q
+      where e.ano = q.ano
+      and (q.uf is null or e.uf = q.uf)
+      and (q.municipio is null or e.co_municipio = q.municipio)
+      and (q.rede is null or e.rede = q.rede)
+      and (q.localizacao is null or e.localizacao = q.localizacao) and e.notas->>q.area is not null
+      group by e.rede
+  )
+  select rede, n_com, n_sem, media_com, media_sem, media_com - media_sem as diferenca
+  from lados where n_com >= {{ minimo }} and n_sem >= {{ minimo }}
+  order by rede
 fonte:
-  - gold.fato_desempenho_escola_ano
-  - gold.dim_escola
-  - gold.dim_escola_infraestrutura
-
+- gold.fato_desempenho_escola_ano
+- gold.dim_escola
+- gold.dim_escola_infraestrutura
 filtros:
-  - área da prova
-  - item
-  - UF
-  - município
-  - localização
-
+- área da prova
+- item
+- UF
+- município
+- localização
 supressao:
   minimo: 10
   regra: rede com menos de 10 escolas em algum dos lados não aparece
-
 consumidores:
-  - painel
+- painel
+interface:
+  parametros:
+  - ano
+  - uf
+  - municipio
+  - rede
+  - localizacao
+  - item
+  - area
+  item_obrigatorio: true

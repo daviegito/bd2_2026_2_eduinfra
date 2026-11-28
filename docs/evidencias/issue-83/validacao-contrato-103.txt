@@ -1,0 +1,25 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 0001, Cadastro geográfico e escolar
+INFO  [alembic.runtime.migration] Running upgrade 0001 -> 0002, Catálogo de itens de infraestrutura vistoriados
+INFO  [alembic.runtime.migration] Running upgrade 0002 -> 0003, Núcleo transacional insert-only de vistorias
+INFO  [alembic.runtime.migration] Running upgrade 0003 -> 0004, View de estado corrente por escola e item
+INFO  [alembic.runtime.migration] Running upgrade 0004 -> 0005, Habilita a publicação de CDC da origem OLTP.
+INFO  [alembic.runtime.migration] Running upgrade 0005 -> 0006, Manifesto das execuções de ingestão
+INFO  [alembic.runtime.migration] Running upgrade 0006 -> 0007, Publica todas as operações de vistoria e vistoria_item no CDC
+INFO  [alembic.runtime.migration] Running upgrade 0007 -> 0008, Manifesto da ingestão com mais de uma fonte (Censo e ENEM)
+INFO  [alembic.runtime.migration] Running upgrade 0008 -> 0009, Limita ocorrido_em ao intervalo finito representável pelo Python, em UTC.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 0009 -> 0010
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+...............................................................                                        [100%]
+=============================== warnings summary ===============================
+../app/.venv/lib/python3.12/site-packages/dagster/_core/definitions/assets/definition/assets_definition.py:413
+  /app/.venv/lib/python3.12/site-packages/dagster/_core/definitions/assets/definition/assets_definition.py:413: PytestCollectionWarning: cannot collect 'testar_gold' because it is not a function.
+    def __call__(self, *args: object, **kwargs: object) -> object:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+63 passed, 1 warning, 42 subtests passed in 7.33s
+Contêiner descartável parado e removido.

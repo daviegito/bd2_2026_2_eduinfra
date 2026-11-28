@@ -1,0 +1,18 @@
+{
+  "pai": "sha256:e589438ccbe49b8e1caa4d0d36ba0b4989ca06625651bd87fc1b400205fc5e12",
+  "bytes_pai": 2311560671,
+  "imagens": {
+    "dbt": {
+      "id": "sha256:f2c26c593aeab939a3ef35a41dd15a07ec93761e7bb0ee69302dea990d59a155",
+      "bytes_imagem": 2413081332,
+      "bytes_adicionados_ao_pai": 101520661
+    },
+    "metricflow": {
+      "id": "sha256:44e024fae7bcf1b904d0afa649dd150640b39ad50817e5120e5d3e3aa5f0d1ee",
+      "bytes_imagem": 2433883436,
+      "bytes_adicionados_ao_pai": 122322765
+    }
+  },
+  "delta_metricflow_menos_dbt_bytes": 20802104,
+  "metodo": "Imagens locais isoladas, mesmo pai, COPY dos ambientes já instalados para /opt/bancada. Nenhuma instalação ou alteração da imagem de produção. Tamanho Docker local não comprimido; não mede a imagem final de produção."
+}

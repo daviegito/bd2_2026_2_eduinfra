@@ -717,6 +717,42 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   --strict` sem avisos novos; fórmulas SQL executadas no banco do projeto.
 - **Quem revisou:** lucasarruda9.
 
+## 2026-11-24 — Camada semântica e ADR de consumo (#83 / #7)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** comparar uma ferramenta de métricas com views PostgreSQL, expor a
+  interface nome/filtros e registrar a decisão de consumo e ETL reverso.
+- **O que foi aproveitado:** protótipos MetricFlow/PostgreSQL e catálogo executável,
+  publicador transacional, contrato SQL/Python/CLI, etapa após dbt no Dagster,
+  testes de filtros/supressão e ADR 0006 proposto com perdas e gatilhos de revisão.
+- **Autorização:** bancada isolada, dependências experimentais e PostgreSQL
+  descartável aprovados pelo usuário; regras gerais permitem os arquivos da tarefa.
+- **Como foi verificado:** comparação A/B em seis cenários e cinco repetições,
+  incluindo mudança isolada do mínimo; testes de integração sobre fixture sintética,
+  oráculo Python independente e testes do grafo Dagster. Evidências e comandos em
+  `docs/evidencias/issue-83/`. O painel de outro integrante não foi migrado nesta branch.
+- **Limites:** sem validação de carga nacional/concorrência, usabilidade humana,
+  escrita de ETL reverso ou tamanho final de imagem com MetricFlow; o custo instalado
+  foi comparado em venvs. A prioridade de vistoria continua como rascunho.
+- **Quem revisou:** revisão humana pendente; ADR proposto para a Squad.
+
+## 2026-11-24 — Corrigir a checagem do painel no CI (#103)
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** investigar e corrigir a falha do CI, conferindo também o estado dos demais PRs.
+- **O que foi aproveitado:** troca da busca pelo título antigo por três marcadores
+  funcionais do HTML: dados, cálculos e gráfico de relação. Mantém a geração real
+  do painel, a checagem de arquivo não vazio e as demais validações do workflow.
+- **Como foi verificado:** a checagem antiga falhou sobre o HTML atual; a nova
+  passou. Remover cada componente, ou fornecer apenas o título antigo sem o painel,
+  continuou retornando falha. Testes do painel: 13 aprovados e quatro ignorados
+  pela ausência de Node no contêiner. `git diff --check` sem erros.
+- **Limites:** o resultado integral no GitHub depende da nova execução após o push.
+  O #104 apresentou a mesma falha do título antigo; o #101 falhou antes, na
+  inicialização dos papéis, conforme registrado no review.
+- **Quem revisou:** revisão humana pendente.
 ## 2026-11-24 — Experimento de cache de fontes no CI
 
 - **Ferramenta:** Codex.
@@ -792,3 +828,67 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
   `tests/test_formatos_de_tabela.py` com 11 testes aprovados e os 3 de Iceberg ignorados sem o PyIceberg.
   Os gatilhos de tamanho de arquivo não foram medidos.
 - **Quem revisou:** Artur Mendonça Arruda; aguarda revisão da Squad.
+
+## 2026-11-27 — Integrar a main no PR #103
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** resolver os conflitos do PR #103 e conferir o motivo do Draft.
+- **O que foi aproveitado:** integração da main preservando o workflow de cache
+  do #105, as regras de ignore, os registros anteriores de IA e os comandos de
+  métricas e anonimização na CLI. Os ADRs 0003 e 0006 permanecem no índice.
+- **Como foi verificado:** 28 testes de semântica em PostgreSQL isolado, dez testes
+  de orquestração em imagem existente, testes do catálogo, painel e preparo das
+  fontes; comandos preservados no help e `mkdocs build --strict` aprovado usando
+  o painel HTML local existente. Não foi reconstruída a Gold nacional.
+- **Limites:** CI remoto ainda depende de commit e push aprovados. O controle de
+  acesso do #101 foi substituído pelo #110 e não faz parte desta integração;
+  criação/propriedade do schema metricas e concessões continuam exigindo
+  validação conjunta antes da integração dos papéis. O ADR 0006 segue proposto.
+- **Recursos:** bancada PostgreSQL parada após os testes; contêiner de validação
+  efêmero, sem instalar dependências e com limite de CPU e memória.
+- **Quem revisou:** revisão humana pendente.
+
+## 2026-11-27 — Atender à revisão técnica do PR #103
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** conferir e corrigir os apontamentos da revisão do Davi.
+- **O que foi aproveitado:** publicação pelo papel dbt, funções de leitura com
+  contexto fixo e permissões explícitas, bases internas restritas, preparação
+  administrativa de objetos antigos, hash dos SQLs, validação de município,
+  disponibilidade de infraestrutura sem ENEM e remoção de funções desativadas.
+  Catálogo atualizado para 1.2.0; fórmulas das quatro métricas preservadas.
+- **Testes:** regressões reproduziram antes da correção três SQLs ausentes do
+  hash, município inexistente, catálogo vazio e função desativada remanescente.
+  PostgreSQL novo com publicação legada, migração 0010 do #110 e publicação de
+  rotina: 63 testes e 42 subtestes passaram sem skips, em imagem já existente.
+- **CI:** job independente com fixture sintética, snapshot explícito da migração
+  e falha em caso de skips; disparos incluem semântica, catálogo e testes.
+  A publicação do site passa a depender dos dois jobs de validação.
+- **Evidências:** a conclusão da mudança de regra foi restringida à supressão da
+  média; os tempos originais A/B não foram medidos novamente nem apresentados
+  como tempos da implementação revisada. ADR e documentação corrigidos.
+- **Limites:** validação remota depende de commit/push autorizados; preservar no
+  merge do #110 a preparação administrativa na CLI reorganizada. O acesso direto
+  à Gold concedido pelo #110 é separado da proteção da interface semântica.
+  ETL reverso e adoção do ADR pela Squad continuam nas respectivas entregas.
+- **Recursos:** testes locais com CPU/memória limitadas; PostgreSQL descartável
+  encerrado ao fim; nenhuma dependência instalada.
+- **Quem revisou:** revisão humana pendente.
+
+### Validação final da revisão do #103
+
+- Suíte sem integração: 232 aprovados, sete skips opcionais (PyIceberg/Node) e
+  42 subtestes. Os 17 testes do painel passaram no host com Node, sem skips.
+- Hypothesis e extensões DuckDB vieram do cache local já existente, somente para
+  leitura; nenhuma dependência foi instalada. Antes disso, a coleta sem Hypothesis
+  e os testes Delta sem extensão/rede falharam por configuração da bancada.
+  Um subprocesso ainda usava o código antigo da imagem; o PYTHONPATH do checkout
+  foi propagado e a suíte foi executada novamente, sem falhas.
+- Revisão independente somente leitura encontrou execução duplicada da 0010 no
+  preparador após o merge do #110. A migração passou a ser administrada pelo Alembic
+  numa cópia temporária, com a publicação legada antes da 0010 e sem reaplicação
+  na segunda chamada. Preparação repetida e 63 testes passaram sem skips.
+- Evidências em docs/evidencias/issue-83/validacao-contrato-103.txt e
+  docs/evidencias/issue-83/validacao-unitarios-103.txt. Banco e contêineres encerrados.

@@ -1,0 +1,265 @@
+version: 2
+semantic_models:
+- name: escolas
+  model: ref('escolas')
+  defaults:
+    agg_time_dimension: data
+  entities:
+  - name: escola
+    type: primary
+    expr: id
+  dimensions:
+  - name: data
+    type: time
+    type_params:
+      time_granularity: day
+  - name: ano
+    type: categorical
+  - name: uf
+    type: categorical
+  - name: co_municipio
+    type: categorical
+  - name: rede
+    type: categorical
+  - name: localizacao
+    type: categorical
+  - name: area
+    type: categorical
+  - name: item
+    type: categorical
+  - name: situacao_enem
+    type: categorical
+  - name: situacao_censo
+    type: categorical
+  measures:
+  - name: n_validas
+    agg: sum
+    expr: case when nota is not null then 1 else 0 end
+  - name: soma_notas
+    agg: sum
+    expr: coalesce(nota,0)
+  - name: soma_quadrados
+    agg: sum
+    expr: coalesce(nota*nota,0)
+  - name: n_censo
+    agg: sum
+    expr: '1'
+  - name: n_existente
+    agg: sum
+    expr: case when nota is not null and situacao_enem='existente' then 1 else 0 end
+  - name: soma_existente
+    agg: sum
+    expr: case when situacao_enem='existente' then coalesce(nota,0) else 0 end
+  - name: n_inexistente
+    agg: sum
+    expr: case when nota is not null and situacao_enem='inexistente' then 1 else 0
+      end
+  - name: soma_inexistente
+    agg: sum
+    expr: case when situacao_enem='inexistente' then coalesce(nota,0) else 0 end
+  - name: censo_existente
+    agg: sum
+    expr: case when situacao_censo='existente' then 1 else 0 end
+  - name: censo_inexistente
+    agg: sum
+    expr: case when situacao_censo='inexistente' then 1 else 0 end
+  - name: censo_em_obra
+    agg: sum
+    expr: case when situacao_censo='em_obra' then 1 else 0 end
+  - name: censo_inutilizavel
+    agg: sum
+    expr: case when situacao_censo='inutilizavel' then 1 else 0 end
+  - name: censo_nao_informado
+    agg: sum
+    expr: case when situacao_censo='nao_informado' then 1 else 0 end
+- name: cobertura
+  model: ref('cobertura')
+  defaults:
+    agg_time_dimension: data
+  entities:
+  - name: cobertura
+    type: primary
+    expr: id
+  dimensions:
+  - name: data
+    type: time
+    type_params:
+      time_granularity: day
+  - name: ano
+    type: categorical
+  measures:
+  - name: escolas_enem
+    agg: sum
+    expr: '1'
+  - name: encontradas
+    agg: sum
+    expr: case when encontrada then 1 else 0 end
+  - name: nao_encontradas
+    agg: sum
+    expr: case when encontrada then 0 else 1 end
+  - name: mascaradas
+    agg: sum
+    expr: case when mascarada then 1 else 0 end
+metrics:
+- name: n_validas
+  label: n_validas
+  type: simple
+  type_params:
+    measure: n_validas
+- name: soma_notas
+  label: soma_notas
+  type: simple
+  type_params:
+    measure: soma_notas
+- name: soma_quadrados
+  label: soma_quadrados
+  type: simple
+  type_params:
+    measure: soma_quadrados
+- name: n_censo
+  label: n_censo
+  type: simple
+  type_params:
+    measure: n_censo
+- name: n_existente
+  label: n_existente
+  type: simple
+  type_params:
+    measure: n_existente
+- name: soma_existente
+  label: soma_existente
+  type: simple
+  type_params:
+    measure: soma_existente
+- name: n_inexistente
+  label: n_inexistente
+  type: simple
+  type_params:
+    measure: n_inexistente
+- name: soma_inexistente
+  label: soma_inexistente
+  type: simple
+  type_params:
+    measure: soma_inexistente
+- name: censo_existente
+  label: censo_existente
+  type: simple
+  type_params:
+    measure: censo_existente
+- name: censo_inexistente
+  label: censo_inexistente
+  type: simple
+  type_params:
+    measure: censo_inexistente
+- name: censo_em_obra
+  label: censo_em_obra
+  type: simple
+  type_params:
+    measure: censo_em_obra
+- name: censo_inutilizavel
+  label: censo_inutilizavel
+  type: simple
+  type_params:
+    measure: censo_inutilizavel
+- name: censo_nao_informado
+  label: censo_nao_informado
+  type: simple
+  type_params:
+    measure: censo_nao_informado
+- name: escolas_enem
+  label: escolas_enem
+  type: simple
+  type_params:
+    measure: escolas_enem
+- name: encontradas
+  label: encontradas
+  type: simple
+  type_params:
+    measure: encontradas
+- name: nao_encontradas
+  label: nao_encontradas
+  type: simple
+  type_params:
+    measure: nao_encontradas
+- name: mascaradas
+  label: mascaradas
+  type: simple
+  type_params:
+    measure: mascaradas
+- name: media_enem_escolas
+  label: media_enem_escolas
+  type: derived
+  type_params:
+    expr: case when n_validas >= 10 then soma_notas / nullif(n_validas,0) end
+    metrics:
+    - n_validas
+    - soma_notas
+- name: desvio_padrao
+  label: desvio_padrao
+  type: derived
+  type_params:
+    expr: case when n_validas >= 10 then sqrt(greatest(0,(soma_quadrados-soma_notas*soma_notas/nullif(n_validas,0))/nullif(n_validas-1,0)))
+      end
+    metrics:
+    - n_validas
+    - soma_notas
+    - soma_quadrados
+- name: diferenca_media_com_sem_item
+  label: diferenca_media_com_sem_item
+  type: derived
+  type_params:
+    expr: case when n_existente >= 10 and n_inexistente >= 10 then soma_existente/nullif(n_existente,0)-soma_inexistente/nullif(n_inexistente,0)
+      end
+    metrics:
+    - n_existente
+    - n_inexistente
+    - soma_existente
+    - soma_inexistente
+- name: pct_existente
+  label: pct_existente
+  type: derived
+  type_params:
+    expr: round(100.0*censo_existente/nullif(n_censo,0),1)
+    metrics:
+    - censo_existente
+    - n_censo
+- name: pct_inexistente
+  label: pct_inexistente
+  type: derived
+  type_params:
+    expr: round(100.0*censo_inexistente/nullif(n_censo,0),1)
+    metrics:
+    - censo_inexistente
+    - n_censo
+- name: pct_em_obra
+  label: pct_em_obra
+  type: derived
+  type_params:
+    expr: round(100.0*censo_em_obra/nullif(n_censo,0),1)
+    metrics:
+    - censo_em_obra
+    - n_censo
+- name: pct_inutilizavel
+  label: pct_inutilizavel
+  type: derived
+  type_params:
+    expr: round(100.0*censo_inutilizavel/nullif(n_censo,0),1)
+    metrics:
+    - censo_inutilizavel
+    - n_censo
+- name: pct_nao_informado
+  label: pct_nao_informado
+  type: derived
+  type_params:
+    expr: round(100.0*censo_nao_informado/nullif(n_censo,0),1)
+    metrics:
+    - censo_nao_informado
+    - n_censo
+- name: cobertura_enem_censo
+  label: cobertura_enem_censo
+  type: derived
+  type_params:
+    expr: round(100.0*encontradas/nullif(escolas_enem,0),1)
+    metrics:
+    - encontradas
+    - escolas_enem

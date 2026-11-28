@@ -29,5 +29,9 @@ transformacao/.user.yml
 
 dbt-docs/
 
+# Bancada isolada da camada semântica (#83)
+docs/evidencias/issue-83/metricflow/target/
+docs/evidencias/issue-83/metricflow/logs/
+docs/evidencias/issue-83/metricflow/.user.yml
 # Arquivos públicos restaurados pelo cache do CI
 .cache/fontes-inep/

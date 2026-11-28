@@ -15,7 +15,7 @@ Os 5 ADRs obrigatórios da disciplina, um por tema.
 | [0003](0003-armazenamento.md) | Usar tabelas Delta sobre Parquet zstd nos destinos analíticos e manter a Silver anual em Parquet puro | Tema livre | Proposto | #4 |
 | [0004](0004-ingestao.md) | Combinar lote idempotente do Censo com CDC pelo slot lógico do PostgreSQL | E2 | Aceito | #5 |
 | [0005](0005-ferramenta-de-transformacao.md) | Usar o dbt para as transformações da Gold | E3 | Proposto | #6 |
-| 0006 | Consumo (painel e camada semântica) e ETL reverso | E4 | A escrever | #7 |
+| [0006](0006-consumo-etl-reverso.md) | Consumo (painel e camada semântica) e ETL reverso | E4 | Proposto | #7 / #83 |
 
 ## Registros complementares
 

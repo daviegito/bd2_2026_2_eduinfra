@@ -1,50 +1,59 @@
 nome: media_enem_escolas
 titulo: Média das escolas no ENEM
-versao: 1.0.0
+versao: 1.2.0
 status: ativa
 historico:
-  - versao: 1.0.0
-    data: 2026-11-22
-    mudanca: primeira definição
+- versao: 1.2.0
+  data: '2026-11-27'
+  mudanca: contrato de publicação e acesso restrito, hash SQL e disponibilidade explícita sem ENEM; fórmulas preservadas
+- versao: 1.1.0
+  data: '2026-11-24'
+  mudanca: interface executável com ano e filtros parametrizados; preserva população, média e supressão
+- versao: 1.0.0
+  data: 2026-11-22
+  mudanca: primeira definição
 dono: lucasarruda9
-
 descricao: Média das notas das escolas do grupo no ENEM.
 grao: uma linha por escola e ano
-
 formula: |
-  -- média geral; para uma área, troque media_geral por
-  -- media_cn, media_ch, media_lc, media_mt ou media_redacao
-  select count(f.media_geral)       as n_escolas,
-         avg(f.media_geral)         as media,
-         stddev_samp(f.media_geral) as desvio_padrao
-  from gold.fato_desempenho_escola_ano f
-  join gold.dim_escola e using (co_entidade)
-  left join gold.dim_municipio m using (co_municipio)
-  left join gold.dim_escola_infraestrutura d on d.escola_infra_sk = f.escola_infra_sk
-  where f.ano = 2024
-    and e.ano_censo_referencia = 2024
-    and f.media_geral is not null
-    -- filtros do grupo, por exemplo:
-    -- and m.sg_uf = 'DF' and e.rede = 'estadual' and d.itens ->> 'biblioteca' = 'existente'
-  having count(f.media_geral) >= 10
-
+  select count((e.notas->>q.area)::numeric) as n_escolas,
+         avg((e.notas->>q.area)::numeric) as media,
+         stddev_samp((e.notas->>q.area)::numeric) as desvio_padrao
+  from metricas.base_analise e cross join parametros q
+  where e.ano = q.ano
+      and (q.uf is null or e.uf = q.uf)
+      and (q.municipio is null or e.co_municipio = q.municipio)
+      and (q.rede is null or e.rede = q.rede)
+      and (q.localizacao is null or e.localizacao = q.localizacao)
+      and (e.notas->>q.area) is not null
+      and (q.item is null or q.situacao is null
+           or coalesce(e.itens_enem->>q.item, 'nao_informado') = q.situacao)
+  having count((e.notas->>q.area)::numeric) >= {{ minimo }}
 fonte:
-  - gold.fato_desempenho_escola_ano
-  - gold.dim_escola
-  - gold.dim_municipio
-  - gold.dim_escola_infraestrutura
-
+- gold.fato_desempenho_escola_ano
+- gold.dim_escola
+- gold.dim_municipio
+- gold.dim_escola_infraestrutura
 filtros:
-  - área da prova
-  - UF
-  - município
-  - rede
-  - localização
-  - situação de um item
-
+- área da prova
+- UF
+- município
+- rede
+- localização
+- situação de um item
 supressao:
   minimo: 10
   regra: grupo com menos de 10 escolas com nota não mostra a média
-
 consumidores:
-  - painel
+- painel
+interface:
+  parametros:
+  - ano
+  - uf
+  - municipio
+  - rede
+  - localizacao
+  - item
+  - area
+  - situacao
+  item_obrigatorio: false

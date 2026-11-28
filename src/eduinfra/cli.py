@@ -1,5 +1,7 @@
 import argparse
+import json
 import logging
+import os
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -41,7 +43,7 @@ def main(argumentos: list[str] | None = None) -> int:
                                            "publicar-analitico", "cdc", "demonstrar-cdc", "comparar-ingestao",
                                            "publicar-analitica", "comparar-particionamento", "medir-cdc", "medir-recarga", "auditar-cdc",
                                            "reprocessar-fila-cdc", "tratar-desvio-cdc", "comparar-consulta", "construir-gold", "comparar-granularidades", "medir-frescor", "demonstrar-frescor",
-                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "anonimizar-tecnico"))
+                                           "ingerir-enem", "medir-cobertura-enem", "gerar-painel", "publicar-metricas", "consultar-metrica", "anonimizar-tecnico"))
     parser.add_argument("--repeticoes", type=int, default=5, help="repetições de cada medição em comparar-compressao, comparar-particionamento, medir-cdc, medir-recarga e comparar-consulta")
     parser.add_argument("--pasta-dos-planos", type=Path, default=Path("docs/explain"), help="onde comparar-consulta grava os planos de execução")
     parser.add_argument("--sla-frescor", type=float, default=auditoria_cdc.SLA_DE_FRESCOR_S, help="segundos de frescor tolerados em auditar-cdc e medir-cdc")
@@ -58,6 +60,8 @@ def main(argumentos: list[str] | None = None) -> int:
     parser.add_argument("--motivo", choices=recuperacao_cdc.MOTIVOS, help="motivo padronizado do tratamento")
     parser.add_argument("--lsn", type=int, help="LSN decimal da ocorrência na fila; exige --chave")
     parser.add_argument("--chave", help="chave exata da ocorrência na fila; exige --lsn")
+    parser.add_argument("--metrica", help="nome da métrica ativa do catálogo")
+    parser.add_argument("--filtros", default="{}", help="objeto JSON com ano e filtros da métrica")
     parser.add_argument("--matricula", help="em anonimizar-tecnico, matrícula original do técnico que pediu a eliminação")
     parser.add_argument("--verboso", action="store_true")
     opcoes = parser.parse_args(argumentos)
@@ -68,6 +72,26 @@ def main(argumentos: list[str] | None = None) -> int:
     )
 
     configuracao = carregar_configuracao()
+
+    if opcoes.comando in ("publicar-metricas", "consultar-metrica"):
+        from psycopg import Error as ErroPostgreSQL
+        from eduinfra import semantica
+
+        try:
+            if opcoes.comando == "publicar-metricas":
+                dsn_publicador = os.environ.get("DATABASE_URL_TRANSFORMACAO") or configuracao.dsn
+                resultado = {"metricas": semantica.publicar(dsn_publicador)}
+            else:
+                if not opcoes.metrica:
+                    parser.error("consultar-metrica exige --metrica")
+                filtros = json.loads(opcoes.filtros)
+                resultado = semantica.consultar(configuracao.dsn, opcoes.metrica, filtros)
+            print(json.dumps(resultado, ensure_ascii=False))
+            return 0
+        except (ValueError, RuntimeError, ErroPostgreSQL) as erro:
+            mensagem = erro.diag.message_primary if isinstance(erro, ErroPostgreSQL) else str(erro)
+            log.error("%s", mensagem or str(erro))
+            return 1
 
     if opcoes.comando == "anonimizar-tecnico":
         try:
@@ -187,6 +211,8 @@ def main(argumentos: list[str] | None = None) -> int:
 
     if opcoes.comando in ("migrar", "tudo"):
         command.upgrade(_alembic(configuracao), opcoes.revisao)
+        from eduinfra import semantica
+        semantica.preparar_acesso(os.environ.get("DATABASE_URL_ADMIN") or configuracao.dsn)
 
     if opcoes.comando in ("carregar", "ingerir", "tudo"):
         resultado = ingerir(configuracao, forcar=opcoes.forcar)

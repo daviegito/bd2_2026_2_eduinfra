@@ -1,0 +1,15 @@
+........................................................................ [ 30%]
+................s..ss..............................................................ssss............... [ 72%]
+.................................................................        [100%]
+=============================== warnings summary ===============================
+../app/.venv/lib/python3.12/site-packages/dagster/_core/definitions/assets/definition/assets_definition.py:413
+  /app/.venv/lib/python3.12/site-packages/dagster/_core/definitions/assets/definition/assets_definition.py:413: PytestCollectionWarning: cannot collect 'testar_gold' because it is not a function.
+    def __call__(self, *args: object, **kwargs: object) -> object:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_formatos_de_tabela.py:81: could not import 'pyiceberg': No module named 'pyiceberg'
+SKIPPED [1] tests/test_formatos_de_tabela.py:91: could not import 'pyiceberg': No module named 'pyiceberg'
+SKIPPED [1] tests/test_formatos_de_tabela.py:24: could not import 'pyiceberg': No module named 'pyiceberg'
+SKIPPED [4] ../home/pedro/Obsidian/Semestre-2026-2/BD2/04-Projeto/bd2_2026_2_eduinfra/tests/test_painel.py:59: Node necessário apenas para conferir os cálculos JavaScript do painel
+232 passed, 7 skipped, 203 deselected, 1 warning, 42 subtests passed in 105.68s (0:01:45)

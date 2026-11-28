@@ -1,0 +1,427 @@
+{
+  "dependencias": {
+    "dbt_base": {
+      "bytes_aparentes": 101520661,
+      "pacotes": 60,
+      "distribuicoes": [
+        "agate-1.9.1.dist-info",
+        "annotated_types-0.8.0.dist-info",
+        "attrs-26.1.0.dist-info",
+        "babel-2.18.0.dist-info",
+        "certifi-2026.11.20.dist-info",
+        "charset_normalizer-3.5.3.dist-info",
+        "click-8.5.1.dist-info",
+        "colorama-0.4.6.dist-info",
+        "daff-1.4.2.dist-info",
+        "dbt_adapters-1.24.6.dist-info",
+        "dbt_common-1.39.0.dist-info",
+        "dbt_core-1.12.6.dist-info",
+        "dbt_core_experimental_parser-2.0.11.dist-info",
+        "dbt_extractor-0.6.0.dist-info",
+        "dbt_postgres-1.11.0.dist-info",
+        "dbt_protos-1.0.615.dist-info",
+        "deepdiff-8.6.2.dist-info",
+        "idna-3.20.dist-info",
+        "importlib_metadata-10.2.0.dist-info",
+        "isodate-0.7.2.dist-info",
+        "jinja2-3.1.6.dist-info",
+        "jsonschema-4.26.0.dist-info",
+        "jsonschema_specifications-2025.9.1.dist-info",
+        "lazy_importer-0.1.0.dist-info",
+        "leather-0.4.1.dist-info",
+        "markupsafe-3.0.4.dist-info",
+        "mashumaro-3.17.dist-info",
+        "metricflow-0.213.0.dist-info",
+        "more_itertools-10.8.0.dist-info",
+        "msgpack-1.2.4.dist-info",
+        "networkx-3.7.dist-info",
+        "opentelemetry_api-1.45.2.dist-info",
+        "orderly_set-5.5.0.dist-info",
+        "packaging-26.4.dist-info",
+        "parsedatetime-2.6.dist-info",
+        "pathspec-1.0.4.dist-info",
+        "protobuf-6.33.6.dist-info",
+        "psycopg2_binary-2.9.13.dist-info",
+        "pydantic-2.14.4.dist-info",
+        "pydantic_core-2.50.5.dist-info",
+        "python_dateutil-2.9.0.post0.dist-info",
+        "python_dotenv-1.2.4.dist-info",
+        "python_slugify-9.2.0.dist-info",
+        "pytimeparse-1.1.10.dist-info",
+        "pytz-2026.6.dist-info",
+        "pyyaml-6.0.4.dist-info",
+        "rapidfuzz-3.14.6.dist-info",
+        "referencing-0.37.0.dist-info",
+        "requests-2.34.2.dist-info",
+        "rpds_py-2026.9.1.dist-info",
+        "six-1.17.0.dist-info",
+        "snowplow_tracker-1.1.0.dist-info",
+        "sqlglot-30.34.0.dist-info",
+        "sqlparse-0.6.1.dist-info",
+        "tabulate-0.10.0.dist-info",
+        "text_unidecode-1.3.dist-info",
+        "typing_extensions-4.16.0.dist-info",
+        "typing_inspection-0.4.5.dist-info",
+        "urllib3-2.8.0.dist-info",
+        "zipp-4.1.2.dist-info"
+      ]
+    },
+    "metricflow": {
+      "bytes_aparentes": 122322765,
+      "pacotes": 66,
+      "distribuicoes": [
+        "agate-1.9.1.dist-info",
+        "annotated_types-0.8.0.dist-info",
+        "attrs-26.1.0.dist-info",
+        "babel-2.18.0.dist-info",
+        "certifi-2026.11.20.dist-info",
+        "charset_normalizer-3.5.3.dist-info",
+        "click-8.5.1.dist-info",
+        "colorama-0.4.6.dist-info",
+        "daff-1.4.2.dist-info",
+        "dbt_adapters-1.24.6.dist-info",
+        "dbt_common-1.39.0.dist-info",
+        "dbt_core-1.12.6.dist-info",
+        "dbt_core_experimental_parser-2.0.11.dist-info",
+        "dbt_extractor-0.6.0.dist-info",
+        "dbt_metricflow-0.16.0.dist-info",
+        "dbt_postgres-1.11.0.dist-info",
+        "dbt_protos-1.0.615.dist-info",
+        "deepdiff-8.6.2.dist-info",
+        "halo-0.0.31.dist-info",
+        "idna-3.20.dist-info",
+        "importlib_metadata-10.2.0.dist-info",
+        "isodate-0.7.2.dist-info",
+        "jinja2-3.1.6.dist-info",
+        "jsonschema-4.26.0.dist-info",
+        "jsonschema_specifications-2025.9.1.dist-info",
+        "lazy_importer-0.1.0.dist-info",
+        "leather-0.4.1.dist-info",
+        "log_symbols-0.0.14.dist-info",
+        "markupsafe-3.0.4.dist-info",
+        "mashumaro-3.17.dist-info",
+        "metricflow-0.214.0.dist-info",
+        "more_itertools-10.8.0.dist-info",
+        "msgpack-1.2.4.dist-info",
+        "networkx-3.7.dist-info",
+        "opentelemetry_api-1.45.2.dist-info",
+        "orderly_set-5.5.0.dist-info",
+        "packaging-26.4.dist-info",
+        "parsedatetime-2.6.dist-info",
+        "pathspec-1.0.4.dist-info",
+        "protobuf-6.33.6.dist-info",
+        "psycopg2_binary-2.9.13.dist-info",
+        "pydantic-2.14.4.dist-info",
+        "pydantic_core-2.50.5.dist-info",
+        "python_dateutil-2.9.0.post0.dist-info",
+        "python_dotenv-1.2.4.dist-info",
+        "python_slugify-9.2.0.dist-info",
+        "pytimeparse-1.1.10.dist-info",
+        "pytz-2026.6.dist-info",
+        "pyyaml-6.0.4.dist-info",
+        "rapidfuzz-3.14.6.dist-info",
+        "referencing-0.37.0.dist-info",
+        "requests-2.34.2.dist-info",
+        "rpds_py-2026.9.1.dist-info",
+        "six-1.17.0.dist-info",
+        "snowplow_tracker-1.1.0.dist-info",
+        "spinners-0.0.24.dist-info",
+        "sqlglot-30.34.0.dist-info",
+        "sqlparse-0.6.1.dist-info",
+        "tabulate-0.10.0.dist-info",
+        "termcolor-3.3.0.dist-info",
+        "text_unidecode-1.3.dist-info",
+        "typing_extensions-4.16.0.dist-info",
+        "typing_inspection-0.4.5.dist-info",
+        "update_checker-0.18.0.dist-info",
+        "urllib3-2.8.0.dist-info",
+        "zipp-4.1.2.dist-info"
+      ]
+    }
+  },
+  "linhas_nao_vazias": {
+    "a_definicoes": {
+      "docs/evidencias/issue-83/metricflow/models/cobertura.sql": 1,
+      "docs/evidencias/issue-83/metricflow/models/escolas.sql": 8,
+      "docs/evidencias/issue-83/metricflow/models/metricas.yml": 265,
+      "docs/evidencias/issue-83/metricflow/models/time_spine.sql": 1,
+      "docs/evidencias/issue-83/metricflow/models/time_spine.yml": 8
+    },
+    "b_catalogo": {
+      "metricas/cobertura_enem_censo.yml": 36,
+      "metricas/diferenca_media_com_sem_item.yml": 57,
+      "metricas/media_enem_escolas.yml": 56,
+      "metricas/pct_escolas_por_situacao_do_item.yml": 53
+    },
+    "bases_e_validacao_sql": {
+      "metricas/sql/base_analise.sql": 23,
+      "metricas/sql/base_cobertura.sql": 6,
+      "metricas/sql/validar_filtros.sql": 60
+    },
+    "publicador_e_interface": {
+      "src/eduinfra/semantica.py": 79
+    }
+  },
+  "escolas_sinteticas": 6000,
+  "repeticoes": 5,
+  "postgres": "16.14 (Debian 16.14-1.pgdg13+1)",
+  "atualizacao_ms": {
+    "metricflow_dbt_cli": [
+      4107.76669400002,
+      3512.3866590001853,
+      3637.381758000174,
+      3724.09057699997,
+      3543.3234070001163
+    ],
+    "views_publicador_python": [
+      28.160123999896314,
+      30.205993999970815,
+      27.20211299993025,
+      32.83680100003039,
+      29.33326299989858
+    ]
+  },
+  "consultas": {
+    "media_enem_escolas": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3407.7177230001325,
+      "metricflow_sql_ms": [
+        139.1537409999728,
+        140.909088999706,
+        140.38162599990756,
+        139.75327200023457,
+        139.1323249999914
+      ],
+      "views_funcao_sql_ms": [
+        38.18445399974735,
+        36.96274700041613,
+        36.820956000156,
+        37.725914000020566,
+        37.14841500004695
+      ],
+      "mediana_metricflow_sql_ms": 139.75327200023457,
+      "mediana_views_ms": 37.14841500004695,
+      "resultado": [
+        {
+          "media": 549.9122426868905,
+          "n_escolas": 4615,
+          "desvio_padrao": 86.6005501091816
+        }
+      ]
+    },
+    "diferenca_media_com_sem_item": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3260.0455449996844,
+      "metricflow_sql_ms": [
+        34.15669900005014,
+        33.71778800010361,
+        33.79939199976434,
+        33.43710099989039,
+        33.57597700005499
+      ],
+      "views_funcao_sql_ms": [
+        35.44272599992837,
+        35.708746000182146,
+        35.220022999965295,
+        35.961221999968984,
+        35.6272919998446
+      ],
+      "mediana_metricflow_sql_ms": 33.71778800010361,
+      "mediana_views_ms": 35.6272919998446,
+      "resultado": [
+        {
+          "rede": "estadual",
+          "n_com": 252,
+          "n_sem": 252,
+          "diferenca": 3.126984126984127,
+          "media_com": 544.4444444444445,
+          "media_sem": 541.3174603174604
+        },
+        {
+          "rede": "federal",
+          "n_com": 168,
+          "n_sem": 168,
+          "diferenca": -6.833333333333333,
+          "media_com": 550.952380952381,
+          "media_sem": 557.7857142857143
+        },
+        {
+          "rede": "municipal",
+          "n_com": 168,
+          "n_sem": 168,
+          "diferenca": -6.833333333333333,
+          "media_com": 548.2142857142857,
+          "media_sem": 555.047619047619
+        },
+        {
+          "rede": "privada",
+          "n_com": 251,
+          "n_sem": 251,
+          "diferenca": 4.159362549800797,
+          "media_com": 555.0796812749004,
+          "media_sem": 550.9203187250996
+        }
+      ]
+    },
+    "pct_escolas_por_situacao_do_item": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3418.5715160001564,
+      "metricflow_sql_ms": [
+        114.59151900044162,
+        116.91957899984118,
+        114.15766399977656,
+        95.81213000001298,
+        94.5163279998269
+      ],
+      "views_funcao_sql_ms": [
+        12.214026000037848,
+        13.392710999596602,
+        13.931515000422223,
+        14.450452999881236,
+        13.987332999931823
+      ],
+      "mediana_metricflow_sql_ms": 114.15766399977656,
+      "mediana_views_ms": 13.931515000422223,
+      "resultado": [
+        {
+          "situacao": "em_obra",
+          "n_escolas": 1091,
+          "percentual": 18.2
+        },
+        {
+          "situacao": "existente",
+          "n_escolas": 1091,
+          "percentual": 18.2
+        },
+        {
+          "situacao": "inexistente",
+          "n_escolas": 1091,
+          "percentual": 18.2
+        },
+        {
+          "situacao": "inutilizavel",
+          "n_escolas": 1091,
+          "percentual": 18.2
+        },
+        {
+          "situacao": "nao_informado",
+          "n_escolas": 1636,
+          "percentual": 27.3
+        }
+      ]
+    },
+    "cobertura_enem_censo": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3544.7477980001167,
+      "metricflow_sql_ms": [
+        5.4883279999558,
+        7.358710000062274,
+        7.476046999727259,
+        5.69484299967371,
+        5.835131999901932
+      ],
+      "views_funcao_sql_ms": [
+        6.427730999803316,
+        6.530963999921369,
+        6.3734249997651204,
+        4.787937999935821,
+        5.090623999876698
+      ],
+      "mediana_metricflow_sql_ms": 5.835131999901932,
+      "mediana_views_ms": 6.3734249997651204,
+      "resultado": [
+        {
+          "mascaradas": 100,
+          "percentual": 98.0,
+          "encontradas": 5000,
+          "escolas_enem": 5100,
+          "nao_encontradas": 100
+        }
+      ]
+    },
+    "media_enem_escolas_DF": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3617.285287999948,
+      "metricflow_sql_ms": [
+        143.63197700004093,
+        144.60317299972303,
+        143.7625720000142,
+        145.08970500037321,
+        147.44065200011391
+      ],
+      "views_funcao_sql_ms": [
+        33.689860999857046,
+        33.82922800028609,
+        33.672580999791535,
+        33.05425500002457,
+        32.85137499960911
+      ],
+      "mediana_metricflow_sql_ms": 144.60317299972303,
+      "mediana_views_ms": 33.672580999791535,
+      "resultado": [
+        {
+          "media": 560.0,
+          "n_escolas": 1000,
+          "desvio_padrao": 69.2950344671377
+        }
+      ]
+    },
+    "media_enem_escolas_AC": {
+      "iguais": true,
+      "tolerancia_absoluta": 1e-07,
+      "compilacao_metricflow_cli_ms": 3392.435317000036,
+      "metricflow_sql_ms": [
+        143.84723199964355,
+        143.5338149999552,
+        140.50805699980629,
+        140.27608600008534,
+        139.74443999995856
+      ],
+      "views_funcao_sql_ms": [
+        31.714405000002444,
+        30.658452000352554,
+        29.74000199992588,
+        29.38711599972521,
+        29.8012309999649
+      ],
+      "mediana_metricflow_sql_ms": 140.50805699980629,
+      "mediana_views_ms": 29.8012309999649,
+      "resultado": []
+    }
+  },
+  "mudanca_de_definicao": {
+    "cenario": "mínimo da média nacional de 10 para 5000 escolas",
+    "a_campos_alterados": 1,
+    "a_arquivos_alterados": 1,
+    "b_campos_alterados": 1,
+    "b_arquivos_alterados": 1,
+    "consumidor_que_recalcula_fora_da_interface_pode_divergir": true,
+    "copia_alterada": "temporária; o catálogo publicado e os fontes medidos foram preservados",
+    "ambas_suprimiram_media": true,
+    "escopo": "Somente a média. A edição em A não alterou a contagem nem o desvio-padrão; não comprova supressão equivalente da linha inteira."
+  },
+  "custo_imagem_controlada": {
+    "pai": "sha256:e589438ccbe49b8e1caa4d0d36ba0b4989ca06625651bd87fc1b400205fc5e12",
+    "bytes_pai": 2311560671,
+    "imagens": {
+      "dbt": {
+        "id": "sha256:f2c26c593aeab939a3ef35a41dd15a07ec93761e7bb0ee69302dea990d59a155",
+        "bytes_imagem": 2413081332,
+        "bytes_adicionados_ao_pai": 101520661
+      },
+      "metricflow": {
+        "id": "sha256:44e024fae7bcf1b904d0afa649dd150640b39ad50817e5120e5d3e3aa5f0d1ee",
+        "bytes_imagem": 2433883436,
+        "bytes_adicionados_ao_pai": 122322765
+      }
+    },
+    "delta_metricflow_menos_dbt_bytes": 20802104,
+    "metodo": "Imagens locais isoladas, mesmo pai, COPY dos ambientes já instalados para /opt/bancada. Nenhuma instalação ou alteração da imagem de produção. Tamanho Docker local não comprimido; não mede a imagem final de produção."
+  },
+  "nota_revisao": "2026-11-27: conclusão do experimento de mudança de regra restringida ao que foi medido. Tempos originais preservados; não são medições da implementação revisada."
+}
