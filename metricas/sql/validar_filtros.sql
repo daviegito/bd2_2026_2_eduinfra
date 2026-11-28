@@ -33,6 +33,9 @@ begin
             raise exception 'Município deve ser um código inteiro positivo';
         end if;
         municipio := (f->>'municipio')::integer;
+        if not exists (select 1 from gold.dim_municipio m where m.co_municipio = municipio) then
+            raise exception 'Município não encontrado no catálogo';
+        end if;
     end if;
     rede := f->>'rede';
     if rede is not null and rede not in ('federal','estadual','municipal','privada') then

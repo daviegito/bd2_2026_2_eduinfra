@@ -1,8 +1,11 @@
 nome: pct_escolas_por_situacao_do_item
 titulo: Percentual de escolas por situação do item
-versao: 1.1.0
+versao: 1.2.0
 status: ativa
 historico:
+- versao: 1.2.0
+  data: '2026-11-27'
+  mudanca: contrato de publicação e acesso restrito, hash SQL e disponibilidade explícita sem ENEM; fórmulas preservadas
 - versao: 1.1.0
   data: '2026-11-24'
   mudanca: interface executável com ano e filtros parametrizados; preserva população, média e supressão

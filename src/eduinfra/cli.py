@@ -1,6 +1,7 @@
 import argparse
 import json
 import logging
+import os
 import sys
 from datetime import timedelta
 from pathlib import Path
@@ -78,7 +79,8 @@ def main(argumentos: list[str] | None = None) -> int:
 
         try:
             if opcoes.comando == "publicar-metricas":
-                resultado = {"metricas": semantica.publicar(configuracao.dsn)}
+                dsn_publicador = os.environ.get("DATABASE_URL_TRANSFORMACAO") or configuracao.dsn
+                resultado = {"metricas": semantica.publicar(dsn_publicador)}
             else:
                 if not opcoes.metrica:
                     parser.error("consultar-metrica exige --metrica")
@@ -209,6 +211,8 @@ def main(argumentos: list[str] | None = None) -> int:
 
     if opcoes.comando in ("migrar", "tudo"):
         command.upgrade(_alembic(configuracao), opcoes.revisao)
+        from eduinfra import semantica
+        semantica.preparar_acesso(os.environ.get("DATABASE_URL_ADMIN") or configuracao.dsn)
 
     if opcoes.comando in ("carregar", "ingerir", "tudo"):
         resultado = ingerir(configuracao, forcar=opcoes.forcar)
