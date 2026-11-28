@@ -219,10 +219,11 @@ def main():
         definicao_b["supressao"]["minimo"] = 5000
         consulta = semantica.corpo_consulta(definicao_b).replace("p_filtros", "%s::jsonb")
         b = conexao.execute(consulta, (json.dumps(filtros),)).fetchone()[0]
-        assert normalizar(nome, a) == b == []
+        assert a[0]["media_enem_escolas"] is None
+        assert b == []
         resultados["mudanca_de_definicao"] = {"cenario": "mínimo da média nacional de 10 para 5000 escolas",
             "a_campos_alterados": 1, "a_arquivos_alterados": 1, "b_campos_alterados": 1, "b_arquivos_alterados": 1,
-            "ambos_suprimiram_grupo": True, "consumidor_que_recalcula_fora_da_interface_pode_divergir": True,
+            "ambas_suprimiram_media": True, "escopo": "somente a média; contagem e desvio não foram suprimidos em A", "consumidor_que_recalcula_fora_da_interface_pode_divergir": True,
             "copia_alterada": "temporária; o catálogo publicado e os fontes medidos foram preservados"}
         if opcoes.imagem_base:
             resultados["custo_imagem_controlada"] = medir_imagens(opcoes.imagem_base, {"dbt": opcoes.bin_dbt_base, "metricflow": opcoes.bin_metricflow})

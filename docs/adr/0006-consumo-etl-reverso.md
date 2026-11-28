@@ -52,6 +52,9 @@ A execução local do CLI usada aqui não exige contratar uma API hospedada.
 
 [Bancada reproduzível](../evidencias/issue-83/README.md) e
 [amostras completas](../evidencias/issue-83/resultados.json).
+**Medição original de 24/11, anterior aos ajustes de permissões/hash de 27/11.**
+Os tempos e contagens de código abaixo não são novas medições da implementação revisada.
+
 PostgreSQL 16.14; 6.000 escolas **sintéticas**, 5.000 correspondências ENEM e 100
 códigos sem correspondência. Cinco repetições após aquecimento. A e B compartilham
 as views de junção sobre a Gold: compara-se a agregação, não a construção da Gold.
@@ -65,7 +68,7 @@ as views de junção sobre a Gold: compara-se a agregação, não a construção
 | Média de matemática, DF | 144,60 | 33,67 |
 | Média de população vazia, AC | 140,51 | 29,80 |
 
-O CLI de A levou separadamente aproximadamente 3,3–3,6 s para compilar cada consulta.
+O CLI de A levou separadamente aproximadamente 3,260–3,617 s para compilar cada consulta.
 Esses tempos **não** estão somados à coluna SQL. A atualização teve medianas de
 3637 ms (`dbt run` completo) e 29 ms (publicador Python, conexão e transação).
 São caminhos de inicialização diferentes; esses valores não demonstram que o
@@ -82,7 +85,9 @@ o catálogo descritivo e as bases também são necessários em A. A contagem det
 por arquivo está no resultado; não usamos uma soma seletiva como prova de simplicidade.
 
 Mudando o mínimo de **uma** métrica de 10 para 5.000 em cópias isoladas, ambas
-suprimiram o grupo: um campo em um arquivo em cada alternativa. Uma fórmula
+suprimiram **a média**: um campo em um arquivo em cada alternativa. Em A,
+a contagem e o desvio-padrão não foram alterados; em B, a linha inteira desapareceu.
+Isso não comprova propagação equivalente da supressão do grupo. Uma fórmula
 reimplementada pelo consumidor pode divergir nas duas. Em B, a interface Python
 compara o hash e a versão do catálogo com a publicação no banco e rejeita a leitura
 se o catálogo mudou sem republicação; isso também é testado.
@@ -110,11 +115,16 @@ aceitável de refresh sobre a carga nacional medido nesta bancada.
 
 A interface Python e a CLI recebem **nome + objeto de filtros**, com o mesmo contrato
 SQL documentado em [Métricas](../metricas.md). Publicação transacional depois do dbt,
-com funções `SECURITY INVOKER`, sem modificar a origem. O publicador precisa
-criar objetos em `metricas` e ler Gold/staging; leitores precisam de `USAGE`, leitura
-das views e execução das funções. As views usam as permissões do proprietário para
-as tabelas subjacentes: essa fronteira e a concessão dos direitos devem acompanhar #86;
-não foi alterada na branch de controle de acesso de outro integrante.
+com funções `SECURITY DEFINER` e `search_path` fixo, sem modificar a origem.
+O dono/publicador é `eduinfra_dbt`; orquestrador é membro desse papel. Leitores
+recebem execução apenas nas métricas ativas e leitura de `metricas.definicoes`,
+sem acesso às views-base. A publicação revoga execução para PUBLIC e concessões
+amplas herdadas da 0010. A etapa administrativa normaliza funções antigas antes
+da publicação de rotina, conforme o contrato em [Métricas](../metricas.md).
+A integração foi exercitada com o snapshot `0d83bc2` da migração 0010 do #110;
+a reorganização da CLI desse PR precisa preservar a preparação administrativa.
+O #110 concede acesso direto à Gold separadamente: esta fronteira protege a
+interface semântica e não substitui a matriz de acesso à Gold.
 
 O painel continua estático para apresentação e Pages. Sua geração deverá ler esta
 interface e carregar apenas recortes necessários ao uso; filtros client-side que
@@ -145,3 +155,10 @@ Reabrir a decisão se:
 
 Não foram medidos usabilidade humana, carga nacional, concorrência nem escrita de
 ETL reverso. Esses limites não são resultados positivos presumidos desta bancada.
+
+## Histórico de Versões
+
+| Versão | Data | Mudança | Responsável |
+| --- | --- | --- | --- |
+| 1.0 | 24/11/2026 | Protótipos, medição e decisão proposta | Pedrovargas10 |
+| 1.1 | 27/11/2026 | Contrato de acesso, hash SQL e correção do alcance do experimento | Pedrovargas10 |

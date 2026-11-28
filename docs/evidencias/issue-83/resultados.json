@@ -400,9 +400,10 @@
     "a_arquivos_alterados": 1,
     "b_campos_alterados": 1,
     "b_arquivos_alterados": 1,
-    "ambos_suprimiram_grupo": true,
     "consumidor_que_recalcula_fora_da_interface_pode_divergir": true,
-    "copia_alterada": "temporária; o catálogo publicado e os fontes medidos foram preservados"
+    "copia_alterada": "temporária; o catálogo publicado e os fontes medidos foram preservados",
+    "ambas_suprimiram_media": true,
+    "escopo": "Somente a média. A edição em A não alterou a contagem nem o desvio-padrão; não comprova supressão equivalente da linha inteira."
   },
   "custo_imagem_controlada": {
     "pai": "sha256:e589438ccbe49b8e1caa4d0d36ba0b4989ca06625651bd87fc1b400205fc5e12",
@@ -421,5 +422,6 @@
     },
     "delta_metricflow_menos_dbt_bytes": 20802104,
     "metodo": "Imagens locais isoladas, mesmo pai, COPY dos ambientes já instalados para /opt/bancada. Nenhuma instalação ou alteração da imagem de produção. Tamanho Docker local não comprimido; não mede a imagem final de produção."
-  }
+  },
+  "nota_revisao": "2026-11-27: conclusão do experimento de mudança de regra restringida ao que foi medido. Tempos originais preservados; não são medições da implementação revisada."
 }

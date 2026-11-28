@@ -34,13 +34,14 @@ flowchart LR
   em uma transação. A etapa tem retry e precisa de permissão de criação no schema
   `metricas`. Consulte o [contrato de leitura](metricas.md).
 - **Testes de dados.** Depois da publicação das métricas, o `testar_gold` roda os testes de
-  `tests/test_e3_gold.py`: esquema, volume, unicidade, integridade referencial,
+  `tests/test_e3_gold.py` e a completude do catálogo em `tests/test_metricas.py`: esquema, volume, unicidade, integridade referencial,
   distribuição e domínio da situação. Ele não tem retry, porque um teste que falha
   aponta defeito na Gold, e repetir não corrige.
 - **Frescor.** Depois da Gold, o `medir_frescor` falha se alguma vistoria
   estiver há mais de 25 horas sem aparecer nela.
-- **Retry.** Cada etapa tem até 3 novas tentativas, com espera de 30, 90 e
+- **Retry.** As etapas com política de retry têm até 3 novas tentativas, com espera de 30, 90 e
   210 s entre elas. Isso cobre falhas passageiras, como o banco reiniciando.
+  `testar_gold` e `medir_frescor` não têm retry; apontam falhas de qualidade e SLA.
 - **Agendamento.** O pipeline roda sozinho no horário de `AGENDA_ORQUESTRADOR`
   do `.env`, que por padrão é todo dia às 3h. Cada execução reconstrói a Gold
   inteira. A agenda só dispara enquanto o serviço está no ar.

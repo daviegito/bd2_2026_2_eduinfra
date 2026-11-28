@@ -848,3 +848,47 @@ tradução. Registre o que produziu artefato ou mudou uma decisão.
 - **Recursos:** bancada PostgreSQL parada após os testes; contêiner de validação
   efêmero, sem instalar dependências e com limite de CPU e memória.
 - **Quem revisou:** revisão humana pendente.
+
+## 2026-11-27 — Atender à revisão técnica do PR #103
+
+- **Ferramenta:** Codex.
+- **Pessoa responsável:** Pedrovargas10.
+- **Pedido:** conferir e corrigir os apontamentos da revisão do Davi.
+- **O que foi aproveitado:** publicação pelo papel dbt, funções de leitura com
+  contexto fixo e permissões explícitas, bases internas restritas, preparação
+  administrativa de objetos antigos, hash dos SQLs, validação de município,
+  disponibilidade de infraestrutura sem ENEM e remoção de funções desativadas.
+  Catálogo atualizado para 1.2.0; fórmulas das quatro métricas preservadas.
+- **Testes:** regressões reproduziram antes da correção três SQLs ausentes do
+  hash, município inexistente, catálogo vazio e função desativada remanescente.
+  PostgreSQL novo com publicação legada, migração 0010 do #110 e publicação de
+  rotina: 63 testes e 42 subtestes passaram sem skips, em imagem já existente.
+- **CI:** job independente com fixture sintética, snapshot explícito da migração
+  e falha em caso de skips; disparos incluem semântica, catálogo e testes.
+  A publicação do site passa a depender dos dois jobs de validação.
+- **Evidências:** a conclusão da mudança de regra foi restringida à supressão da
+  média; os tempos originais A/B não foram medidos novamente nem apresentados
+  como tempos da implementação revisada. ADR e documentação corrigidos.
+- **Limites:** validação remota depende de commit/push autorizados; preservar no
+  merge do #110 a preparação administrativa na CLI reorganizada. O acesso direto
+  à Gold concedido pelo #110 é separado da proteção da interface semântica.
+  ETL reverso e adoção do ADR pela Squad continuam nas respectivas entregas.
+- **Recursos:** testes locais com CPU/memória limitadas; PostgreSQL descartável
+  encerrado ao fim; nenhuma dependência instalada.
+- **Quem revisou:** revisão humana pendente.
+
+### Validação final da revisão do #103
+
+- Suíte sem integração: 232 aprovados, sete skips opcionais (PyIceberg/Node) e
+  42 subtestes. Os 17 testes do painel passaram no host com Node, sem skips.
+- Hypothesis e extensões DuckDB vieram do cache local já existente, somente para
+  leitura; nenhuma dependência foi instalada. Antes disso, a coleta sem Hypothesis
+  e os testes Delta sem extensão/rede falharam por configuração da bancada.
+  Um subprocesso ainda usava o código antigo da imagem; o PYTHONPATH do checkout
+  foi propagado e a suíte foi executada novamente, sem falhas.
+- Revisão independente somente leitura encontrou execução duplicada da 0010 no
+  preparador após o merge do #110. A migração passou a ser administrada pelo Alembic
+  numa cópia temporária, com a publicação legada antes da 0010 e sem reaplicação
+  na segunda chamada. Preparação repetida e 63 testes passaram sem skips.
+- Evidências em docs/evidencias/issue-83/validacao-contrato-103.txt e
+  docs/evidencias/issue-83/validacao-unitarios-103.txt. Banco e contêineres encerrados.

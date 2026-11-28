@@ -65,7 +65,9 @@ protótipo para o experimento de mudança. Não acessa slot, WAL nem banco da or
   divergir em mais de `1e-7`. Há também média de matemática no DF e população vazia
   no AC. Os SQLs efetivamente compilados são preservados em `sql_compilado/`.
 - Mínimo da média alterado de 10 para 5.000 em cópias das duas definições: ambas
-  passam a suprimir o grupo. Muda um campo em um arquivo em cada alternativa.
+  passam a suprimir a média. Muda um campo em um arquivo em cada alternativa,
+  mas a contagem e o desvio continuam em A; em B a linha inteira desaparece.
+  Não é uma comprovação de supressão equivalente do grupo completo.
   A mudança não é publicada no catálogo de produção nem no catálogo da bancada.
 
 ## Resultados e decisão
@@ -128,3 +130,55 @@ pelo comando da bancada, que exige o CLI experimental fora da imagem de produç�
 A adoção pela Squad depende da revisão do PR; a migração do consumidor do painel e
 a escrita operacional permanecem nas respectivas entregas, sem bloquear a publicação
 da interface. Os limites da bancada constam do ADR, sem alegar validação nacional.
+
+## Revisão de 27/11: contrato e controle de acesso
+
+Os números de `resultados.json` são da medição original de 24/11. Não representam
+nova medição da implementação de permissões/hash revisada; a conclusão sobre a
+mudança de regra foi restringida à média, sem alterar os tempos coletados.
+
+O CI e a bancada conjunta usam a migração 0010 do #110 no commit
+`0d83bc291bf49a3c6c28842cfb8e2ed305c6bb84`. Não copiam a migração para a aplicação.
+Em um PostgreSQL **descartável**, com banco chamado `eduinfra83`, a preparação é:
+
+```bash
+git show origin/feat/controle_acesso:alembic/versions/0010_controle_de_acesso.py > /tmp/controle_acesso_0010.py
+uv run --no-sync python tests/preparar_semantica.py \
+  --dsn postgresql://eduinfra83:validacao83_local@127.0.0.1:55483/eduinfra83 \
+  --migracao-acesso /tmp/controle_acesso_0010.py
+SEMANTICA_BANCADA_DSN=postgresql://eduinfra83:validacao83_local@127.0.0.1:55483/eduinfra83 \
+uv run --no-sync pytest tests/test_semantica.py tests/test_semantica_cli.py tests/test_metricas.py tests/test_orquestrador.py -q -rs
+```
+
+O preparador recusa outros bancos/hosts e só cria a fixture se a Gold não existe.
+A variável opcional `SEMANTICA_PUBLICADOR_LEGADO` recebe um arquivo Python com o
+publicador anterior para exercitar a atualização; o CI extrai o commit `8e87397`
+num caminho temporário antes de aplicar a 0010. A etapa administrativa chama
+`preparar_acesso`, e o publicador de rotina passa a usar o dono dbt.
+
+Há oráculos Python independentes para as quatro métricas, testes do limite 9/10
+na média e nos dois lados da diferença, atomicidade da publicação, limpeza de
+função desativada, hash dos SQLs, município inexistente, CLI, papéis de leitura e
+Gold sem ENEM. Para a disponibilidade sem ENEM, o perfil é o fechamento anual;
+a geração original com ENEM continua usando a referência histórica da prova.
+
+Ao integrar o #110, preservar a chamada administrativa após Alembic no novo
+módulo `origem/comandos.py:migrar`. Sem isso, instalações antigas com funções
+pertencentes ao administrador não podem ser atualizadas pelo papel de rotina.
+
+### Resultados da revisão
+
+- [Contrato conjunto e repetição da preparação](validacao-contrato-103.txt):
+  PostgreSQL novo, publicação legada, 0010 aplicada uma vez pelo Alembic,
+  segunda preparação sem reaplicar políticas; 63 testes e 42 subtestes aprovados,
+  nenhum skip.
+- [Suíte sem integração](validacao-unitarios-103.txt): 232 aprovados, sete skips
+  (três de PyIceberg e quatro de Node) e 42 subtestes. Rodou em imagem existente,
+  usando Hypothesis e extensões DuckDB já disponíveis em cache, sem instalação.
+  O checkout entrou no PYTHONPATH também dos subprocessos.
+- Os 17 testes do painel passaram depois no ambiente local com Node, sem skips.
+- `mkdocs build --strict` e `git diff --check` aprovados. O HTML antigo local do
+  painel foi usado no build; não foi reconstruída a Gold nacional nesta revisão.
+- A revisão independente apontou a execução duplicada da 0010 no preparador;
+  após a correção não apontou outro achado importante ou crítico nos trechos revistos.
+- Nenhum contêiner desta validação ficou rodando.
